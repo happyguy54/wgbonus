@@ -3,7 +3,10 @@ function processData() {
     let lines = inputText.split("\n");
     let output = '';
 
-    // Zde zpracujeme text. Příklad, jak vyčíst konkrétní data a provést výpočty.
+    //output the text word by word
+    lines.forEach(line => {
+        output += `<p>${line}</p>`;
+    });
     let země = '';
     let prestiz = '';
     let vojaci = 0;
