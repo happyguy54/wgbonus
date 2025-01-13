@@ -3,10 +3,6 @@ function processData() {
     let lines = inputText.split("\n");
     let output = '';
 
-    //output the text word by word
-    lines.forEach(line => {
-        output += `<p>${line}</p>`;
-    });
     let země = '';
     let prestiz = '';
     let vojaci = 0;
@@ -14,21 +10,37 @@ function processData() {
     let stihacky = 0;
 
     lines.forEach(line => {
-        if (line.includes('Země')) země = line.split(' ')[1];
-        if (line.includes('Prestiž')) prestiz = line.split(' ')[1];
-        if (line.includes('Vojáci')) vojaci = parseInt(line.split(' ')[1]) || 0;
-        if (line.includes('Tanky')) tanky = parseInt(line.split(' ')[1]) || 0;
-        if (line.includes('Stíhačky')) stihacky = parseInt(line.split(' ')[1]) || 0;
+        output += `<p>${line}</p>`;
+        let parts = line.split(' ');
+        if (parts.length < 2) return;
+
+        let key = parts[0];
+        let value = parts.slice(1).join(' ');
+
+        switch (key) {
+            case 'Země':
+                země = value;
+                break;
+            case 'Prestiž':
+                prestiz = value;
+                break;
+            case 'Vojáci':
+                vojaci = parseInt(value) || 0;
+                break;
+            case 'Tanky':
+                tanky = parseInt(value) || 0;
+                break;
+            case 'Stíhačky':
+                stihacky = parseInt(value) || 0;
+                break;
+        }
     });
 
-    // Vypočítame bonus (príklad)
     let bonus = vojaci * 10 + tanky * 20 + stihacky * 30;
 
-    // Vypíšeme výsledky
     output += `<h3>Výsledky pro zemi: ${země || 'N/A'}</h3>`;
     output += `<p>Prestiž: ${prestiz || 'N/A'}</p>`;
     output += `<p>Bonus (Vojáci: ${vojaci}, Tanky: ${tanky}, Stíhačky: ${stihacky}): ${bonus}</p>`;
 
-    // Ukážeme výsledky na stránke
     document.getElementById('output').innerHTML = output;
 }
