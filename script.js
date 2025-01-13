@@ -18,6 +18,23 @@ function processData() {
         data[name] = values[index];
     });
 
+    // Extract dynamic values from the input text
+    let zemeParts = data['Země'].split(' ');
+    let zemeId = zemeParts[5].match(/\d+/)[0];
+    let zemeName = zemeParts.slice(6).join(' ').split('[')[0].trim();
+    let zemeTag = zemeParts.slice(6).join(' ').match(/\[(.*?)\]/)[1];
+    let zemeHpid = lines[10].match(/\d+/)[0];
+    let zemePerson = lines[10].split('-')[1].trim().split(' ')[0];
+    let zemeRole = lines[10].split('(')[1].split(')')[0];
+
+    let odParts = data['Od'].split(' ');
+    let odId = odParts[1].match(/\d+/)[0];
+    let odName = odParts.slice(2).join(' ').split('[')[0].trim();
+    let odTag = odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1];
+    let odHpid = lines[11].match(/\d+/)[0];
+    let odPerson = lines[11].split('-')[1].trim().split(' ')[0];
+    let odRole = lines[11].split('(')[1].split(')')[0];
+
     // Jednotky
     let jednotkyNames = ['Vojáci', 'Tanky', 'Stíhačky', 'Bunkry', 'Mechové'];
     let jednotkyValues = [
@@ -76,21 +93,21 @@ function processData() {
     let summaryValuesCell = document.createElement('td');
     summaryValuesCell.className = 'rdata r';
     summaryValuesCell.innerHTML = `
-        <a href="index.php?p=mail&amp;to_id=165"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=165"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=utok&amp;to_id=165"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
-        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=165"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=rakety&amp;target=165"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=165">-=Melwean=-(#165)</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=RS">[RS]</a>
-        <a href="index.php?p=najitzem&amp;hpid=413184" class="pname"> - Haffik</a> 
-        <span class="ocas" style="color:silver">(zástupce)</span><br>
-        ${data['Od']}<br>${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
-        <a href="index.php?p=mail&amp;to_id=81"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=81">+_+sun+_+(#81)</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=EG">[EG]</a>
-        <a href="index.php?p=najitzem&amp;hpid=428063" class="pname"> - happyguy</a> 
-        <span class="ocas" style="color:silver">(předseda)</span>
+        <a href="index.php?p=mail&amp;to_id=${zemeId}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeId}"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
+        <a href="index.php?p=valka&amp;s=utok&amp;to_id=${zemeId}"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
+        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=${zemeId}"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
+        <a href="index.php?p=valka&amp;s=rakety&amp;target=${zemeId}"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
+        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${zemeId}">${zemeName}</a>
+        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${zemeTag}">[${zemeTag}]</a>
+        <a href="index.php?p=najitzem&amp;hpid=${zemeHpid}" class="pname"> - ${zemePerson}</a> 
+        <span class="ocas" style="color:silver">(${zemeRole})</span><br>
+        ${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
+        <a href="index.php?p=mail&amp;to_id=${odId}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${odId}">${odName}</a>
+        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${odTag}">[${odTag}]</a>
+        <a href="index.php?p=najitzem&amp;hpid=${odHpid}" class="pname"> - ${odPerson}</a> 
+        <span class="ocas" style="color:silver">(${odRole})</span>
     `;
     summaryRow.appendChild(summaryValuesCell);
 
