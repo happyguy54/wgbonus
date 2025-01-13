@@ -1,37 +1,31 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    line-height: 1.6;
-}
+function processData() {
+    let inputText = document.getElementById('inputText').value;
+    let lines = inputText.split("\n");
+    let output = '';
 
-textarea {
-    width: 100%;
-    height: 300px;
-    margin-bottom: 10px;
-    font-family: monospace;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
+    // Zde zpracujeme text. Příklad, jak vyčíst konkrétní data a provést výpočty.
+    let země = '';
+    let prestiz = '';
+    let vojaci = 0;
+    let tanky = 0;
+    let stihacky = 0;
 
-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
+    lines.forEach(line => {
+        if (line.includes('Země')) země = line.split(' ')[1];
+        if (line.includes('Prestiž')) prestiz = line.split(' ')[1];
+        if (line.includes('Vojáci')) vojaci = parseInt(line.split(' ')[1]) || 0;
+        if (line.includes('Tanky')) tanky = parseInt(line.split(' ')[1]) || 0;
+        if (line.includes('Stíhačky')) stihacky = parseInt(line.split(' ')[1]) || 0;
+    });
 
-button:hover {
-    background-color: #0056b3;
-}
+    // Vypočítame bonus (príklad)
+    let bonus = vojaci * 10 + tanky * 20 + stihacky * 30;
 
-#output {
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    background-color: #f9f9f9;
-    border-radius: 5px;
+    // Vypíšeme výsledky
+    output += `<h3>Výsledky pro zemi: ${země || 'N/A'}</h3>`;
+    output += `<p>Prestiž: ${prestiz || 'N/A'}</p>`;
+    output += `<p>Bonus (Vojáci: ${vojaci}, Tanky: ${tanky}, Stíhačky: ${stihacky}): ${bonus}</p>`;
+
+    // Ukážeme výsledky na stránke
+    document.getElementById('output').innerHTML = output;
 }
