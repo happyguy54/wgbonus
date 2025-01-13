@@ -1,4 +1,6 @@
 function processData() {
+    console.log('processData function called'); // Debugging line
+
     let inputText = document.getElementById('inputText').value;
     let lines = inputText.split("\n");
 
