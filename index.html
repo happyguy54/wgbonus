@@ -1,1 +1,70 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Výpočet Bonusů</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 10px;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
 
+<h1>Vložte tabulku pro výpočet bonusu</h1>
+
+<textarea id="inputText" placeholder="Vložte text zde..."></textarea>
+
+<button onclick="processData()">Zpracovat</button>
+
+<div id="output"></div>
+
+<script>
+function processData() {
+    let inputText = document.getElementById('inputText').value;
+    let lines = inputText.split("\n");
+    let output = '';
+
+    // Zde zpracujeme text. Příklad, jak vyčíst konkrétní data a provést výpočty.
+    let země = '';
+    let prestiz = '';
+    let vojaci = 0;
+    let tanky = 0;
+    let stihacky = 0;
+
+    lines.forEach(line => {
+        if (line.includes('Země')) země = line.split(' ')[1];
+        if (line.includes('Prestiž')) prestiz = line.split(' ')[1];
+        if (line.includes('Vojáci')) vojaci = parseInt(line.split(' ')[1]);
+        if (line.includes('Tanky')) tanky = parseInt(line.split(' ')[1]);
+        if (line.includes('Stíhačky')) stihacky = parseInt(line.split(' ')[1]);
+    });
+
+    // Vypočítame bonus (príklad)
+    let bonus = vojaci * 10 + tanky * 20 + stihacky * 30;
+
+    // Vypíšeme výsledky
+    output += `<h3>Výsledky pro zemi: ${země}</h3>`;
+    output += `<p>Prestiž: ${prestiz}</p>`;
+    output += `<p>Bonus (Vojáci: ${vojaci}, Tanky: ${tanky}, Stíhačky: ${stihacky}): ${bonus}</p>`;
+
+    // Ukážeme výsledky na stránke
+    document.getElementById('output').innerHTML = output;
+}
+</script>
+
+</body>
+</html>
