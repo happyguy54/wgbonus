@@ -1,46 +1,141 @@
 function processData() {
     let inputText = document.getElementById('inputText').value;
     let lines = inputText.split("\n");
-    let output = '';
 
     let země = '';
     let prestiz = '';
+    let typZpravy = '';
+    let datum = '';
+    let od = '';
     let vojaci = 0;
     let tanky = 0;
     let stihacky = 0;
+    let bunkry = 0;
+    let mechove = 0;
+    let spokojenost = '';
+    let vlada = '';
+    let rozloha = '';
+
+    let currentSection = '';
 
     lines.forEach(line => {
-        output += `<p>${line}</p>`;
-        let parts = line.split(' ');
-        if (parts.length < 2) return;
+        line = line.trim();
+        if (line === '') return;
 
-        let key = parts[0];
-        let value = parts.slice(1).join(' ');
-
-        switch (key) {
-            case 'Země':
-                země = value;
-                break;
-            case 'Prestiž':
-                prestiz = value;
-                break;
-            case 'Vojáci':
-                vojaci = parseInt(value) || 0;
-                break;
-            case 'Tanky':
-                tanky = parseInt(value) || 0;
-                break;
-            case 'Stíhačky':
-                stihacky = parseInt(value) || 0;
-                break;
+        if (line === 'Země') {
+            currentSection = 'země';
+        } else if (line === 'Prestiž') {
+            currentSection = 'prestiž';
+        } else if (line === 'Typ zprávy') {
+            currentSection = 'typZpravy';
+        } else if (line === 'Datum') {
+            currentSection = 'datum';
+        } else if (line.startsWith('Od')) {
+            currentSection = 'od';
+        } else if (line === 'Vojáci') {
+            currentSection = 'vojaci';
+        } else if (line === 'Tanky') {
+            currentSection = 'tanky';
+        } else if (line === 'Stíhačky') {
+            currentSection = 'stihacky';
+        } else if (line === 'Bunkry') {
+            currentSection = 'bunkry';
+        } else if (line === 'Mechové') {
+            currentSection = 'mechove';
+        } else if (line === 'Spokojenost') {
+            currentSection = 'spokojenost';
+        } else if (line === 'Vláda') {
+            currentSection = 'vlada';
+        } else if (line === 'Rozloha') {
+            currentSection = 'rozloha';
+        } else {
+            switch (currentSection) {
+                case 'země':
+                    země = line;
+                    break;
+                case 'prestiž':
+                    prestiz = line;
+                    break;
+                case 'typZpravy':
+                    typZpravy = line;
+                    break;
+                case 'datum':
+                    datum = line;
+                    break;
+                case 'od':
+                    od = line;
+                    break;
+                case 'vojaci':
+                    vojaci = parseInt(line) || 0;
+                    break;
+                case 'tanky':
+                    tanky = parseInt(line) || 0;
+                    break;
+                case 'stihacky':
+                    stihacky = parseInt(line) || 0;
+                    break;
+                case 'bunkry':
+                    bunkry = parseInt(line) || 0;
+                    break;
+                case 'mechove':
+                    mechove = parseInt(line) || 0;
+                    break;
+                case 'spokojenost':
+                    spokojenost = line;
+                    break;
+                case 'vlada':
+                    vlada = line;
+                    break;
+                case 'rozloha':
+                    rozloha = line;
+                    break;
+            }
         }
     });
 
-    let bonus = vojaci * 10 + tanky * 20 + stihacky * 30;
-
-    output += `<h3>Výsledky pro zemi: ${země || 'N/A'}</h3>`;
-    output += `<p>Prestiž: ${prestiz || 'N/A'}</p>`;
-    output += `<p>Bonus (Vojáci: ${vojaci}, Tanky: ${tanky}, Stíhačky: ${stihacky}): ${bonus}</p>`;
+    let output = `
+    <div id="icontent">
+        <h1>Zpráva tajné služby</h1>
+        <table id="spy-message-summary" class="vis_tbl vtop">
+            <tbody>
+                <tr>
+                    <td class="rname l">Země<br>Prestiž<br>Typ zprávy<br>Datum<br><br>Od</td>
+                    <td class="rdata r">
+                        ${země}<br>${prestiz}<br>${typZpravy}<br>${datum}<br><br>${od}
+                    </td>
+                </tr>
+                <tr><td colspan="2"></td></tr>
+            </tbody>
+        </table>
+        <br>
+        <div class="tbl_sim" style="width:400px;">
+            <div class="td_sim c">
+                <form action="index.php?p=rozvedka&amp;s=viewspye&amp;msgid=1743" method="post">
+                    <span class="caption">Poslat zprávu zemi (číslo)</span>
+                    <input class="short" name="user" type="text">
+                    <input class="submit" name="action" type="submit" value="Poslat">
+                </form>
+            </div>
+        </div>
+        <br>
+        <table id="spy-message-detail" class="vis_tbl vtop">
+            <tbody>
+                <tr>
+                    <th colspan="2">Jednotky</th>
+                    <th colspan="2">Budovy</th>
+                    <th colspan="2">Technologie</th>
+                </tr>
+                <tr>
+                    <td class="rname l">Vojáci<br>Tanky<br>Stíhačky<br>Bunkry<br>Mechové<br><br>Spokojenost<br><br>Vláda<br>Rozloha</td>
+                    <td class="rdata r">${vojaci}<br>${tanky}<br>${stihacky}<br>${bunkry}<br>${mechove}<br><br>${spokojenost}<br><br>${vlada}<br>${rozloha}</td>
+                    <td class="rname l">Vesnice<br>Města<br>Obchodní zóny<br>Farmy<br>Laboratoře<br>Továrny<br>Kasárny<br>Elektrárny<br>Zábavní střediska<br>Vojenské základny<br>Stavební firmy<br>Nezastavěné území<br>Ruiny</td>
+                    <td class="rdata r">32<br>30<br>31<br>78<br>1505<br>2658<br>1436<br>84<br>109<br>1054<br>43<br>3<br>0</td>
+                    <td class="rname l">Rychlost stavby<br>Obchod<br>Hustota zalidnění<br>Zemědělství<br>Automatizace továren<br>Energetika<br>Síla zbraní<br>Cena na dom.trhu<br>Vývoj raket<br>Protiraketová obrana<br>Síla rozvědky<br>Výzkum vesmíru</td>
+                    <td class="rdata r">299<br>1488<br>2075<br>3961<br>9344<br>37<br>14643<br>13<br>28<br>27<br>7058<br>10568</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>`;
 
     document.getElementById('output').innerHTML = output;
 }
