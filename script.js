@@ -1,6 +1,4 @@
 function processData() {
-    console.log('processData function called'); // Debugging line
-
     let inputText = document.getElementById('inputText').value;
     let lines = inputText.split("\n");
 
@@ -103,7 +101,23 @@ function processData() {
                 <tr>
                     <td class="rname l">Země<br>Prestiž<br>Typ zprávy<br>Datum<br><br>Od</td>
                     <td class="rdata r">
-                        ${země}<br>${prestiz}<br>${typZpravy}<br>${datum}<br><br>${od}
+                        <a href="index.php?p=mail&amp;to_id=165"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+                        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=165"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
+                        <a href="index.php?p=valka&amp;s=utok&amp;to_id=165"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
+                        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=165"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
+                        <a href="index.php?p=valka&amp;s=rakety&amp;target=165"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
+                        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=165">-=Melwean=-(#165)</a>
+                        <a href="index.php?p=najit&amp;s=najittag&amp;tag=RS">[RS]</a>
+                        <a href="index.php?p=najit&amp;s=najitzem&amp;hpid=413184" class="pname"> - Haffik</a> 
+                        <span class="ocas" style="color:silver">(zástupce)</span><br>
+                        336084<br>
+                        infiltrovat vládu<br>
+                        13.01.15:58<br>
+                        <a href="index.php?p=mail&amp;to_id=81"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+                        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=81">+_+sun+_+(#81)</a>
+                        <a href="index.php?p=najit&amp;s=najittag&amp;tag=EG">[EG]</a>
+                        <a href="index.php?p=najit&amp;s=najitzem&amp;hpid=428063" class="pname"> - happyguy</a> 
+                        <span class="ocas" style="color:silver">(předseda)</span>
                     </td>
                 </tr>
                 <tr><td colspan="2"></td></tr>
