@@ -1,97 +1,35 @@
 function processData() {
     let inputText = document.getElementById('inputText').value;
-    let lines = inputText.split("\n");
+    let lines = inputText.split("\n").map(line => line.trim()).filter(line => line !== '');
 
-    let země = '';
-    let prestiz = '';
-    let typZpravy = '';
-    let datum = '';
-    let od = '';
-    let vojaci = 0;
-    let tanky = 0;
-    let stihacky = 0;
-    let bunkry = 0;
-    let mechove = 0;
-    let spokojenost = '';
-    let vlada = '';
-    let rozloha = '';
+    // Individual variables
+    let země = lines[0];
+    let prestiz = lines[1];
+    let typZpravy = lines[2];
+    let datum = lines[3];
+    let od = lines[5];
+    let odValue1 = lines[6];
+    let odValue2 = lines[7];
+    let odValue3 = lines[8];
+    let odValue4 = lines[9];
 
-    let currentSection = '';
+    // Jednotky
+    let jednotky = {
+        vojaci: parseInt(lines[13]) || 0,
+        tanky: parseInt(lines[14]) || 0,
+        stihacky: parseInt(lines[15]) || 0,
+        bunkry: parseInt(lines[16]) || 0,
+        mechove: parseInt(lines[17]) || 0
+    };
 
-    lines.forEach(line => {
-        line = line.trim();
-        if (line === '') return;
+    // Other individual variables
+    let spokojenost = lines[19];
+    let vlada = lines[21];
+    let rozloha = lines[22];
 
-        if (line === 'Země') {
-            currentSection = 'země';
-        } else if (line === 'Prestiž') {
-            currentSection = 'prestiž';
-        } else if (line === 'Typ zprávy') {
-            currentSection = 'typZpravy';
-        } else if (line === 'Datum') {
-            currentSection = 'datum';
-        } else if (line.startsWith('Od')) {
-            currentSection = 'od';
-        } else if (line === 'Vojáci') {
-            currentSection = 'vojaci';
-        } else if (line === 'Tanky') {
-            currentSection = 'tanky';
-        } else if (line === 'Stíhačky') {
-            currentSection = 'stihacky';
-        } else if (line === 'Bunkry') {
-            currentSection = 'bunkry';
-        } else if (line === 'Mechové') {
-            currentSection = 'mechove';
-        } else if (line === 'Spokojenost') {
-            currentSection = 'spokojenost';
-        } else if (line === 'Vláda') {
-            currentSection = 'vlada';
-        } else if (line === 'Rozloha') {
-            currentSection = 'rozloha';
-        } else {
-            switch (currentSection) {
-                case 'země':
-                    země = line;
-                    break;
-                case 'prestiž':
-                    prestiz = line;
-                    break;
-                case 'typZpravy':
-                    typZpravy = line;
-                    break;
-                case 'datum':
-                    datum = line;
-                    break;
-                case 'od':
-                    od = line;
-                    break;
-                case 'vojaci':
-                    vojaci = parseInt(line) || 0;
-                    break;
-                case 'tanky':
-                    tanky = parseInt(line) || 0;
-                    break;
-                case 'stihacky':
-                    stihacky = parseInt(line) || 0;
-                    break;
-                case 'bunkry':
-                    bunkry = parseInt(line) || 0;
-                    break;
-                case 'mechove':
-                    mechove = parseInt(line) || 0;
-                    break;
-                case 'spokojenost':
-                    spokojenost = line;
-                    break;
-                case 'vlada':
-                    vlada = line;
-                    break;
-                case 'rozloha':
-                    rozloha = line;
-                    break;
-            }
-        }
-    });
+    // Budovy and Technologie
+    let budovy = lines.slice(24, 37);
+    let technologie = lines.slice(38);
 
     let output = `
     <div id="icontent">
@@ -101,6 +39,7 @@ function processData() {
                 <tr>
                     <td class="rname l">Země<br>Prestiž<br>Typ zprávy<br>Datum<br><br>Od</td>
                     <td class="rdata r">
+                        ${země}<br>${prestiz}<br>${typZpravy}<br>${datum}<br><br>
                         <a href="index.php?p=mail&amp;to_id=165"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
                         <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=165"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
                         <a href="index.php?p=valka&amp;s=utok&amp;to_id=165"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
@@ -108,15 +47,13 @@ function processData() {
                         <a href="index.php?p=valka&amp;s=rakety&amp;target=165"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
                         <a href="index.php?p=najit&amp;s=najitzem&amp;hid=165">-=Melwean=-(#165)</a>
                         <a href="index.php?p=najit&amp;s=najittag&amp;tag=RS">[RS]</a>
-                        <a href="index.php?p=najit&amp;s=najitzem&amp;hpid=413184" class="pname"> - Haffik</a> 
+                        <a href="index.php?p=najitzem&amp;hpid=413184" class="pname"> - Haffik</a> 
                         <span class="ocas" style="color:silver">(zástupce)</span><br>
-                        336084<br>
-                        infiltrovat vládu<br>
-                        13.01.15:58<br>
+                        ${odValue1}<br>${odValue2}<br>${odValue3}<br>${odValue4}<br>
                         <a href="index.php?p=mail&amp;to_id=81"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
                         <a href="index.php?p=najit&amp;s=najitzem&amp;hid=81">+_+sun+_+(#81)</a>
                         <a href="index.php?p=najit&amp;s=najittag&amp;tag=EG">[EG]</a>
-                        <a href="index.php?p=najit&amp;s=najitzem&amp;hpid=428063" class="pname"> - happyguy</a> 
+                        <a href="index.php?p=najitzem&amp;hpid=428063" class="pname"> - happyguy</a> 
                         <span class="ocas" style="color:silver">(předseda)</span>
                     </td>
                 </tr>
@@ -143,11 +80,11 @@ function processData() {
                 </tr>
                 <tr>
                     <td class="rname l">Vojáci<br>Tanky<br>Stíhačky<br>Bunkry<br>Mechové<br><br>Spokojenost<br><br>Vláda<br>Rozloha</td>
-                    <td class="rdata r">${vojaci}<br>${tanky}<br>${stihacky}<br>${bunkry}<br>${mechove}<br><br>${spokojenost}<br><br>${vlada}<br>${rozloha}</td>
-                    <td class="rname l">Vesnice<br>Města<br>Obchodní zóny<br>Farmy<br>Laboratoře<br>Továrny<br>Kasárny<br>Elektrárny<br>Zábavní střediska<br>Vojenské základny<br>Stavební firmy<br>Nezastavěné území<br>Ruiny</td>
-                    <td class="rdata r">32<br>30<br>31<br>78<br>1505<br>2658<br>1436<br>84<br>109<br>1054<br>43<br>3<br>0</td>
-                    <td class="rname l">Rychlost stavby<br>Obchod<br>Hustota zalidnění<br>Zemědělství<br>Automatizace továren<br>Energetika<br>Síla zbraní<br>Cena na dom.trhu<br>Vývoj raket<br>Protiraketová obrana<br>Síla rozvědky<br>Výzkum vesmíru</td>
-                    <td class="rdata r">299<br>1488<br>2075<br>3961<br>9344<br>37<br>14643<br>13<br>28<br>27<br>7058<br>10568</td>
+                    <td class="rdata r">${jednotky.vojaci}<br>${jednotky.tanky}<br>${jednotky.stihacky}<br>${jednotky.bunkry}<br>${jednotky.mechove}<br><br>${spokojenost}<br><br>${vlada}<br>${rozloha}</td>
+                    <td class="rname l">${budovy.join('<br>')}</td>
+                    <td class="rdata r"></td>
+                    <td class="rname l">${technologie.join('<br>')}</td>
+                    <td class="rdata r"></td>
                 </tr>
             </tbody>
         </table>
