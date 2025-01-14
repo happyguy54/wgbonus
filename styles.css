@@ -20,6 +20,12 @@ body {
 	_overflow-y:auto;
 }
 
+.container {
+	display: flex;
+	align-items: flex-start;
+	gap: 20px; /* Adjust the gap as needed */
+}
+
 textarea.inputText {
 	width: 300px;
 	height: 150px;

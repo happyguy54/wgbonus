@@ -11,9 +11,6 @@ function processData() {
         return;
     }
 
-    // Trim the lines to only include useful information
-    lines = lines.slice(startIndex);
-
     // Names and values with an offset of 4
     let names = ['Země', 'Prestiž', 'Typ zprávy', 'Datum', 'Od'];
     let values = [
@@ -33,9 +30,12 @@ function processData() {
     // Extract dynamic values from the input text
     let zemeParts = data['Země'].split(' ');
     console.log('zemeParts:', zemeParts); // Log zemeParts to see its content
-    let zemeName = zemeParts.slice(5).join(' ').split('[')[0].trim();
-    let zemeNumber = zemeParts[5] ? zemeParts[5].match(/\d+/)[0] : '';
-    let zemeAli = zemeParts.slice(6).join(' ').match(/\[(.*?)\]/) ? zemeParts.slice(6).join(' ').match(/\[(.*?)\]/)[1] : '';
+
+    // Extract zemeName, zemeNumber, and zemeAli from zemeParts[5]
+    let zemeName = zemeParts[5].split('(')[0].trim();
+    let zemeNumber = zemeParts[5].match(/\(#(\d+)\)/) ? zemeParts[5].match(/\(#(\d+)\)/)[1] : '';
+    let zemeAli = zemeParts[5].match(/\[(.*?)\]/) ? zemeParts[5].match(/\[(.*?)\]/)[1] : '';
+
     let zemePerson = zemeParts[7] ? zemeParts[7].trim() : '';
     let zemeRole = zemeParts[8] ? zemeParts[8].replace('(', '').replace(')', '') : '';
 
