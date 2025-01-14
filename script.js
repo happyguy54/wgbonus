@@ -2,14 +2,26 @@ function processData() {
     let inputText = document.getElementById('inputText').value;
     let lines = inputText.split("\n").map(line => line.trim()).filter(line => line !== '');
 
+    // Find the index of the line containing "Země"
+    let startIndex = lines.findIndex(line => line.includes('Země'));
+
+    // Ensure we have found the correct starting point
+    if (startIndex === -1 || startIndex + 5 >= lines.length) {
+        console.error('Invalid input format');
+        return;
+    }
+
+    // Trim the lines to only include useful information
+    lines = lines.slice(startIndex);
+
     // Names and values with an offset of 4
     let names = ['Země', 'Prestiž', 'Typ zprávy', 'Datum', 'Od'];
     let values = [
-        lines[4],  // Země
-        lines[5],  // Prestiž
-        lines[6],  // Typ zprávy
-        lines[7],  // Datum
-        lines[8]   // Od
+        lines[1],  // Země
+        lines[2],  // Prestiž
+        lines[3],  // Typ zprávy
+        lines[4],  // Datum
+        lines[5]   // Od
     ];
 
     // Create an object to store the names and their corresponding values
@@ -34,6 +46,9 @@ function processData() {
     let odAli = odParts.slice(2).join(' ').match(/\[(.*?)\]/) ? odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1] : '';
     let odPerson = odParts[3] ? odParts[3].trim() : '';
     let odRole = odParts[4] ? odParts[4].replace('(', '').replace(')', '') : '';
+
+    // Base URL
+    let baseUrl = "https://gold.webgame.cz/wg/index.php";
 
     // Clear previous output
     let outputDiv = document.getElementById('output');
@@ -63,20 +78,20 @@ function processData() {
     let summaryValuesCell = document.createElement('td');
     summaryValuesCell.className = 'rdata r';
     summaryValuesCell.innerHTML = `
-        <a href="index.php?p=mail&amp;to_id=${zemeNumber}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=utok&amp;to_id=${zemeNumber}"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
-        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=rakety&amp;target=${zemeNumber}"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${zemeNumber}">${zemeName}</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${zemeAli}">[${zemeAli}]</a>
-        <a href="index.php?p=najitzem&amp;hpid=${zemeNumber}" class="pname"> - ${zemePerson}</a> 
+        <a href="${baseUrl}?p=mail&amp;to_id=${zemeNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="${baseUrl}?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}" target="_blank"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
+        <a href="${baseUrl}?p=valka&amp;s=utok&amp;to_id=${zemeNumber}" target="_blank"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
+        <a href="${baseUrl}?p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}" target="_blank"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
+        <a href="${baseUrl}?p=valka&amp;s=rakety&amp;target=${zemeNumber}" target="_blank"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
+        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${zemeNumber}" target="_blank">${zemeName}</a>
+        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${zemeAli}" target="_blank">[${zemeAli}]</a>
+        <a href="${baseUrl}?p=najitzem&amp;hpid=${zemeNumber}" class="pname" target="_blank"> - ${zemePerson}</a> 
         <span class="ocas" style="color:silver">${zemeRole ? `(${zemeRole})` : ''}</span><br>
         ${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
-        <a href="index.php?p=mail&amp;to_id=${odNumber}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${odNumber}">${odName}</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${odAli}">[${odAli}]</a>
-        <a href="index.php?p=najitzem&amp;hpid=${odNumber}" class="pname"> - ${odPerson}</a> 
+        <a href="${baseUrl}?p=mail&amp;to_id=${odNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${odNumber}" target="_blank">${odName}</a>
+        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${odAli}" target="_blank">[${odAli}]</a>
+        <a href="${baseUrl}?p=najitzem&amp;hpid=${odNumber}" class="pname" target="_blank"> - ${odPerson}</a> 
         <span class="ocas" style="color:silver">${odRole ? `(${odRole})` : ''}</span>
     `;
     summaryRow.appendChild(summaryValuesCell);
