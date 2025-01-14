@@ -41,11 +41,49 @@ function processData() {
 
     let odParts = data['Od'].split(' ');
     console.log('odParts:', odParts); // Log odParts to see its content
-    let odName = odParts.slice(2).join(' ').split('[')[0].trim();
-    let odNumber = odParts[1] ? odParts[1].match(/\d+/)[0] : '';
-    let odAli = odParts.slice(2).join(' ').match(/\[(.*?)\]/) ? odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1] : '';
+
+    // Extract odName, odNumber, and odAli from odParts[1]
+    let odName = odParts[1].split('(')[0].trim();
+    let odNumber = odParts[1].match(/\(#(\d+)\)/) ? odParts[1].match(/\(#(\d+)\)/)[1] : '';
+    let odAli = odParts[1].match(/\[(.*?)\]/) ? odParts[1].match(/\[(.*?)\]/)[1] : '';
+
     let odPerson = odParts[3] ? odParts[3].trim() : '';
     let odRole = odParts[4] ? odParts[4].replace('(', '').replace(')', '') : '';
+
+    // Find the index of the line containing "Jednotky"
+    let unitsIndex = lines.findIndex(line => line.includes('Jednotky'));
+
+    // Ensure we have found the correct starting point
+    if (unitsIndex === -1 || unitsIndex + 15 >= lines.length) {
+        console.error('Invalid input format');
+        return;
+    }
+
+    // Extract names and values for jednotky, budovy, and technologie
+    let jednotky = [];
+    let budovy = [];
+    let technologie = [];
+
+    let spokojenost = '';
+    let vlada = '';
+    let rozloha = '';
+
+    // Shift value for the corresponding values
+    const shift = 8;
+
+    // Extract names for jednotky
+    for (let i = unitsIndex + 1; i < unitsIndex + 6; i++) {
+        let value = i === unitsIndex + 1 ? parseInt(lines[unitsIndex + 8].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        jednotky.push({ name: lines[i], value: value });
+    }
+
+    // Extract spokojenost, vlada, and rozloha
+    spokojenost = lines[unitsIndex + 6];
+    //convert 80.81% to 80.81
+    spokojenost = spokojenost.replace('%', '');
+    spokojenost = parseFloat(spokojenost);
+    vlada = lines[unitsIndex + 7];
+    rozloha = parseInt(lines[unitsIndex + shift].split('\t')[0]);
 
     // Base URL
     let baseUrl = "https://gold.webgame.cz/wg/index.php";
@@ -100,6 +138,64 @@ function processData() {
     summaryTableBody.appendChild(document.createElement('tr')).innerHTML = '<td colspan="2"></td>';
     summaryTable.appendChild(summaryTableBody);
     container.appendChild(summaryTable);
+
+    // Append the container to the output div
+    outputDiv.appendChild(container);
+
+    // Create and append detail table
+    let detailTable = document.createElement('table');
+    detailTable.id = 'spy-message-detail';
+    detailTable.className = 'vis_tbl vtop';
+    let detailTableBody = document.createElement('tbody');
+
+    // Create header row
+    let headerRow = document.createElement('tr');
+    headerRow.innerHTML = `
+        <th colspan="2">Jednotky</th>
+        <th colspan="2">Budovy</th>
+        <th colspan="2">Technologie</th>
+    `;
+    detailTableBody.appendChild(headerRow);
+
+    // Create data row
+    let dataRow = document.createElement('tr');
+
+    // Jednotky
+    let jednotkyNamesCell = document.createElement('td');
+    jednotkyNamesCell.className = 'rname l';
+    jednotkyNamesCell.innerHTML = jednotky.map(j => j.name).join('<br>');
+    dataRow.appendChild(jednotkyNamesCell);
+
+    let jednotkyValuesCell = document.createElement('td');
+    jednotkyValuesCell.className = 'rdata r';
+    jednotkyValuesCell.innerHTML = jednotky.map(j => j.value).join('<br>');
+    dataRow.appendChild(jednotkyValuesCell);
+
+    // Budovy
+    let budovyNamesCell = document.createElement('td');
+    budovyNamesCell.className = 'rname l';
+    budovyNamesCell.innerHTML = budovy.map(b => b.name).join('<br>');
+    dataRow.appendChild(budovyNamesCell);
+
+    let budovyValuesCell = document.createElement('td');
+    budovyValuesCell.className = 'rdata r';
+    budovyValuesCell.innerHTML = budovy.map(b => b.value).join('<br>');
+    dataRow.appendChild(budovyValuesCell);
+
+    // Technologie
+    let technologieNamesCell = document.createElement('td');
+    technologieNamesCell.className = 'rname l';
+    technologieNamesCell.innerHTML = technologie.map(t => t.name).join('<br>');
+    dataRow.appendChild(technologieNamesCell);
+
+    let technologieValuesCell = document.createElement('td');
+    technologieValuesCell.className = 'rdata r';
+    technologieValuesCell.innerHTML = technologie.map(t => t.value).join('<br>');
+    dataRow.appendChild(technologieValuesCell);
+
+    detailTableBody.appendChild(dataRow);
+    detailTable.appendChild(detailTableBody);
+    container.appendChild(detailTable);
 
     // Append the container to the output div
     outputDiv.appendChild(container);
