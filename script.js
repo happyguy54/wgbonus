@@ -17,11 +17,11 @@ function processData() {
     // Names and values with an offset of 4
     let names = ['Země', 'Prestiž', 'Typ zprávy', 'Datum', 'Od'];
     let values = [
-        lines[1],  // Země
-        lines[2],  // Prestiž
-        lines[3],  // Typ zprávy
-        lines[4],  // Datum
-        lines[5]   // Od
+        lines[4],  // Země
+        lines[5],  // Prestiž
+        lines[6],  // Typ zprávy
+        lines[7],  // Datum
+        lines[8]   // Od
     ];
 
     // Create an object to store the names and their corresponding values

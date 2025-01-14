@@ -29,6 +29,16 @@ textarea.inputText {
 	border-radius: 5px;
 }
 
+a {
+	font-weight: bold;
+	font-size: 13px;
+	font-style:normal;
+	color: #d5e396;
+	background-color:  transparent;
+	text-decoration: none;
+	cursor:pointer;
+}
+
 a:hover {
 	text-decoration: underline;
 }
