@@ -32,8 +32,8 @@ function processData() {
     let odName = odParts.slice(2).join(' ').split('[')[0].trim();
     let odNumber = odParts[1] ? odParts[1].match(/\d+/)[0] : '';
     let odAli = odParts.slice(2).join(' ').match(/\[(.*?)\]/) ? odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1] : '';
-    let odPerson = lines[10] ? lines[10].split('-')[1].trim().split(' ')[0] : '';
-    let odRole = lines[10] && lines[10].includes('(') ? lines[10].split('(')[1].split(')')[0] : '';
+    let odPerson = odParts[3] ? odParts[3].trim() : '';
+    let odRole = odParts[4] ? odParts[4].replace('(', '').replace(')', '') : '';
 
     // Clear previous output
     let outputDiv = document.getElementById('output');
