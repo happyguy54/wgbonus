@@ -21,21 +21,19 @@ function processData() {
     // Extract dynamic values from the input text
     let zemeParts = data['Země'].split(' ');
     console.log('zemeParts:', zemeParts); // Log zemeParts to see its content
-    let zemeId = zemeParts[5] ? zemeParts[5].match(/\d+/)[0] : '';
-    let zemeName = zemeParts.slice(6).join(' ').split('[')[0].trim();
-    let zemeTag = zemeParts.slice(6).join(' ').match(/\[(.*?)\]/) ? zemeParts.slice(6).join(' ').match(/\[(.*?)\]/)[1] : '';
-    let zemeHpid = lines[9] ? lines[9].match(/\d+/)[0] : '';
-    let zemePerson = lines[9] ? lines[9].split('-')[1].trim().split(' ')[0] : '';
-    let zemeRole = lines[9] ? lines[9].split('(')[1].split(')')[0] : '';
+    let zemeName = zemeParts.slice(5).join(' ').split('[')[0].trim();
+    let zemeNumber = zemeParts[5] ? zemeParts[5].match(/\d+/)[0] : '';
+    let zemeAli = zemeParts.slice(6).join(' ').match(/\[(.*?)\]/) ? zemeParts.slice(6).join(' ').match(/\[(.*?)\]/)[1] : '';
+    let zemePerson = zemeParts[7] ? zemeParts[7].trim() : '';
+    let zemeRole = zemeParts[8] ? zemeParts[8].replace('(', '').replace(')', '') : '';
 
     let odParts = data['Od'].split(' ');
     console.log('odParts:', odParts); // Log odParts to see its content
-    let odId = odParts[1] ? odParts[1].match(/\d+/)[0] : '';
     let odName = odParts.slice(2).join(' ').split('[')[0].trim();
-    let odTag = odParts.slice(2).join(' ').match(/\[(.*?)\]/) ? odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1] : '';
-    let odHpid = lines[10] ? lines[10].match(/\d+/)[0] : '';
+    let odNumber = odParts[1] ? odParts[1].match(/\d+/)[0] : '';
+    let odAli = odParts.slice(2).join(' ').match(/\[(.*?)\]/) ? odParts.slice(2).join(' ').match(/\[(.*?)\]/)[1] : '';
     let odPerson = lines[10] ? lines[10].split('-')[1].trim().split(' ')[0] : '';
-    let odRole = lines[10] ? lines[10].split('(')[1].split(')')[0] : '';
+    let odRole = lines[10] && lines[10].includes('(') ? lines[10].split('(')[1].split(')')[0] : '';
 
     // Clear previous output
     let outputDiv = document.getElementById('output');
@@ -65,21 +63,21 @@ function processData() {
     let summaryValuesCell = document.createElement('td');
     summaryValuesCell.className = 'rdata r';
     summaryValuesCell.innerHTML = `
-        <a href="index.php?p=mail&amp;to_id=${zemeId}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeId}"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=utok&amp;to_id=${zemeId}"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
-        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=${zemeId}"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
-        <a href="index.php?p=valka&amp;s=rakety&amp;target=${zemeId}"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${zemeId}">${zemeName}</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${zemeTag}">[${zemeTag}]</a>
-        <a href="index.php?p=najitzem&amp;hpid=${zemeHpid}" class="pname"> - ${zemePerson}</a> 
-        <span class="ocas" style="color:silver">(${zemeRole})</span><br>
+        <a href="index.php?p=mail&amp;to_id=${zemeNumber}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="index.php?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
+        <a href="index.php?p=valka&amp;s=utok&amp;to_id=${zemeNumber}"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
+        <a href="index.php?p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
+        <a href="index.php?p=valka&amp;s=rakety&amp;target=${zemeNumber}"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
+        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${zemeNumber}">${zemeName}</a>
+        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${zemeAli}">[${zemeAli}]</a>
+        <a href="index.php?p=najitzem&amp;hpid=${zemeNumber}" class="pname"> - ${zemePerson}</a> 
+        <span class="ocas" style="color:silver">${zemeRole ? `(${zemeRole})` : ''}</span><br>
         ${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
-        <a href="index.php?p=mail&amp;to_id=${odId}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${odId}">${odName}</a>
-        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${odTag}">[${odTag}]</a>
-        <a href="index.php?p=najitzem&amp;hpid=${odHpid}" class="pname"> - ${odPerson}</a> 
-        <span class="ocas" style="color:silver">(${odRole})</span>
+        <a href="index.php?p=mail&amp;to_id=${odNumber}"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="index.php?p=najit&amp;s=najitzem&amp;hid=${odNumber}">${odName}</a>
+        <a href="index.php?p=najit&amp;s=najittag&amp;tag=${odAli}">[${odAli}]</a>
+        <a href="index.php?p=najitzem&amp;hpid=${odNumber}" class="pname"> - ${odPerson}</a> 
+        <span class="ocas" style="color:silver">${odRole ? `(${odRole})` : ''}</span>
     `;
     summaryRow.appendChild(summaryValuesCell);
 
