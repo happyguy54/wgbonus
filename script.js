@@ -69,7 +69,7 @@ function processData() {
     let rozloha = '';
 
     // Shift value for the corresponding values
-    const shift = 8;
+    const shift = 7;
 
     // Extract names for jednotky
     for (let i = unitsIndex + 1; i < unitsIndex + 6; i++) {
