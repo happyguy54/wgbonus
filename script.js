@@ -78,18 +78,27 @@ function processData() {
     }
 
     // Extract spokojenost, vlada, and rozloha
-    spokojenost = lines[unitsIndex + 6];
+    spokojenost = lines[unitsIndex + 6 + shift];
     //convert 80.81% to 80.81
     spokojenost = spokojenost.replace('%', '');
     spokojenost = parseFloat(spokojenost);
-    vlada = lines[unitsIndex + 7];
-    rozloha = parseInt(lines[unitsIndex + shift].split('\t')[0]);
+    vlada = lines[unitsIndex + 7 + shift];
+    rozloha = parseInt(lines[unitsIndex + 8 + shift].split('\t')[0]);
 
-    // Extract names and values for budovy and technologie
-    for (let i = unitsIndex + 9; i < lines.length; i += 2) {
-        if (lines[i].includes('Rozloha')) break;
-        budovy.push({ name: lines[i], value: parseInt(lines[i + 1]) || 0 });
-        technologie.push({ name: lines[i], value: parseInt(lines[i + 1]) || 0 });
+    // Extract names and values for budovy
+    for (let i = unitsIndex + 9; i < unitsIndex + 22; i++) {
+        let parts = lines[i].split('\t');
+        let name = parts[1] ? parts[1] : parts[0];
+        let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
+        budovy.push({ name: name, value: value });
+    }
+
+    // Extract names and values for technologie
+    for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
+        let parts = lines[i].split('\t');
+        let name = parts[1] ? parts[1] : parts[0];
+        let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
+        technologie.push({ name: name, value: value });
     }
 
     // Base URL
