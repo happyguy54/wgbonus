@@ -85,6 +85,13 @@ function processData() {
     vlada = lines[unitsIndex + 7];
     rozloha = parseInt(lines[unitsIndex + shift].split('\t')[0]);
 
+    // Extract names and values for budovy and technologie
+    for (let i = unitsIndex + 9; i < lines.length; i += 2) {
+        if (lines[i].includes('Rozloha')) break;
+        budovy.push({ name: lines[i], value: parseInt(lines[i + 1]) || 0 });
+        technologie.push({ name: lines[i], value: parseInt(lines[i + 1]) || 0 });
+    }
+
     // Base URL
     let baseUrl = "https://gold.webgame.cz/wg/index.php";
 
@@ -139,9 +146,6 @@ function processData() {
     summaryTable.appendChild(summaryTableBody);
     container.appendChild(summaryTable);
 
-    // Append the container to the output div
-    outputDiv.appendChild(container);
-
     // Create and append detail table
     let detailTable = document.createElement('table');
     detailTable.id = 'spy-message-detail';
@@ -163,12 +167,12 @@ function processData() {
     // Jednotky
     let jednotkyNamesCell = document.createElement('td');
     jednotkyNamesCell.className = 'rname l';
-    jednotkyNamesCell.innerHTML = jednotky.map(j => j.name).join('<br>');
+    jednotkyNamesCell.innerHTML = `${jednotky.map(j => j.name).join('<br>')}<br><br>Spokojenost<br><br>Vláda<br>Rozloha`;
     dataRow.appendChild(jednotkyNamesCell);
 
     let jednotkyValuesCell = document.createElement('td');
     jednotkyValuesCell.className = 'rdata r';
-    jednotkyValuesCell.innerHTML = jednotky.map(j => j.value).join('<br>');
+    jednotkyValuesCell.innerHTML = `${jednotky.map(j => j.value).join('<br>')}<br><br>${spokojenost}%<br><br>${vlada}<br>${rozloha}`;
     dataRow.appendChild(jednotkyValuesCell);
 
     // Budovy
