@@ -94,9 +94,9 @@ function processData() {
     }
     shift = 12;
     // Extract names and values for budovy
-    for (let i = buildingsIndex; i < buildingsIndex + 12; i++) {
-        let value = i === buildingsIndex ? parseInt(lines[unitsIndex + 13].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
-        budovy.push({ name: lines[i], value: value });
+    for (let i = buildingsIndex; i < buildingsIndex + 13; i++) {
+        let value = i === buildingsIndex ? parseInt(lines[buildingsIndex + 12].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        budovy.push({ name: i === buildingsIndex ? lines[i].split('\t')[2] : lines[i], value: value });
     }
     // for (let i = unitsIndex + 9; i < unitsIndex + 22; i++) {
     //     let parts = lines[i].split('\t');
@@ -104,14 +104,24 @@ function processData() {
     //     let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
     //     budovy.push({ name: name, value: value });
     // }
-
-    // Extract names and values for technologie
-    for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
-        let parts = lines[i].split('\t');
-        let name = parts[1] ? parts[1] : parts[0];
-        let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
-        technologie.push({ name: name, value: value });
+    let technologieIndex = lines.findIndex(line => line.includes('Rychlost stavby'));
+    // Ensure we have found the correct starting point
+    if (technologieIndex === -1 || technologieIndex + 15 >= lines.length) {
+        console.error('Invalid input format');
+        return;
     }
+    shift = 12;
+    // Extract names and values for technologie
+    for (let i = technologieIndex; i < technologieIndex + 13; i++) {
+        let value = i === technologieIndex ? parseInt(lines[technologieIndex + 12].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        technologie.push({ name: i === technologieIndex ? lines[i].split('\t')[1] + lines[i].split('\t')[2] : (i === buildingsIndex + 12 ? lines[i].split('\t')[0] : lines[i]), value: value });
+    }
+    // for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
+    //     let parts = lines[i].split('\t');
+    //     let name = parts[1] ? parts[1] : parts[0];
+    //     let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
+    //     technologie.push({ name: name, value: value });
+    // }
 
     // Base URL
     let baseUrl = "https://gold.webgame.cz/wg/index.php";
@@ -193,7 +203,7 @@ function processData() {
 
     let jednotkyValuesCell = document.createElement('td');
     jednotkyValuesCell.className = 'rdata r';
-    jednotkyValuesCell.innerHTML = `${jednotky.map(j => j.value).join('<br>')}<br><br>${spokojenost}%<br><br>${vlada}<br>${rozloha}`;
+    jednotkyValuesCell.innerHTML = `${jednotky.map(j => j.value).join('<br>')}<br><br>${spokojenost}%<br><br>${vlada}<br>${rozloha} km²`;
     dataRow.appendChild(jednotkyValuesCell);
 
     // Budovy
