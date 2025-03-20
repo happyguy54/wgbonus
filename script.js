@@ -92,11 +92,11 @@ function processData() {
         console.error('Invalid input format');
         return;
     }
-    shift = 12;
+    shift = 13;
     // Extract names and values for budovy
-    for (let i = buildingsIndex; i < buildingsIndex + 13; i++) {
-        let value = i === buildingsIndex ? parseInt(lines[buildingsIndex + 12].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
-        budovy.push({ name: i === buildingsIndex ? lines[i].split('\t')[2] : lines[i], value: value });
+    for (let i = buildingsIndex; i < buildingsIndex + shift; i++) {
+        let value = i === buildingsIndex ? parseInt(lines[buildingsIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        budovy.push({ name: i === buildingsIndex ? lines[i].split('\t')[1] : lines[i], value: value });
     }
     // for (let i = unitsIndex + 9; i < unitsIndex + 22; i++) {
     //     let parts = lines[i].split('\t');
@@ -110,11 +110,11 @@ function processData() {
         console.error('Invalid input format');
         return;
     }
-    shift = 12;
+    shift = 13;
     // Extract names and values for technologie
-    for (let i = technologieIndex; i < technologieIndex + 13; i++) {
-        let value = i === technologieIndex ? parseInt(lines[technologieIndex + 12].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
-        technologie.push({ name: i === technologieIndex ? lines[i].split('\t')[1] + lines[i].split('\t')[2] : (i === technologieIndex + 12 ? lines[i].split('\t')[0] : lines[i]), value: value });
+    for (let i = technologieIndex; i < technologieIndex + shift; i++) {
+        let value = i === technologieIndex ? parseInt(lines[technologieIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        technologie.push({ name: i === technologieIndex ? lines[i].split('\t')[1] : (i === technologieIndex + 12 ? lines[i].split('\t')[0] : lines[i]), value: value });
     }
     // for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
     //     let parts = lines[i].split('\t');
