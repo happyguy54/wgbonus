@@ -37,7 +37,7 @@ function processData() {
     let zemeAli = zemeParts[10].match(/\[(.*?)\]/) ? zemeParts[10].match(/\[(.*?)\]/)[1] : '';
 
     let zemePerson = zemeParts[12] ? zemeParts[12].trim() : '';
-    let zemeRole = zemeParts[13] ? zemeParts[12].replace('(', '').replace(')', '') : '';
+    let zemeRole = zemeParts[13] ? zemeParts[13].replace('(', '').replace(')', '') : '';
 
     let odParts = data['Od'].split(' ');
     console.log('odParts:', odParts); // Log odParts to see its content
