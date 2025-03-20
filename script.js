@@ -114,7 +114,7 @@ function processData() {
     // Extract names and values for technologie
     for (let i = technologieIndex; i < technologieIndex + shift; i++) {
         let value = i === technologieIndex ? parseInt(lines[technologieIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
-        technologie.push({ name: i === technologieIndex ? lines[i].split('\t')[1] : (i === technologieIndex + 12 ? lines[i].split('\t')[0] : lines[i]), value: value });
+        technologie.push({ name: i === technologieIndex ? lines[i].split('\t')[1] : (i === technologieIndex + shift ? lines[i].split('\t')[0] : lines[i]), value: value });
     }
     // for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
     //     let parts = lines[i].split('\t');
