@@ -32,12 +32,12 @@ function processData() {
     console.log('zemeParts:', zemeParts); // Log zemeParts to see its content
 
     // Extract zemeName, zemeNumber, and zemeAli from zemeParts[5]
-    let zemeName = zemeParts[5].split('(')[0].trim();
-    let zemeNumber = zemeParts[5].match(/\(#(\d+)\)/) ? zemeParts[5].match(/\(#(\d+)\)/)[1] : '';
-    let zemeAli = zemeParts[5].match(/\[(.*?)\]/) ? zemeParts[5].match(/\[(.*?)\]/)[1] : '';
+    let zemeName = zemeParts[10].split('(')[0].trim();
+    let zemeNumber = zemeParts[10].match(/\(#(\d+)\)/) ? zemeParts[5].match(/\(#(\d+)\)/)[1] : '';
+    let zemeAli = zemeParts[10].match(/\[(.*?)\]/) ? zemeParts[5].match(/\[(.*?)\]/)[1] : '';
 
-    let zemePerson = zemeParts[7] ? zemeParts[7].trim() : '';
-    let zemeRole = zemeParts[8] ? zemeParts[8].replace('(', '').replace(')', '') : '';
+    let zemePerson = zemeParts[12] ? zemeParts[7].trim() : '';
+    let zemeRole = zemeParts[13] ? zemeParts[8].replace('(', '').replace(')', '') : '';
 
     let odParts = data['Od'].split(' ');
     console.log('odParts:', odParts); // Log odParts to see its content
