@@ -85,13 +85,25 @@ function processData() {
     vlada = lines[unitsIndex + 7 + shift];
     rozloha = parseInt(lines[unitsIndex + 8 + shift].split('\t')[0]);
 
-    // Extract names and values for budovy
-    for (let i = unitsIndex + 9; i < unitsIndex + 22; i++) {
-        let parts = lines[i].split('\t');
-        let name = parts[1] ? parts[1] : parts[0];
-        let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
-        budovy.push({ name: name, value: value });
+    // Find the index of the line containing "Jednotky"
+    let buildingsIndex = lines.findIndex(line => line.includes('Vesnice'));
+    // Ensure we have found the correct starting point
+    if (buildingsIndex === -1 || buildingsIndex + 15 >= lines.length) {
+        console.error('Invalid input format');
+        return;
     }
+    shift = 12;
+    // Extract names and values for budovy
+    for (let i = buildingsIndex; i < buildingsIndex + 12; i++) {
+        let value = i === buildingsIndex ? parseInt(lines[unitsIndex + 13].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
+        budovy.push({ name: lines[i], value: value });
+    }
+    // for (let i = unitsIndex + 9; i < unitsIndex + 22; i++) {
+    //     let parts = lines[i].split('\t');
+    //     let name = parts[1] ? parts[1] : parts[0];
+    //     let value = parseInt(parts[1] ? parts[0] : lines[i + shift]) || 0;
+    //     budovy.push({ name: name, value: value });
+    // }
 
     // Extract names and values for technologie
     for (let i = unitsIndex + 22; i < unitsIndex + 35; i++) {
