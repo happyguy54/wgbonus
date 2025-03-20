@@ -92,9 +92,9 @@ function processData() {
         console.error('Invalid input format');
         return;
     }
-    shift = 10;
+    shift = 12;
     // Extract names and values for budovy
-    for (let i = buildingsIndex; i < buildingsIndex + shift + 3; i++) {
+    for (let i = buildingsIndex; i < buildingsIndex + shift + 1; i++) {
         let value = i === buildingsIndex ? parseInt(lines[buildingsIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
         let name = i === buildingsIndex ? lines[i].split('\t')[1] : (i === buildingsIndex + shift ? lines[i].split(' ')[0] : lines[i]);
         budovy.push({ name: name, value: value });
@@ -111,9 +111,9 @@ function processData() {
         console.error('Invalid input format');
         return;
     }
-    shift = 9;
+    shift = 11;
     // Extract names and values for technologie
-    for (let i = technologieIndex; i < technologieIndex + shift + 3; i++) {
+    for (let i = technologieIndex; i < technologieIndex + shift + 1; i++) {
         let value = i === technologieIndex ? parseInt(lines[technologieIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
         let name = i === technologieIndex ? lines[i].split('\t')[1] : (i === technologieIndex + shift ? lines[i].split('\t')[0] : lines[i]);
         technologie.push({ name: name, value: value });
