@@ -92,9 +92,9 @@ function processData() {
         console.error('Invalid input format');
         return;
     }
-    shift = 13;
+    shift = 11;
     // Extract names and values for budovy
-    for (let i = buildingsIndex; i < buildingsIndex + shift; i++) {
+    for (let i = buildingsIndex; i < buildingsIndex + shift + 2; i++) {
         let value = i === buildingsIndex ? parseInt(lines[buildingsIndex + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
         budovy.push({ name: i === buildingsIndex ? lines[i].split('\t')[1] : lines[i], value: value });
     }
