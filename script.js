@@ -238,14 +238,15 @@ function appendRefreshButton(container) {
 
 function refreshBonuses() {
     // Get updated values from inputs
-    const pripravenost = parseFloat(document.getElementById('pripravenost').value) || 100;
-    const spokojenost = parseFloat(document.getElementById('spokojenost').value) || 100;
-    const silaZbraniEffect = parseFloat(document.getElementById('silaZbraniEffect').value) || 0;
-    const zkušenostiEffect = parseFloat(document.getElementById('zkušenostiEffect').value) || 25;
-    const vojenskeZakladny = parseFloat(document.getElementById('vojenskeZakladny').value) || 0;
+    const pripravenost = parseFloat(document.getElementById('input-pripravenost').value) || 100;
+    const spokojenost = parseFloat(document.getElementById('input-spokojenost').value) || 100;
+    const silaZbraniEffect = parseFloat(document.getElementById('input-silaZbraniEffect').value) || 0;
+    const zkušenostiEffect = parseFloat(document.getElementById('input-zkušenostiEffect').value) || 25;
+    const vojenskeZakladny = parseFloat(document.getElementById('input-vojenskeZakladny').value) || 0;
+    const plazmy = parseFloat(document.getElementById('input-plazmy').value) || 0;
+
     const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
     const vlada = document.getElementById('Vláda')?.textContent || '';
-    const plazmy = parseFloat(document.getElementById('plazmy').value) || 0;
 
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
@@ -260,6 +261,7 @@ function refreshBonuses() {
     // Recalculate and update the final bonus
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
+}
 
 // Calculate the effect of silaZbrani
 function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, plazmy = 0) {

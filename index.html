@@ -31,18 +31,44 @@
         <button class="submit" onclick="processData()">Zpracovat</button>
         <div id="editableInputs">
             <h3>Upravitelné hodnoty</h3>
-            <label for="pripravenost">Připravenost:</label>
-            <input id="pripravenost" type="number" value="100" style="width: 100px;"><br>
-            <label for="spokojenost">Spokojenost:</label>
-            <input id="spokojenost" type="number" value="100" style="width: 100px;"><br>
-            <label for="silaZbraniEffect">Síla zbraní:</label>
-            <input id="silaZbraniEffect" type="number" value="0" style="width: 100px;"><br>
-            <label for="zkušenostiEffect">Zkušenosti:</label>
-            <input id="zkušenostiEffect" type="number" value="25" style="width: 100px;"><br>
-            <label for="vojenskeZakladny">Vojenské základny:</label>
-            <input id="vojenskeZakladny" type="number" value="0" style="width: 100px;"><br>
-            <label for="plazmy">Plazmy:</label>
-            <input id="plazmy" type="number" value="0" style="width: 100px;"><br>
+            <table>
+                <tr>
+                    <td class="l">
+                        <label for="input-pripravenost">Připravenost:</label>
+                        <input class="short" id="input-pripravenost" name="pripravenost" type="text" size="6" value="100"> z 100
+                    </td>
+                </tr>
+                <tr>
+                    <td class="l">
+                        <label for="input-spokojenost">Spokojenost:</label>
+                        <input class="short" id="input-spokojenost" name="spokojenost" type="text" size="6" value="100"> z 100
+                    </td>
+                </tr>
+                <tr>
+                    <td class="l">
+                        <label for="input-silaZbraniEffect">Síla zbraní:</label>
+                        <input class="short" id="input-silaZbraniEffect" name="silaZbraniEffect" type="text" size="6" value="0"> z 100
+                    </td>
+                </tr>
+                <tr>
+                    <td class="l">
+                        <label for="input-zkušenostiEffect">Zkušenosti:</label>
+                        <input class="short" id="input-zkušenostiEffect" name="zkušenostiEffect" type="text" size="6" value="25"> z 100
+                    </td>
+                </tr>
+                <tr>
+                    <td class="l">
+                        <label for="input-vojenskeZakladny">Vojenské základny:</label>
+                        <input class="short" id="input-vojenskeZakladny" name="vojenskeZakladny" type="text" size="6" value="0"> z 100
+                    </td>
+                </tr>
+                <tr>
+                    <td class="l">
+                        <label for="input-plazmy">Plazmy:</label>
+                        <input class="short" id="input-plazmy" name="plazmy" type="text" size="6" value="0"> z 100
+                    </td>
+                </tr>
+            </table>
             <button class="submit" onclick="refreshBonuses()">Refresh</button>
         </div>
     </div>
