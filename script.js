@@ -219,7 +219,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const zkušenostiEffect = 25; // Default value
     //extract from pokroky plazmy
     plazmy = pokroky.find(p => p.name === 'plazmy')?.value || 0;
-    const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = 0);
+    const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
     // const spokojenostBonus = calculateSpokojenostBonus(vlada, budovy.find(b => b.name === 'Zábavní střediska')?.value || 0, rozloha);
@@ -295,7 +295,7 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
 
 function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost) {
     const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * (1 + (zkušenostiEffect) / 100) * (1 + (spokojenostEffect) / 100) * ((pripravenost) / 100);
-
+    return (finalBonus * 100 - 100).toFixed(2);
 }
 function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus) {
     const table = document.createElement('table');
