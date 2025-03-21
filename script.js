@@ -12,7 +12,9 @@ function processData() {
     // Clear the output container before appending new elements
     const outputDiv = document.getElementById('output');
     outputDiv.innerHTML = ''; // Clear all existing content
-
+    const pokroky = [
+        { name: 'plazmy', value: 0 } // Default placeholder
+    ];
     appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
     appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, jednotky, pokroky = []);
