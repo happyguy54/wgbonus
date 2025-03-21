@@ -361,7 +361,7 @@ function calculateAttackDefense(jednotky) {
     let totalDefense = 0;
 
     jednotky.forEach(unit => {
-        const stats = unitStats[unit.name.toLowerCase()];
+        const stats = unitStats[unit.name];
         if (stats) {
             totalAttack += unit.value * stats.attack;
             totalDefense += unit.value * stats.defense;
