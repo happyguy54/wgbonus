@@ -236,12 +236,28 @@ function processData() {
 
     // Append the container to the output div
     outputDiv.appendChild(container);
-
+    let plazmy = false;
+    //function to set custom values for all bonuses
+    function setCustomValues() {
+    }
     function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost) {
         // Extract relevant values from the input
         const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
         const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
-    
+        
+        // Calculate the effect of vojenskeZakladny
+        const a = 0.2, b = 0.2, c = 11;
+        const x = vojenskeZakladny / rozloha;
+        const zakladnyEffect = a - b * Math.exp(-c * x);
+        // chekc if name of zrizeni is Fundamentalismus
+        if (budovy.find(b => b.name === 'Fundamentalismus')) {
+            zakladnyEffect *= 1.5;
+        }
+        if (plazmy) {
+            zakladnyEffect *= 1.25;
+        }
+        const zakladnyEffectPercentage = (zakladnyEffect * 100).toFixed(1); // Convert to percentage and format
+
         // Table for "Síla armády: Bonusy"
         let bonusTable = document.createElement('table');
         bonusTable.id = 'war-bonuses';
@@ -260,7 +276,7 @@ function processData() {
             </tr>
             <tr>
                 <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
-                <td class="plus">+26.7%</td>
+                <td class="plus">+${zakladnyEffectPercentage}%</td>
             </tr>
             <tr>
                 <td class="rname l">Zkušenosti  (189813)</td>
