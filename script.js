@@ -328,10 +328,10 @@ function refreshBonuses() {
     const generalLevel = parseFloat(document.getElementById('input-generaloveLevel').value) || 0;
 
     const generals = {
-        nacionalista: document.getElementById('checkbox-nacionalista').checked,
-        strateg: document.getElementById('checkbox-strateg').checked,
-        ochranca: document.getElementById('checkbox-ochranca').checked,
-        vlastenec: document.getElementById('checkbox-vlastenec').checked,
+        nacionalista: document.getElementById('checkbox-Nacionalista').checked,
+        strateg: document.getElementById('checkbox-Stratég').checked,
+        ochranca: document.getElementById('checkbox-Ochránca').checked,
+        vlastenec: document.getElementById('checkbox-Vlastenec').checked,
     };
 
     // Recalculate bonuses
