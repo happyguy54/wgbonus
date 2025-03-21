@@ -290,14 +290,19 @@ function refreshBonuses() {
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
-    const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
+    const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
 
     // Update the DOM with new values
     document.getElementById('pripravenost').textContent = `${pripravenost}%`;
     document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
-    document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
+    document.getElementById('silaZbraniEffect').textContent = `+${silaZbraniEffect}%`;
+    document.getElementById('vojenskeZakladny').textContent = `Vojenské základny (${vojenskeZakladny})`;
     document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
+    document.getElementById('zkušenostiEffect').textContent = `+${zkušenostiEffect}%`;
+    document.getElementById('spokojenost').textContent = `Spokojenost (${spokojenost}%)`;
+    document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
+
 
     // Recalculate and update the final bonus
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
