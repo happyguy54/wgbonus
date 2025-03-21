@@ -73,13 +73,13 @@ function extractSummaryData(lines) {
 
 // Extract details for jednotky, budovy, technologie, and other fields
 function extractDetails(lines) {
-    const unitsIndex = lines.findIndex(line => line.includes('Jednotky'));
+    const unitsIndex = lines.findIndex(line => line.includes('Vojáci'));
     if (unitsIndex === -1 || unitsIndex + 15 >= lines.length) {
         console.error('Invalid input format');
         return {};
     }
 
-    const jednotky = extractSection(lines, unitsIndex + 1, 5, 7);
+    const jednotky = extractSection(lines, unitsIndex, 5, 7);
     const spokojenost = parseFloat(lines[unitsIndex + 13].replace('%', ''));
     const vlada = lines[unitsIndex + 14];
     const rozloha = parseInt(lines[unitsIndex + 15].split('\t')[0]);
@@ -97,7 +97,7 @@ function extractDetails(lines) {
 function extractSection(lines, startIndex, count, shift) {
     const section = [];
     for (let i = startIndex; i < startIndex + count; i++) {
-        const value = i === startIndex ? parseInt(lines[i + shift]/split('\t')[1]) : parseInt(lines[i + shift]);
+        const value = i === startIndex ? parseInt(lines[i + shift].split('\t')[1]) : parseInt(lines[i + shift]);
         const name = (() => {
             if (count === 5) return lines[i];
             if (i === startIndex) return lines[i].split('\t')[1];
