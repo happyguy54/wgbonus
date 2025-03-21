@@ -39,6 +39,8 @@ function extractSummaryData(lines) {
 
     // Extract dynamic values from "Země" and "Od"
     const zemeParts = data['Země'].split(' ');
+    console.log('zemeParts:', zemeParts); // Log zemeParts to see its content
+
     const zemeName = zemeParts[10]?.split('(')[0]?.trim() || '';
     const zemeNumber = zemeParts[10]?.match(/\(#(\d+)\)/)?.[1] || '';
     const zemeAli = zemeParts[10]?.match(/\[(.*?)\]/)?.[1] || '';
@@ -47,6 +49,7 @@ function extractSummaryData(lines) {
 
     const odParts = data['Od'].split(' ');
     const odName = odParts[1]?.split('(')[0]?.trim() || '';
+    console.log('odParts:', odParts); // Log odParts to see its content
     const odNumber = odParts[1]?.match(/\(#(\d+)\)/)?.[1] || '';
     const odAli = odParts[1]?.match(/\[(.*?)\]/)?.[1] || '';
     const odPerson = odParts[3]?.trim() || '';
