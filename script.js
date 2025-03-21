@@ -11,7 +11,8 @@ function processData() {
 
     appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
-    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada);
+    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = 0);
+    appendRefreshButton(container);
 
     document.getElementById('output').appendChild(container);
 }
@@ -200,24 +201,52 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha) {
 }
 
 // Append the bonus and attack/defense tables
-function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada) {
+function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky) {
     const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
     const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
 
-    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada);
+    const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, plazmy);
+    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
+    const spokojenostEffect = (spokojenost - 100) / 2;
     const spokojenostBonus = calculateSpokojenostBonus(vlada, budovy.find(b => b.name === 'Zábavní střediska')?.value || 0, rozloha);
 
     // Create and append the tables
-    container.appendChild(createBonusTable(silaZbrani, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostBonus));
+    container.appendChild(createBonusTable(silaZbrani, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, finalBonus));
     container.appendChild(createAttackDefenseTable());
 }
 
+function appendRefreshButton(container) {
+    const button = document.createElement('button');
+    button.textContent = 'Refresh';
+    button.onclick = refreshBonuses; // Attach the refresh function
+    container.appendChild(button);
+}
+
+function refreshBonuses() {
+    // Get updated values from inputs
+    const pripravenost = parseFloat(document.getElementById('pripravenost').value) || 100;
+    const spokojenost = parseFloat(document.getElementById('spokojenost').value) || 100;
+
+    // Recalculate bonuses
+    const pripravenostBonus = (100 - pripravenost).toFixed(1);
+    const spokojenostBonus = calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha);
+
+    // Update the DOM with new values
+    document.getElementById('pripravenostBonus').textContent = `-${pripravenostBonus}%`;
+    document.getElementById('spokojenostBonus').textContent = `+${spokojenostBonus}%`;
+
+    // Recalculate and update the final bonus
+    const finalBonus = calculateFinalBonus(pripravenostBonus, spokojenostBonus); // Implement this function as needed
+    document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
+}
+
 // Calculate the effect of vojenskeZakladny
-function calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada) {
+function calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0) {
     const a = 0.2, b = 0.2, c = 11;
     const x = vojenskeZakladny / rozloha;
     let effect = a - b * Math.exp(-c * x);
     if (vlada === 'Fundamentalismus') effect *= 1.5;
+    if (plazmy > 0) effect *= 1.25;
     return (effect * 100).toFixed(1);
 }
 
@@ -226,9 +255,9 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
     const c = 0.09;
     let a, b;
 
-    if (['Demo', 'Fund'].includes(vlada)) {
+    if (['Demokracie', 'Fundamentalismus'].includes(vlada)) {
         a = 34; b = 34;
-    } else if (['Rep', 'Feud', 'Anar', 'Utop', 'Tech'].includes(vlada)) {
+    } else if (['Republika', 'Feudalismus', 'Anarchie', 'Utopie', 'Technokracie'].includes(vlada)) {
         a = 27; b = 27;
     } else {
         a = 20; b = 20;
@@ -238,8 +267,7 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
     return (a - b * Math.exp(-c * x)).toFixed(1);
 }
 
-// Create the bonus table
-function createBonusTable(silaZbrani, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostBonus) {
+function createBonusTable(silaZbrani, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostBonus, pripravenost, finalBonus) {
     const table = document.createElement('table');
     table.id = 'war-bonuses';
     table.className = 'vis_tbl';
@@ -247,11 +275,26 @@ function createBonusTable(silaZbrani, vojenskeZakladny, zakladnyEffect, spokojen
     const tbody = document.createElement('tbody');
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
-        <tr><td class="rname l">Připravenost (99%)</td><td class="minus">-1%</td></tr>
-        <tr><td class="rname l">Technologie Síla zbraní (${silaZbrani})</td><td class="plus">+24%</td></tr>
-        <tr><td class="rname l">Vojenské základny (${vojenskeZakladny})</td><td class="plus">+${zakladnyEffect}%</td></tr>
-        <tr><td class="rname l">Spokojenost (${spokojenost}%)</td><td class="plus">+${spokojenostBonus}%</td></tr>
-        <tr><td class="sum l">Celkový bonus</td><td class="plus">+117.3%</td></tr>
+        <tr>
+            <td class="rname l">Připravenost (<input id="pripravenost" type="number" value="${pripravenost}" style="width: 50px;">%)</td>
+            <td class="minus" id="pripravenostBonus">-${(100 - pripravenost).toFixed(1)}%</td>
+        </tr>
+        <tr>
+            <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
+            <td class="plus">+24%</td>
+        </tr>
+        <tr>
+            <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
+            <td class="plus">+${zakladnyEffect}%</td>
+        </tr>
+        <tr>
+            <td class="rname l">Spokojenost (<input id="spokojenost" type="number" value="${spokojenost}" style="width: 50px;">%)</td>
+            <td class="plus" id="spokojenostBonus">+${spokojenostBonus}%</td>
+        </tr>
+        <tr>
+            <td class="sum l">Celkový bonus</td>
+            <td class="plus" id="finalBonus">+${finalBonus}%</td>
+        </tr>
     `;
     table.appendChild(tbody);
     return table;
