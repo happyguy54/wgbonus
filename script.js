@@ -254,7 +254,7 @@ function refreshBonuses() {
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
 
     // Update the DOM with new values
-    document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
+    document.getElementById('pripravenostEffect').textContent = `${pripravenostEffect}%`;
     document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
     document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
 
