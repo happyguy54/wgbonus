@@ -22,8 +22,15 @@ body {
 
 .container {
 	display: flex;
+	flex-direction: row;
 	align-items: flex-start;
 	gap: 20px; /* Adjust the gap as needed */
+}
+
+.left-section {
+	display: flex;
+	flex-direction: column; /* Stack textarea and button vertically */
+	gap: 10px; /* Add spacing between textarea and button */
 }
 
 textarea.inputText {
