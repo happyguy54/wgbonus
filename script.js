@@ -237,42 +237,94 @@ function processData() {
     // Append the container to the output div
     outputDiv.appendChild(container);
 
-    function appendBonusAndDefenseTables(container) {
+    function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost) {
+        // Extract relevant values from the input
+        const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
+        const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
+    
         // Table for "Síla armády: Bonusy"
         let bonusTable = document.createElement('table');
+        bonusTable.id = 'war-bonuses';
         bonusTable.className = 'vis_tbl';
-        bonusTable.style = 'width:400px;margin-right:5px;min-height:150px';
     
         let bonusTableBody = document.createElement('tbody');
         bonusTableBody.innerHTML = `
             <tr><th colspan="2">Síla armády: Bonusy</th></tr>
-            <tr><td>Připravenost (100%)</td><td width="35%" style="text-align:center"><span class="neutral">0%</span></td></tr>
-            <tr><td>Technologie Síla zbraní (63839)</td><td style="text-align:center"><span class="plus">+36.2%</span></td></tr>
-            <tr><td>Vojenské základny (1579) 14.5%</td><td style="text-align:center"><span class="plus">+15.9%</span></td></tr>
-            <tr><td>Zkušenosti  (?)</td><td colspan="2" style="text-align:center"><span class="plus">+15%</span></td></tr>
-            <tr><td>Spokojenost  (98.24%)</td><td style="text-align:center"><span class="minus">-0.9%</span></td></tr>
-            <tr><td class="sum">Celkový bonus</td><td style="text-align:center"><span class="plus">+73.4%</span></td></tr>
-            <tr><td class="sum">Navíc vláda, gen. a ali. bonus (obr)</td><td style="text-align:center"><span class="neutral">0%</span></td></tr>
+            <tr>
+                <td class="rname l" style="width:70% !important">Připravenost (99%)</td>
+                <td class="minus">-1%</td>
+            </tr>
+            <tr>
+                <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
+                <td class="plus">+24%</td>
+            </tr>
+            <tr>
+                <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
+                <td class="plus">+26.7%</td>
+            </tr>
+            <tr>
+                <td class="rname l">Zkušenosti  (189813)</td>
+                <td class="plus">+31.1%</td>
+            </tr>
+            <tr>
+                <td class="rname l">Spokojenost  (${spokojenost}%)</td>
+                <td class="plus">+11%</td>
+            </tr>
+            <tr>
+                <td class="sum l">Celkový bonus</td>
+                <td class="plus">+117.3%</td>
+            </tr>
+            <tr>
+                <td class="sum l">Navíc vláda, gen. a ali. bonus (út/obr)</td>
+                <td>
+                    <span class="plus">+30%</span>/<span class="plus">+15%</span>
+                </td>
+            </tr>
         `;
         bonusTable.appendChild(bonusTableBody);
         container.appendChild(bonusTable);
     
-        // Table for "Obrana"
-        let defenseTable = document.createElement('table');
-        defenseTable.className = 'vis_tbl';
-        defenseTable.style = 'width:400px;margin-right:5px;';
+        // Table for "Útok a obrana"
+        let attackDefenseTable = document.createElement('table');
+        attackDefenseTable.id = 'war-attack-defence';
+        attackDefenseTable.className = 'vis_tbl';
     
-        let defenseTableBody = document.createElement('tbody');
-        defenseTableBody.innerHTML = `
-            <tr><th colspan="2">Obrana</th></tr>
-            <tr><td>Základní obrana</td><td style="text-align:center">878 024</td></tr>
-            <tr><td>Bonus normální</td><td width="35%" style="text-align:center"><span class="plus">+73.4%</span></td></tr>
-            <tr><td class="sum">Obrana s bonusy</td><td class="sum" style="text-align:center">1 522 521</td></tr>
+        let attackDefenseTableBody = document.createElement('tbody');
+        attackDefenseTableBody.innerHTML = `
+            <tr><th colspan="2">Útok a obrana</th></tr>
+            <tr>
+                <td class="rname l" style="width:70% !important">Základní útok</td>
+                <td width="30%">376 399</td>
+            </tr>
+            <tr>
+                <td class="rname l">Bonus % normální / taktický</td>
+                <td>
+                    <span class="plus">+182.4%</span> / <span class="plus">+309.5%</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="sum l">Útok s bonusy</td>
+                <td class="sum">1 063 054</td>
+            </tr>
+            <tr>
+                <td class="rname l">Základní obrana</td>
+                <td>359 148</td>
+            </tr>
+            <tr>
+                <td class="rname l">Bonus % normální / taktický</td>
+                <td>
+                    <span class="plus">+149.8%</span> / <span class="plus">+262.3%</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="sum l">Obrana s bonusy</td>
+                <td class="sum">897 294</td>
+            </tr>
         `;
-        defenseTable.appendChild(defenseTableBody);
-        container.appendChild(defenseTable);
+        attackDefenseTable.appendChild(attackDefenseTableBody);
+        container.appendChild(attackDefenseTable);
     }
     
     // Call this function after appending the detail table
-    appendBonusAndDefenseTables(container);
+    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost);
 }
