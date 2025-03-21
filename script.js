@@ -344,11 +344,12 @@ function refreshBonuses() {
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     const updatedBonuses = calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals);
     const updatedBonusesEffect = {
-        normalAttack: (updatedBonuses.normalAttack - 1) * 100,
-        normalDefense: (updatedBonuses.normalDefense - 1) * 100,
-        tacticalAttack: (updatedBonuses.tacticalAttack - 1) * 100,
-        tacticalDefense: (updatedBonuses.tacticalDefense - 1) * 100,
+        normalAttack: ((updatedBonuses.normalAttack - 1) * 100).toFixed(2),
+        normalDefense: ((updatedBonuses.normalDefense - 1) * 100).toFixed(2),
+        tacticalAttack: ((updatedBonuses.tacticalAttack - 1) * 100).toFixed(2),
+        tacticalDefense: ((updatedBonuses.tacticalDefense - 1) * 100).toFixed(2),
     };
+
     // Update the DOM with new values
     document.getElementById('pripravenost').textContent = `Připravenost (${pripravenost}%)`;
     document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
@@ -369,8 +370,8 @@ function refreshBonuses() {
     const totalAttack = parseInt(document.getElementById('totalAttack').textContent.replace(/,/g, ''));
     const totalDefense = parseInt(document.getElementById('totalDefense').textContent.replace(/,/g, ''));
 
-    document.getElementById('attackWithBonuses').textContent = totalAttack * updatedBonuses.normalAttack;
-    document.getElementById('defenseWithBonuses').textContent = totalDefense * updatedBonuses.normalDefense;
+    document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toFixed(0);
+    document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toFixed(0);
 }
 
 // Calculate the effect of silaZbrani
