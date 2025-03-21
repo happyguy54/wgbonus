@@ -98,7 +98,12 @@ function extractSection(lines, startIndex, count, shift) {
     const section = [];
     for (let i = startIndex; i < startIndex + count; i++) {
         const value = i === startIndex ? parseInt(lines[i + shift]/split('\t')[1]) : parseInt(lines[i + shift]);
-        const name = count === 5 ||  i != startIndex ? lines[i] : lines[i].split('\t')[1];
+        const name = (() => {
+            if (count === 5) return lines[i];
+            if (i === startIndex) return lines[i].split('\t')[1];
+            if (i === startIndex + shift) return lines[i].split('\t')[0];
+            return lines[i];
+        })();
         section.push({ name, value });
     }
     return section;
