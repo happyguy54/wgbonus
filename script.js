@@ -310,7 +310,7 @@ function refreshBonuses() {
 }
 
 // Calculate the effect of silaZbrani
-function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, plazmy = 0) {
+function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []) {
     effect = 40;
     return effect.toFixed(2);
 }
