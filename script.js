@@ -60,6 +60,31 @@ function createEditableInputs(values) {
         table.appendChild(row);
     });
 
+    // Add Generálové level input
+    const generalRow = document.createElement('tr');
+    generalRow.innerHTML = `
+        <td class="rname l">
+            <label for="input-generaloveLevel">Generálové level:</label>
+        </td>
+        <td class="rdata r">
+            <input class="short" id="input-generaloveLevel" name="generaloveLevel" type="text" size="6" value="0">
+        </td>
+    `;
+    table.appendChild(generalRow);
+
+    // Add checkboxes for generals
+    const generals = ['Nacionalista', 'Stratég', 'Ochránca', 'Vlastenec'];
+    generals.forEach(general => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="rname l">${general}:</td>
+            <td class="rdata r">
+                <input type="checkbox" id="checkbox-${general.toLowerCase()}" name="${general.toLowerCase()}">
+            </td>
+        `;
+        table.appendChild(row);
+    });
+
     editableInputsDiv.appendChild(table);
 
 //     // Add the Refresh button
@@ -298,13 +323,32 @@ function refreshBonuses() {
     const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
     const vlada = document.getElementById('Vláda')?.textContent || '';
 
+    const vladaUtok = parseFloat(document.getElementById('vladaUtok').value) || 0;
+    const vladaObrana = parseFloat(document.getElementById('vladaObrana').value) || 0;
+    const generalLevel = parseFloat(document.getElementById('input-generaloveLevel').value) || 0;
+
+    const generals = {
+        nacionalista: document.getElementById('checkbox-nacionalista').checked,
+        strateg: document.getElementById('checkbox-strateg').checked,
+        ochranca: document.getElementById('checkbox-ochranca').checked,
+        vlastenec: document.getElementById('checkbox-vlastenec').checked,
+    };
+
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
-    console.log('zakladnyEffect:', zakladnyEffect);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
 
+    // Recalculate and update the final bonus
+    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
+    const updatedBonuses = calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals);
+    const updatedBonusesEffect = {
+        normalAttack: (updatedBonuses.normalAttack - 1) * 100,
+        normalDefense: (updatedBonuses.normalDefense - 1) * 100,
+        tacticalAttack: (updatedBonuses.tacticalAttack - 1) * 100,
+        tacticalDefense: (updatedBonuses.tacticalDefense - 1) * 100,
+    };
     // Update the DOM with new values
     document.getElementById('pripravenost').textContent = `Připravenost (${pripravenost}%)`;
     document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
@@ -315,10 +359,18 @@ function refreshBonuses() {
     document.getElementById('spokojenost').textContent = `Spokojenost (${spokojenost}%)`;
     document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
 
-
-    // Recalculate and update the final bonus
-    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
+    document.getElementById('normalAttackBonus').textContent = `+${updatedBonusesEffect.normalAttack}%`;
+    document.getElementById('tacticalAttackBonus').textContent = `+${updatedBonusesEffect.tacticalAttack}%`;
+    document.getElementById('normalDefenseBonus').textContent = `+${updatedBonusesEffect.normalDefense}%`;
+    document.getElementById('tacticalDefenseBonus').textContent = `+${updatedBonusesEffect.tacticalDefense}%`;
+
+    // Update attack and defense with bonuses
+    const totalAttack = parseInt(document.getElementById('totalAttack').textContent.replace(/,/g, ''));
+    const totalDefense = parseInt(document.getElementById('totalDefense').textContent.replace(/,/g, ''));
+
+    document.getElementById('attackWithBonuses').textContent = totalAttack * updatedBonuses.normalAttack;
+    document.getElementById('defenseWithBonuses').textContent = totalDefense * updatedBonuses.normalDefense;
 }
 
 // Calculate the effect of silaZbrani
@@ -365,6 +417,44 @@ function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect
                        (1 + (spokojenostEffect) / 100) * 
                        ((pripravenost) / 100);
     return (finalBonus * 100 - 100).toFixed(2);
+}
+
+function calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals) {
+    // Initialize bonuses
+    let normalAttackBonus = 0;
+    let normalDefenseBonus = 0;
+    let tacticalAttackBonus = 0;
+    let tacticalDefenseBonus = 0;
+    finalBonus = 1 + parseFloat(finalBonus) / 100;
+
+    // Calculate bonuses from generals
+    if (generals.nacionalista) {
+        normalAttackBonus += 3 * generalLevel;
+    }
+    if (generals.strateg) {
+        tacticalAttackBonus += 5 * generalLevel;
+        tacticalDefenseBonus += 5 * generalLevel;
+    }
+    if (generals.ochranca) {
+        tacticalDefenseBonus += 5 * generalLevel;
+    }
+    if (generals.vlastenec) {
+        normalDefenseBonus += 4 * generalLevel;
+    }
+
+    // Add bonuses from "Navíc vláda, gen. a ali. bonus"
+    normalAttackBonus *= (1 + (parseFloat(vladaUtok) || 0) / 100);
+    normalDefenseBonus *= (1 + (parseFloat(vladaObrana) || 0) / 100);
+
+    // Combine with the previous final bonus
+    const updatedFinalBonus = {
+        normalAttack: finalBonus * normalAttackBonus,
+        normalDefense: finalBonus * normalDefenseBonus,
+        tacticalAttack: finalBonus * normalAttackBonus * tacticalAttackBonus,
+        tacticalDefense: finalBonus * normalDefenseBonus * tacticalDefenseBonus,
+    };
+
+    return updatedFinalBonus;
 }
 
 function calculateAttackDefense(jednotky) {
@@ -427,7 +517,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
 }
 
 // Create the attack/defense table
-function createAttackDefenseTable(jednotky) {
+function createAttackDefenseTable(jednotky, finalBonus) {
     const { totalAttack, totalDefense } = calculateAttackDefense(jednotky);
 
     const table = document.createElement('table');
@@ -437,12 +527,36 @@ function createAttackDefenseTable(jednotky) {
     const tbody = document.createElement('tbody');
     tbody.innerHTML = `
         <tr><th colspan="2">Útok a obrana</th></tr>
-        <tr><td class="rname l">Základní útok</td><td>${totalAttack.toLocaleString()}</td></tr>
-        <tr><td class="rname l">Bonus % normální / taktický</td><td><span class="plus">+182.4%</span> / <span class="plus">+309.5%</span></td></tr>
-        <tr><td class="sum l">Útok s bonusy</td><td class="sum">1 063 054</td></tr>
-        <tr><td class="rname l">Základní obrana</td><td>${totalDefense.toLocaleString()}</td></tr>
-        <tr><td class="rname l">Bonus % normální / taktický</td><td><span class="plus">+149.8%</span> / <span class="plus">+262.3%</span></td></tr>
-        <tr><td class="sum l">Obrana s bonusy</td><td class="sum">897 294</td></tr>
+        <tr>
+            <td class="rname l">Základní útok</td>
+            <td id="totalAttack">${totalAttack.toLocaleString()}</td>
+        </tr>
+        <tr>
+            <td class="rname l">Bonus % normální / taktický</td>
+            <td>
+                <span class="plus" id="normalAttackBonus">+${finalBonus}%</span> /
+                <span class="plus" id="tacticalAttackBonus">+${finalBonus}%</span>
+            </td>
+        </tr>
+        <tr>
+            <td class="sum l">Útok s bonusy</td>
+            <td class="sum" id="attackWithBonuses">1 063 054</td>
+        </tr>
+        <tr>
+            <td class="rname l">Základní obrana</td>
+            <td id="totalDefense">${totalDefense.toLocaleString()}</td>
+        </tr>
+        <tr>
+            <td class="rname l">Bonus % normální / taktický</td>
+            <td>
+                <span class="plus" id="normalDefenseBonus">+${finalBonus}%</span> /
+                <span class="plus" id="tacticalDefenseBonus">+${finalBonus}%</span>
+            </td>
+        </tr>
+        <tr>
+            <td class="sum l">Obrana s bonusy</td>
+            <td class="sum" id="defenseWithBonuses">897 294</td>
+        </tr>
     `;
     table.appendChild(tbody);
     return table;
