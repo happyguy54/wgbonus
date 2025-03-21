@@ -360,7 +360,10 @@ function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect
     zkušenostiEffect = parseFloat(zkušenostiEffect);
     spokojenostEffect = parseFloat(spokojenostEffect);
     pripravenost = parseFloat(pripravenost);
-    const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * (1 + (zkušenostiEffect) / 100) * (1 + (spokojenostEffect) / 100) * ((pripravenost) / 100);
+    const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * 
+                       (1 + (zkušenostiEffect) / 100) * 
+                       (1 + (spokojenostEffect) / 100) * 
+                       ((pripravenost) / 100);
     return (finalBonus * 100 - 100).toFixed(2);
 }
 
