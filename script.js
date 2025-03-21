@@ -24,7 +24,7 @@ function processData() {
     createEditableInputs({
         pripravenost: 100,
         spokojenost,
-        silaZbraniEffect: technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
+        silaZbraniEffect: 40, // technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
         zkušenostiEffect: 25,
         vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
         plazmy: 0, // Default value
@@ -40,9 +40,11 @@ function createEditableInputs(values) {
     Object.entries(values).forEach(([key, value]) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="l">
+            <td class="rname l">
                 <label for="input-${key}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
-                <input class="short" id="input-${key}" name="${key}" type="text" size="6" value="${value}"> z 100
+            </td>
+            <td class="rdata r">
+                <input class="short" id="input-${key}" name="${key}" type="text" size="6" value="${value}">
             </td>
         `;
         table.appendChild(row);
@@ -276,10 +278,10 @@ function appendRefreshButton(container) {
 function refreshBonuses() {
     // Get updated values from inputs
     const pripravenost = parseFloat(document.getElementById('input-pripravenost').value) || 100;
-    const spokojenost = parseFloat(document.getElementById('input-spokojenost').value) || 100;
     const silaZbraniEffect = parseFloat(document.getElementById('input-silaZbraniEffect').value) || 0;
-    const zkušenostiEffect = parseFloat(document.getElementById('input-zkušenostiEffect').value) || 25;
     const vojenskeZakladny = parseFloat(document.getElementById('input-vojenskeZakladny').value) || 0;
+    const zkušenostiEffect = parseFloat(document.getElementById('input-zkušenostiEffect').value) || 25;
+    const spokojenost = parseFloat(document.getElementById('input-spokojenost').value) || 100;
     const plazmy = parseFloat(document.getElementById('input-plazmy').value) || 0;
 
     const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
@@ -287,11 +289,13 @@ function refreshBonuses() {
 
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
+    // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
 
     // Update the DOM with new values
-    document.getElementById('pripravenostEffect').textContent = `${pripravenostEffect}%`;
+    document.getElementById('pripravenost').textContent = `${pripravenost}%`;
+    document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
     document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
     document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
 
