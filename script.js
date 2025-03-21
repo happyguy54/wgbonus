@@ -16,7 +16,7 @@ function processData() {
     appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
     appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, jednotky, pokroky = []);
-    appendRefreshButton(container);
+    // appendRefreshButton(container);
 
     document.getElementById('output').appendChild(container);
 
@@ -60,12 +60,12 @@ function createEditableInputs(values) {
 
     editableInputsDiv.appendChild(table);
 
-    // Add the Refresh button
-    const refreshButton = document.createElement('button');
-    refreshButton.className = 'submit';
-    refreshButton.textContent = 'Refresh';
-    refreshButton.onclick = refreshBonuses;
-    editableInputsDiv.appendChild(refreshButton);
+//     // Add the Refresh button
+//     const refreshButton = document.createElement('button');
+//     refreshButton.className = 'submit';
+//     refreshButton.textContent = 'Refresh';
+//     refreshButton.onclick = refreshBonuses;
+//     editableInputsDiv.appendChild(refreshButton);
 }
 
 // Parse input text into lines
