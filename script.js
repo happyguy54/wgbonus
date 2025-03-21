@@ -309,15 +309,15 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
         <tr>
-            <td class="rname l">Připravenost</td>
-            <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(1)}%</td>
+            <td class="rname l">Připravenost (${pripravenost})</td>
+            <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(0)}%</td>
         </tr>
         <tr>
             <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
             <td class="plus" id="silaZbraniEffect">+${silaZbraniEffect}%</td>
         </tr>
         <tr>
-            <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
+            <td class="rname l" id="vojenskeZakladny">Vojenské základny (${vojenskeZakladny})</td>
             <td class="plus" id="zakladnyEffect">+${zakladnyEffect}%</td>
         </tr>
         <tr>
@@ -325,7 +325,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
             <td class="plus" id="zkušenostiEffect">+25%</td>
         </tr>
         <tr>
-            <td class="rname l">Spokojenost</td>
+            <td class="rname l" id="spokojenost">Spokojenost (${spokojenost}%)</td>
             <td class="${spokojenostEffect >= 0 ? 'plus' : 'minus'}" id="spokojenostEffect">${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%</td>
         </tr>
         <tr>
