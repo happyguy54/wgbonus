@@ -80,9 +80,9 @@ function extractDetails(lines) {
     }
 
     const jednotky = extractSection(lines, unitsIndex, 5, 7);
-    const spokojenost = parseFloat(lines[unitsIndex + 13].replace('%', ''));
-    const vlada = lines[unitsIndex + 14];
-    const rozloha = parseInt(lines[unitsIndex + 15].split('\t')[0]);
+    const spokojenost = parseFloat(lines[unitsIndex + 12].replace('%', ''));
+    const vlada = lines[unitsIndex + 13];
+    const rozloha = parseInt(lines[unitsIndex + 14].split('\t')[0]);
 
     const buildingsIndex = lines.findIndex(line => line.includes('Vesnice'));
     const budovy = extractSection(lines, buildingsIndex, 13, 12);
