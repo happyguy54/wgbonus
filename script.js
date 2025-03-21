@@ -540,7 +540,7 @@ function createAttackDefenseTable(jednotky, finalBonus) {
         </tr>
         <tr>
             <td class="sum l">Útok s bonusy</td>
-            <td class="sum" id="attackWithBonuses">1 063 054</td>
+            <td class="sum" id="attackWithBonuses">${totalAttack.toLocaleString()}</td>
         </tr>
         <tr>
             <td class="rname l">Základní obrana</td>
@@ -555,7 +555,7 @@ function createAttackDefenseTable(jednotky, finalBonus) {
         </tr>
         <tr>
             <td class="sum l">Obrana s bonusy</td>
-            <td class="sum" id="defenseWithBonuses">897 294</td>
+            <td class="sum" id="defenseWithBonuses">${totalDefense.toLocaleString()}</td>
         </tr>
     `;
     table.appendChild(tbody);
