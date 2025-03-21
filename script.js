@@ -31,7 +31,7 @@ function extractSummaryData(lines) {
 
     const names = ['Země', 'Prestiž', 'Typ zprávy', 'Datum', 'Od'];
     const shift = names.length - 1;
-    const values = lines.slice(startIndex + shift, startIndex + 2*shift);
+    const values = lines.slice(startIndex + shift, startIndex + shift + names.length);
 
     const data = {};
     names.forEach((name, index) => {
