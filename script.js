@@ -3,11 +3,13 @@ function processData() {
     const inputText = document.getElementById('inputText').value;
     const lines = parseInput(inputText);
 
-    const data = extractSummaryData(lines);
+    const summaryData = extractSummaryData(lines);
     const { jednotky, budovy, technologie, spokojenost, vlada, rozloha } = extractDetails(lines);
 
     const container = createOutputContainer();
-    appendSummaryTable(container, data);
+    const baseUrl = "https://gold.webgame.cz/wg/index.php";
+
+    appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
     appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada);
 
@@ -35,7 +37,34 @@ function extractSummaryData(lines) {
         data[name] = values[index];
     });
 
-    return data;
+    // Extract dynamic values from "Země" and "Od"
+    const zemeParts = data['Země'].split(' ');
+    const zemeName = zemeParts[10]?.split('(')[0]?.trim() || '';
+    const zemeNumber = zemeParts[10]?.match(/\(#(\d+)\)/)?.[1] || '';
+    const zemeAli = zemeParts[10]?.match(/\[(.*?)\]/)?.[1] || '';
+    const zemePerson = zemeParts[12]?.trim() || '';
+    const zemeRole = zemeParts[13]?.replace('(', '').replace(')', '') || '';
+
+    const odParts = data['Od'].split(' ');
+    const odName = odParts[1]?.split('(')[0]?.trim() || '';
+    const odNumber = odParts[1]?.match(/\(#(\d+)\)/)?.[1] || '';
+    const odAli = odParts[1]?.match(/\[(.*?)\]/)?.[1] || '';
+    const odPerson = odParts[3]?.trim() || '';
+    const odRole = odParts[4]?.replace('(', '').replace(')', '') || '';
+
+    return {
+        data,
+        zemeName,
+        zemeNumber,
+        zemeAli,
+        zemePerson,
+        zemeRole,
+        odName,
+        odNumber,
+        odAli,
+        odPerson,
+        odRole,
+    };
 }
 
 // Extract details for jednotky, budovy, technologie, and other fields
@@ -79,7 +108,9 @@ function createOutputContainer() {
 }
 
 // Append the summary table
-function appendSummaryTable(container, data) {
+function appendSummaryTable(container, summaryData, baseUrl) {
+    const { data, zemeName, zemeNumber, zemeAli, zemePerson, zemeRole, odName, odNumber, odAli, odPerson, odRole } = summaryData;
+
     const summaryTable = document.createElement('table');
     summaryTable.id = 'spy-message-summary';
     summaryTable.className = 'vis_tbl vtop';
@@ -94,10 +125,27 @@ function appendSummaryTable(container, data) {
 
     const summaryValuesCell = document.createElement('td');
     summaryValuesCell.className = 'rdata r';
-    summaryValuesCell.innerHTML = Object.values(data).join('<br>');
+    summaryValuesCell.innerHTML = `
+        <a href="${baseUrl}?p=mail&amp;to_id=${zemeNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="${baseUrl}?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}" target="_blank"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
+        <a href="${baseUrl}?p=valka&amp;s=utok&amp;to_id=${zemeNumber}" target="_blank"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
+        <a href="${baseUrl}?p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}" target="_blank"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
+        <a href="${baseUrl}?p=valka&amp;s=rakety&amp;target=${zemeNumber}" target="_blank"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
+        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${zemeNumber}" target="_blank">${zemeName}</a>
+        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${zemeAli}" target="_blank">[${zemeAli}]</a>
+        <a href="${baseUrl}?p=najitzem&amp;hpid=${zemeNumber}" class="pname" target="_blank"> - ${zemePerson}</a> 
+        <span class="ocas" style="color:silver">${zemeRole ? `(${zemeRole})` : ''}</span><br>
+        ${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
+        <a href="${baseUrl}?p=mail&amp;to_id=${odNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
+        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${odNumber}" target="_blank">${odName}</a>
+        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${odAli}" target="_blank">[${odAli}]</a>
+        <a href="${baseUrl}?p=najitzem&amp;hpid=${odNumber}" class="pname" target="_blank"> - ${odPerson}</a> 
+        <span class="ocas" style="color:silver">${odRole ? `(${odRole})` : ''}</span>
+    `;
     summaryRow.appendChild(summaryValuesCell);
 
     summaryTableBody.appendChild(summaryRow);
+    summaryTableBody.appendChild(document.createElement('tr')).innerHTML = '<td colspan="2"></td>';
     summaryTable.appendChild(summaryTableBody);
     container.appendChild(summaryTable);
 }
