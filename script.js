@@ -356,6 +356,7 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
 
 function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost) {
     const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * (1 + (zkušenostiEffect) / 100) * (1 + (spokojenostEffect) / 100) * ((pripravenost) / 100);
+    console.log('finalBonus:', finalBonus, 'silaZbraniEffect:', silaZbraniEffect, 'zakladnyEffect:', zakladnyEffect, 'zkušenostiEffect:', zkušenostiEffect, 'spokojenostEffect:', spokojenostEffect, 'pripravenost:', pripravenost);
     return (finalBonus * 100 - 100).toFixed(2);
 }
 
