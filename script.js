@@ -355,7 +355,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
         <tr>
-            <td class="rname l">Připravenost (${pripravenost})</td>
+            <td class="rname l" id="pripravenost">Připravenost (${pripravenost})</td>
             <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(0)}%</td>
         </tr>
         <tr>
