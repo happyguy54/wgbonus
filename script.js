@@ -19,6 +19,43 @@ function processData() {
     appendRefreshButton(container);
 
     document.getElementById('output').appendChild(container);
+
+    // Dynamically create or refresh the "Upravitelné hodnoty" section
+    createEditableInputs({
+        pripravenost: 100,
+        spokojenost,
+        silaZbraniEffect: technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
+        zkušenostiEffect: 25,
+        vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
+        plazmy: 0, // Default value
+    });
+}
+
+function createEditableInputs(values) {
+    const editableInputsDiv = document.getElementById('editableInputs');
+    editableInputsDiv.innerHTML = ''; // Clear existing inputs
+
+    const table = document.createElement('table');
+
+    Object.entries(values).forEach(([key, value]) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="l">
+                <label for="input-${key}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
+                <input class="short" id="input-${key}" name="${key}" type="text" size="6" value="${value}"> z 100
+            </td>
+        `;
+        table.appendChild(row);
+    });
+
+    editableInputsDiv.appendChild(table);
+
+    // Add the Refresh button
+    const refreshButton = document.createElement('button');
+    refreshButton.className = 'submit';
+    refreshButton.textContent = 'Refresh';
+    refreshButton.onclick = refreshBonuses;
+    editableInputsDiv.appendChild(refreshButton);
 }
 
 // Parse input text into lines
