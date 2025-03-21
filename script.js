@@ -301,7 +301,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     // Create and append the tables
     container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus));
-    container.appendChild(createAttackDefenseTable(jednotky));
+    container.appendChild(createAttackDefenseTable(jednotky, finalBonus));
 }
 
 function appendRefreshButton(container) {
