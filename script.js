@@ -11,7 +11,7 @@ function processData() {
 
     appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
-    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = 0);
+    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = []);
     appendRefreshButton(container);
 
     document.getElementById('output').appendChild(container);
@@ -98,13 +98,13 @@ function extractDetails(lines) {
 function extractSection(lines, startIndex, count, shift) {
     const section = [];
     for (let i = startIndex; i < startIndex + count; i++) {
-        const value = i === startIndex ? parseInt(lines[i + shift].split('\t')[1]) : parseInt(lines[i + shift]);
+        const value = i === startIndex ? parseInt(lines[i + shift].split('\t')[1]) : parseInt(lines[i + shift]) || 0;
         const name = (() => {
             if (count === 5) return lines[i];
             if (i === startIndex) return lines[i].split('\t')[1];
             if (i === startIndex + shift) return lines[i].split('\t')[0];
             return lines[i];
-        })();
+        })() || '';
         section.push({ name, value });
     }
     return section;
@@ -201,7 +201,7 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha) {
 }
 
 // Append the bonus and attack/defense tables
-function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky) {
+function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = []) {
     const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
     const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
     const pripravenost = 100; // Default value
