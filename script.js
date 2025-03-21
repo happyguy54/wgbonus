@@ -31,12 +31,20 @@ function processData() {
     });
 }
 
+const unitStats = {
+    vojaci: { attack: 1, defense: 1 },
+    tanky: { attack: 6, defense: 4 },
+    stihachy: { attack: 6, defense: 0 },
+    bunkry: { attack: 0, defense: 6 },
+    mechove: { attack: 2, defense: 3 },
+};
+
 function createEditableInputs(values) {
     const editableInputsDiv = document.getElementById('editableInputs');
     editableInputsDiv.innerHTML = ''; // Clear existing inputs
 
     const table = document.createElement('table');
-
+    table.className = 'vis_tbl';
     Object.entries(values).forEach(([key, value]) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -251,7 +259,7 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha) {
 }
 
 // Append the bonus and attack/defense tables
-function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = []) {
+function appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, jednotky, pokroky = []) {
     const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
     const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
     const pripravenost = 100; // Default value
@@ -265,7 +273,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     // Create and append the tables
     container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus));
-    container.appendChild(createAttackDefenseTable());
+    container.appendChild(createAttackDefenseTable(jednotky));
 }
 
 function appendRefreshButton(container) {
@@ -346,6 +354,22 @@ function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect
     const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * (1 + (zkušenostiEffect) / 100) * (1 + (spokojenostEffect) / 100) * ((pripravenost) / 100);
     return (finalBonus * 100 - 100).toFixed(2);
 }
+
+function calculateAttackDefense(jednotky) {
+    let totalAttack = 0;
+    let totalDefense = 0;
+
+    jednotky.forEach(unit => {
+        const stats = unitStats[unit.name.toLowerCase()];
+        if (stats) {
+            totalAttack += unit.value * stats.attack;
+            totalDefense += unit.value * stats.defense;
+        }
+    });
+
+    return { totalAttack, totalDefense };
+}
+
 function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus) {
     const table = document.createElement('table');
     table.id = 'war-bonuses';
@@ -355,7 +379,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
         <tr>
-            <td class="rname l" id="pripravenost">Připravenost (${pripravenost})</td>
+            <td class="rname l" id="pripravenost">Připravenost (${pripravenost}%)</td>
             <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(0)}%</td>
         </tr>
         <tr>
@@ -391,7 +415,9 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
 }
 
 // Create the attack/defense table
-function createAttackDefenseTable() {
+function createAttackDefenseTable(jednotky) {
+    const { totalAttack, totalDefense } = calculateAttackDefense(jednotky);
+
     const table = document.createElement('table');
     table.id = 'war-attack-defence';
     table.className = 'vis_tbl';
@@ -399,10 +425,10 @@ function createAttackDefenseTable() {
     const tbody = document.createElement('tbody');
     tbody.innerHTML = `
         <tr><th colspan="2">Útok a obrana</th></tr>
-        <tr><td class="rname l">Základní útok</td><td>376 399</td></tr>
+        <tr><td class="rname l">Základní útok</td><td>${totalAttack.toLocaleString()}</td></tr>
         <tr><td class="rname l">Bonus % normální / taktický</td><td><span class="plus">+182.4%</span> / <span class="plus">+309.5%</span></td></tr>
         <tr><td class="sum l">Útok s bonusy</td><td class="sum">1 063 054</td></tr>
-        <tr><td class="rname l">Základní obrana</td><td>359 148</td></tr>
+        <tr><td class="rname l">Základní obrana</td><td>${totalDefense.toLocaleString()}</td></tr>
         <tr><td class="rname l">Bonus % normální / taktický</td><td><span class="plus">+149.8%</span> / <span class="plus">+262.3%</span></td></tr>
         <tr><td class="sum l">Obrana s bonusy</td><td class="sum">897 294</td></tr>
     `;
