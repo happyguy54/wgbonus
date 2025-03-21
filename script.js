@@ -243,7 +243,9 @@ function refreshBonuses() {
     const silaZbraniEffect = parseFloat(document.getElementById('silaZbraniEffect').value) || 0;
     const zkušenostiEffect = parseFloat(document.getElementById('zkušenostiEffect').value) || 0;
     const vojenskeZakladny = parseFloat(document.getElementById('vojenskeZakladny').value) || 0;
-
+    const rozloha = parseFloat(document.getElementById('Rozloha').textContent) || 0;
+    const vlada = document.getElementById('Vláda').textContent || '';
+    const plazmy = parseFloat(document.getElementById('plazmy').value) || 0;
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     const spokojenostEffect =  (spokojenost - 100) / 2;
