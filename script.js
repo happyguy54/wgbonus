@@ -25,10 +25,10 @@ function processData() {
     // Dynamically create or refresh the "Upravitelné hodnoty" section
     createEditableInputs({
         pripravenost: 100,
-        spokojenost,
         silaZbraniEffect: 40, // technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
-        zkušenostiEffect: 25,
         vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
+        zkušenostiEffect: 25,
+        spokojenost,
         plazmy: 0, // Default value
     });
 }
