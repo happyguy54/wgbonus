@@ -323,8 +323,7 @@ function refreshBonuses() {
 
 // Calculate the effect of silaZbrani
 function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []) {
-    effect = 40;
-    return effect.toFixed(2);
+    return effect = 40;
 }
 
 // Calculate the effect of vojenskeZakladny
@@ -355,8 +354,13 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
 }
 
 function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost) {
+    // Ensure all inputs are numbers
+    silaZbraniEffect = parseFloat(silaZbraniEffect);
+    zakladnyEffect = parseFloat(zakladnyEffect);
+    zkušenostiEffect = parseFloat(zkušenostiEffect);
+    spokojenostEffect = parseFloat(spokojenostEffect);
+    pripravenost = parseFloat(pripravenost);
     const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * (1 + (zkušenostiEffect) / 100) * (1 + (spokojenostEffect) / 100) * ((pripravenost) / 100);
-    console.log('finalBonus:', finalBonus, 'silaZbraniEffect:', silaZbraniEffect, 'zakladnyEffect:', zakladnyEffect, 'zkušenostiEffect:', zkušenostiEffect, 'spokojenostEffect:', spokojenostEffect, 'pripravenost:', pripravenost);
     return (finalBonus * 100 - 100).toFixed(2);
 }
 
