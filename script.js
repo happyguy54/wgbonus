@@ -88,7 +88,7 @@ function extractDetails(lines) {
     const budovy = extractSection(lines, buildingsIndex, 13, 12);
 
     const technologieIndex = lines.findIndex(line => line.includes('Rychlost stavby'));
-    const technologie = extractSection(lines, technologieIndex, 11, 11);
+    const technologie = extractSection(lines, technologieIndex, 12, 11);
 
     return { jednotky, budovy, technologie, spokojenost, vlada, rozloha };
 }
@@ -97,8 +97,8 @@ function extractDetails(lines) {
 function extractSection(lines, startIndex, count, shift) {
     const section = [];
     for (let i = startIndex; i < startIndex + count; i++) {
-        const value = parseInt(lines[i + shift]) || 0;
-        const name = lines[i];
+        const value = i === startIndex ? parseInt(lines[i + shift]/split('\t')[1]) : parseInt(lines[i + shift]);
+        const name = count === 5 ||  i != startIndex ? lines[i] : lines[i].split('\t')[1];
         section.push({ name, value });
     }
     return section;
