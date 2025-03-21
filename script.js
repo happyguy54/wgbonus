@@ -292,7 +292,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
         </tr>
         <tr>
             <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
-            <td class="plus">+${silaZbraniEffect}%</td>
+            <td class="plus"><input id="silaZbrani" type="number" value="${silaZbrani}" style="width: 50px;">%</td>
         </tr>
         <tr>
             <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
