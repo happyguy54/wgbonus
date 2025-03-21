@@ -241,24 +241,25 @@ function refreshBonuses() {
     const pripravenost = parseFloat(document.getElementById('pripravenost').value) || 100;
     const spokojenost = parseFloat(document.getElementById('spokojenost').value) || 100;
     const silaZbraniEffect = parseFloat(document.getElementById('silaZbraniEffect').value) || 0;
-    const zkušenostiEffect = parseFloat(document.getElementById('zkušenostiEffect').value) || 0;
+    const zkušenostiEffect = parseFloat(document.getElementById('zkušenostiEffect').value) || 25;
     const vojenskeZakladny = parseFloat(document.getElementById('vojenskeZakladny').value) || 0;
-    const rozloha = parseFloat(document.getElementById('Rozloha').textContent) || 0;
-    const vlada = document.getElementById('Vláda').textContent || '';
+    const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
+    const vlada = document.getElementById('Vláda')?.textContent || '';
     const plazmy = parseFloat(document.getElementById('plazmy').value) || 0;
+
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
-    const spokojenostEffect =  (spokojenost - 100) / 2;
-    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0);
+    const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
+    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
 
     // Update the DOM with new values
-    document.getElementById('pripravenostEffect').textContent = `${pripravenostEffect}%`;
-    document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect}%`;
+    document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
+    document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
+    document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
 
     // Recalculate and update the final bonus
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
     document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
-}
 
 // Calculate the effect of silaZbrani
 function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, plazmy = 0) {
@@ -306,22 +307,23 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
         <tr>
-            <td class="rname l">Připravenost (<input id="pripravenost" type="number" value="${pripravenost}" style="width: 50px;">%)</td>
+            <td class="rname l">Připravenost</td>
             <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(1)}%</td>
         </tr>
         <tr>
             <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
-            <td class="plus"><input id="silaZbraniEffect" type="number" value="${silaZbraniEffect}" style="width: 50px;">%</td>
+            <td class="plus" id="silaZbraniEffect">+${silaZbraniEffect}%</td>
         </tr>
         <tr>
-            <td class="rname l">Vojenské základny (<input id="vojenskeZakladny" type="number" value="${vojenskeZakladny}" style="width: 50px;">)</td>
-            <td class="plus">+${zakladnyEffect}%</td>
+            <td class="rname l">Vojenské základny (${vojenskeZakladny})</td>
+            <td class="plus" id="zakladnyEffect">+${zakladnyEffect}%</td>
         </tr>
-         <tr>
+        <tr>
             <td class="rname l">Zkušenosti</td>
-            <td class="plus"><input id="zkušenostiEffect" type="number" value="25" style="width: 50px;">%</td>
+            <td class="plus" id="zkušenostiEffect">+25%</td>
+        </tr>
         <tr>
-            <td class="rname l">Spokojenost (<input id="spokojenost" type="number" value="${spokojenost}" style="width: 50px;">%)</td>
+            <td class="rname l">Spokojenost</td>
             <td class="${spokojenostEffect >= 0 ? 'plus' : 'minus'}" id="spokojenostEffect">${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%</td>
         </tr>
         <tr>

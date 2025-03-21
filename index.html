@@ -29,6 +29,22 @@
     <div class="left-section">
         <textarea class="inputText" id="inputText" placeholder="Vložte text zde..."></textarea>
         <button class="submit" onclick="processData()">Zpracovat</button>
+        <div id="editableInputs">
+            <h3>Upravitelné hodnoty</h3>
+            <label for="pripravenost">Připravenost:</label>
+            <input id="pripravenost" type="number" value="100" style="width: 100px;"><br>
+            <label for="spokojenost">Spokojenost:</label>
+            <input id="spokojenost" type="number" value="100" style="width: 100px;"><br>
+            <label for="silaZbraniEffect">Síla zbraní:</label>
+            <input id="silaZbraniEffect" type="number" value="0" style="width: 100px;"><br>
+            <label for="zkušenostiEffect">Zkušenosti:</label>
+            <input id="zkušenostiEffect" type="number" value="25" style="width: 100px;"><br>
+            <label for="vojenskeZakladny">Vojenské základny:</label>
+            <input id="vojenskeZakladny" type="number" value="0" style="width: 100px;"><br>
+            <label for="plazmy">Plazmy:</label>
+            <input id="plazmy" type="number" value="0" style="width: 100px;"><br>
+            <button class="submit" onclick="refreshBonuses()">Refresh</button>
+        </div>
     </div>
     <div id="output"></div>
 </div>
