@@ -370,8 +370,8 @@ function refreshBonuses() {
     const totalAttack = parseInt(document.getElementById('totalAttack').textContent.replace(/,/g, ''));
     const totalDefense = parseInt(document.getElementById('totalDefense').textContent.replace(/,/g, ''));
 
-    document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toFixed(0);
-    document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toFixed(0);
+    document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toLocaleString();
+    document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toLocaleString();
 }
 
 // Calculate the effect of silaZbrani
