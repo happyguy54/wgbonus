@@ -236,4 +236,43 @@ function processData() {
 
     // Append the container to the output div
     outputDiv.appendChild(container);
+
+    function appendBonusAndDefenseTables(container) {
+        // Table for "Síla armády: Bonusy"
+        let bonusTable = document.createElement('table');
+        bonusTable.className = 'vis_tbl';
+        bonusTable.style = 'width:400px;margin-right:5px;min-height:150px';
+    
+        let bonusTableBody = document.createElement('tbody');
+        bonusTableBody.innerHTML = `
+            <tr><th colspan="2">Síla armády: Bonusy</th></tr>
+            <tr><td>Připravenost (100%)</td><td width="35%" style="text-align:center"><span class="neutral">0%</span></td></tr>
+            <tr><td>Technologie Síla zbraní (63839)</td><td style="text-align:center"><span class="plus">+36.2%</span></td></tr>
+            <tr><td>Vojenské základny (1579) 14.5%</td><td style="text-align:center"><span class="plus">+15.9%</span></td></tr>
+            <tr><td>Zkušenosti  (?)</td><td colspan="2" style="text-align:center"><span class="plus">+15%</span></td></tr>
+            <tr><td>Spokojenost  (98.24%)</td><td style="text-align:center"><span class="minus">-0.9%</span></td></tr>
+            <tr><td class="sum">Celkový bonus</td><td style="text-align:center"><span class="plus">+73.4%</span></td></tr>
+            <tr><td class="sum">Navíc vláda, gen. a ali. bonus (obr)</td><td style="text-align:center"><span class="neutral">0%</span></td></tr>
+        `;
+        bonusTable.appendChild(bonusTableBody);
+        container.appendChild(bonusTable);
+    
+        // Table for "Obrana"
+        let defenseTable = document.createElement('table');
+        defenseTable.className = 'vis_tbl';
+        defenseTable.style = 'width:400px;margin-right:5px;';
+    
+        let defenseTableBody = document.createElement('tbody');
+        defenseTableBody.innerHTML = `
+            <tr><th colspan="2">Obrana</th></tr>
+            <tr><td>Základní obrana</td><td style="text-align:center">878 024</td></tr>
+            <tr><td>Bonus normální</td><td width="35%" style="text-align:center"><span class="plus">+73.4%</span></td></tr>
+            <tr><td class="sum">Obrana s bonusy</td><td class="sum" style="text-align:center">1 522 521</td></tr>
+        `;
+        defenseTable.appendChild(defenseTableBody);
+        container.appendChild(defenseTable);
+    }
+    
+    // Call this function after appending the detail table
+    appendBonusAndDefenseTables(container);
 }
