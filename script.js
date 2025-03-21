@@ -79,7 +79,7 @@ function createEditableInputs(values) {
         row.innerHTML = `
             <td class="rname l">${general}:</td>
             <td class="rdata r">
-                <input type="checkbox" id="checkbox-${general.toLowerCase()}" name="${general.toLowerCase()}">
+                <input type="checkbox" id="checkbox-${general}" name="${general}">
             </td>
         `;
         table.appendChild(row);
@@ -421,25 +421,25 @@ function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect
 
 function calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals) {
     // Initialize bonuses
-    let normalAttackBonus = 0;
-    let normalDefenseBonus = 0;
-    let tacticalAttackBonus = 0;
-    let tacticalDefenseBonus = 0;
+    let normalAttackBonus = 1;
+    let normalDefenseBonus = 1;
+    let tacticalAttackBonus = 1;
+    let tacticalDefenseBonus = 1;
     finalBonus = 1 + parseFloat(finalBonus) / 100;
 
     // Calculate bonuses from generals
     if (generals.nacionalista) {
-        normalAttackBonus += 3 * generalLevel;
+        normalAttackBonus *= (1 + 0.03 * generalLevel);
     }
     if (generals.strateg) {
-        tacticalAttackBonus += 5 * generalLevel;
-        tacticalDefenseBonus += 5 * generalLevel;
+        tacticalAttackBonus *= (1 + 0.05 * generalLevel);
+        tacticalDefenseBonus *= (1 + 0.05 * generalLevel);
     }
     if (generals.ochranca) {
-        tacticalDefenseBonus += 5 * generalLevel;
+        tacticalDefenseBonus *= (1 + 0.05 * generalLevel);
     }
     if (generals.vlastenec) {
-        normalDefenseBonus += 4 * generalLevel;
+        normalDefenseBonus *= (1 + 0.04 * generalLevel);
     }
 
     // Add bonuses from "Navíc vláda, gen. a ali. bonus"
