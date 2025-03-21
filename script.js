@@ -15,7 +15,7 @@ function processData() {
 
     appendSummaryTable(container, summaryData, baseUrl);
     appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
-    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, pokroky = []);
+    appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, jednotky, pokroky = []);
     appendRefreshButton(container);
 
     document.getElementById('output').appendChild(container);
@@ -32,11 +32,11 @@ function processData() {
 }
 
 const unitStats = {
-    vojaci: { attack: 1, defense: 1 },
-    tanky: { attack: 6, defense: 4 },
-    stihachy: { attack: 6, defense: 0 },
-    bunkry: { attack: 0, defense: 6 },
-    mechove: { attack: 2, defense: 3 },
+    Vojáci: { attack: 1, defense: 1 },
+    Tanky: { attack: 6, defense: 4 },
+    Stíhačhy: { attack: 6, defense: 0 },
+    Bunkry: { attack: 0, defense: 6 },
+    Mechové: { attack: 2, defense: 3 },
 };
 
 function createEditableInputs(values) {
@@ -299,10 +299,11 @@ function refreshBonuses() {
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
+    console.log('zakladnyEffect:', zakladnyEffect);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
 
     // Update the DOM with new values
-    document.getElementById('pripravenost').textContent = `${pripravenost}%`;
+    document.getElementById('pripravenost').textContent = `Připravenost (${pripravenost}%)`;
     document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
     document.getElementById('silaZbraniEffect').textContent = `+${silaZbraniEffect}%`;
     document.getElementById('vojenskeZakladny').textContent = `Vojenské základny (${vojenskeZakladny})`;
