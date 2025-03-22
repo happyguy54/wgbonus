@@ -27,6 +27,12 @@ body {
 	gap: 20px; /* Adjust the gap as needed */
 }
 
+.flex-container {
+	display: flex;
+	gap: 20px; /* Add spacing between the tables */
+	margin-top: 20px; /* Optional: Add some spacing above the container */
+}
+
 .left-section {
 	display: flex;
 	flex-direction: column; /* Stack textarea and button vertically */
@@ -562,7 +568,7 @@ table {
 }
 
 table.vis_tbl {  /*klasicka viditelna tabulka WG like*/
-	font: normal normal normal 11px verdana, arial, sans-serif;
+	font: normal normal normal 14px verdana, arial, sans-serif;
 	color:#FFF;
 	background-color: #2a2a2a;
 	border-top: solid 4px #111111;

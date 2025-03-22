@@ -22,15 +22,16 @@ function processData() {
 
     document.getElementById('output').appendChild(container);
 
-    // Dynamically create or refresh the "Upravitelné hodnoty" section
-    createEditableInputs({
-        pripravenost: 100,
-        silaZbraniEffect: 40, // technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
-        vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
-        zkušenostiEffect: 25,
-        spokojenost,
-        plazmy: 0, // Default value
-    });
+    // // Dynamically create or refresh the "Upravitelné hodnoty" section
+    // createEditableInputs({
+    //     pripravenost: 100,
+    //     silaZbraniEffect: 40, // technologie.find(t => t.name === 'Síla zbraní')?.value || 0,
+    //     vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
+    //     zkusenostiEffect: 25,
+    //     spokojenost,
+    //     plazmy: 0, // Default value
+    // });
+    createEditableInputs(budovy);
 }
 
 const unitStats = {
@@ -41,58 +42,107 @@ const unitStats = {
     Mechové: { attack: 2, defense: 3 },
 };
 
-function createEditableInputs(values) {
+function createEditableInputs(budovy) {
     const editableInputsDiv = document.getElementById('editableInputs');
     editableInputsDiv.innerHTML = ''; // Clear existing inputs
 
+    // Default values grouped into categories
+    const defaultValues = {
+        silaArmady: {
+            pripravenost: 100,
+            silaZbraniEffect: 40,
+            vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
+            zkusenostiEffect: 25,
+            spokojenost: 100,
+        },
+        pokroky: {
+            druzice: true,
+            hranicky: true,
+            pacifismus: true,
+            pohranicne: false,
+            bezpecaky: false,
+            plazmy: false,
+        },
+        generalove: {
+            generaloveLevel: 0,
+            nacionalista: false,
+            strateg: true,
+            ochranca: true,
+            vlastenec: false,
+        },
+        gwgBonus: {
+            "+10% / -5%": false,
+            "+5% / +0%": false,
+            "+0% / +5%": true,
+            H6: false,
+            H14: false,
+        },
+    };
+
+    const flexContainer = document.createElement('div');
+    flexContainer.className = 'flex-container';
+
+    // Create the "Síla Armády" table
+    const silaArmadyTable = createTable('Síla Armády', defaultValues.silaArmady);
+    flexContainer.appendChild(silaArmadyTable);
+
+    // Create the "GWG Bonus" table
+    const gwgBonusTable = createTable('GWG Bonus', defaultValues.gwgBonus);
+    flexContainer.appendChild(gwgBonusTable);
+    editableInputsDiv.appendChild(flexContainer);
+
+    const flexContainer2 = document.createElement('div');
+    flexContainer2.className = 'flex-container';
+
+    // Create the "Pokroky" table
+    const pokrokyTable = createTable('Pokroky', defaultValues.pokroky);
+    flexContainer2.appendChild(pokrokyTable);
+
+    // Create the "Generálové" table
+    const generaloveTable = createTable('Generálové', defaultValues.generalove);
+    flexContainer2.appendChild(generaloveTable);
+    editableInputsDiv.appendChild(flexContainer2);
+}
+
+// Helper function to create a table
+function createTable(title, values) {
     const table = document.createElement('table');
     table.className = 'vis_tbl';
+    table.innerHTML = `<tr><th colspan="2">${title}</th></tr>`;
+
     Object.entries(values).forEach(([key, value]) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="rname l">
-                <label for="input-${key}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
-            </td>
-            <td class="rdata r">
-                <input class="short" id="input-${key}" name="${key}" type="text" size="6" value="${value}">
-            </td>
-        `;
+
+        const cleanId = key
+            .replace(/[^\w]/g, '_') // Replace non-alphanumeric characters with underscores
+            .replace(/_+/g, '_')    // Replace multiple underscores with a single underscore
+            .replace(/^_|_$/g, '')  // Remove leading or trailing underscores
+            || key;                 // Fallback to the original key if the result is empty
+        
+        if (typeof value === 'boolean') {
+            // Checkbox for boolean values
+            row.innerHTML = `
+                <td class="rname l">${key}</td>
+                <td class="rdata c">
+                    <input type="checkbox" id="checkbox-${cleanId}" name="${key}" ${value ? 'checked' : ''}>
+                </td>
+            `;
+        } else {
+            // Text input for other values
+            row.innerHTML = `
+                <td class="rname l">
+                    <label for="input-${cleanId}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
+                </td>
+                <td class="rdata r">
+                    <input class="short" id="input-${cleanId}" name="${key}" type="text" size="6" value="${value}">
+                </td>
+            `;
+        }
+
         table.appendChild(row);
     });
 
-    // Add Generálové level input
-    const generalRow = document.createElement('tr');
-    generalRow.innerHTML = `
-        <td class="rname l">
-            <label for="input-generaloveLevel">Generálové level:</label>
-        </td>
-        <td class="rdata r">
-            <input class="short" id="input-generaloveLevel" name="generaloveLevel" type="text" size="6" value="0">
-        </td>
-    `;
-    table.appendChild(generalRow);
-
-    // Add checkboxes for generals
-    const generals = ['Nacionalista', 'Stratég', 'Ochránca', 'Vlastenec'];
-    generals.forEach(general => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="rname l">${general}:</td>
-            <td class="rdata r">
-                <input type="checkbox" id="checkbox-${general}" name="${general}">
-            </td>
-        `;
-        table.appendChild(row);
-    });
-
-    editableInputsDiv.appendChild(table);
-
-//     // Add the Refresh button
-//     const refreshButton = document.createElement('button');
-//     refreshButton.className = 'submit';
-//     refreshButton.textContent = 'Refresh';
-//     refreshButton.onclick = refreshBonuses;
-//     editableInputsDiv.appendChild(refreshButton);
+    return table;
 }
 
 // Parse input text into lines
@@ -290,7 +340,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const silaZbrani = technologie.find(t => t.name === 'Síla zbraní')?.value || 0;
     const vojenskeZakladny = budovy.find(b => b.name === 'Vojenské základny')?.value || 0;
     const pripravenost = 100; // Default value
-    const zkušenostiEffect = 25; // Default value
+    const zkusenostiEffect = 25; // Default value
     //extract from pokroky plazmy
     plazmy = pokroky.find(p => p.name === 'plazmy')?.value || 0;
     const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []);
@@ -298,7 +348,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
     // const spokojenostBonus = calculateSpokojenostBonus(vlada, budovy.find(b => b.name === 'Zábavní střediska')?.value || 0, rozloha);
-    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
+    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
     // Create and append the tables
     container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus));
     container.appendChild(createAttackDefenseTable(jednotky, finalBonus));
@@ -316,9 +366,8 @@ function refreshBonuses() {
     const pripravenost = parseFloat(document.getElementById('input-pripravenost').value) || 100;
     const silaZbraniEffect = parseFloat(document.getElementById('input-silaZbraniEffect').value) || 0;
     const vojenskeZakladny = parseFloat(document.getElementById('input-vojenskeZakladny').value) || 0;
-    const zkušenostiEffect = parseFloat(document.getElementById('input-zkušenostiEffect').value) || 25;
+    const zkusenostiEffect = parseFloat(document.getElementById('input-zkusenostiEffect').value) || 25;
     const spokojenost = parseFloat(document.getElementById('input-spokojenost').value) || 100;
-    const plazmy = parseFloat(document.getElementById('input-plazmy').value) || 0;
 
     const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
     const vlada = document.getElementById('Vláda')?.textContent || '';
@@ -327,22 +376,37 @@ function refreshBonuses() {
     const vladaObrana = parseFloat(document.getElementById('vladaObrana').value) || 0;
     const generalLevel = parseFloat(document.getElementById('input-generaloveLevel').value) || 0;
 
+    const gwgBonus = {
+        '+10% / -5%': document.getElementById('checkbox-10_5').checked,
+        '+5% / +0%': document.getElementById('checkbox-5_0').checked,
+        '+0% / +5%': document.getElementById('checkbox-0_5').checked,
+        H6: document.getElementById('checkbox-H6').checked,
+        H14: document.getElementById('checkbox-H14').checked,
+    };
+    const pokroky = {
+        druzice: document.getElementById('checkbox-druzice').checked,
+        hranicky: document.getElementById('checkbox-hranicky').checked,
+        pacifismus: document.getElementById('checkbox-pacifismus').checked,
+        pohranicne: document.getElementById('checkbox-pohranicne').checked,
+        bezpecaky: document.getElementById('checkbox-bezpecaky').checked,
+        plazmy: document.getElementById('checkbox-plazmy').checked,
+    }
     const generals = {
-        nacionalista: document.getElementById('checkbox-Nacionalista').checked,
-        strateg: document.getElementById('checkbox-Stratég').checked,
-        ochranca: document.getElementById('checkbox-Ochránca').checked,
-        vlastenec: document.getElementById('checkbox-Vlastenec').checked,
+        nacionalista: document.getElementById('checkbox-nacionalista').checked,
+        strateg: document.getElementById('checkbox-strateg').checked,
+        ochranca: document.getElementById('checkbox-ochranca').checked,
+        vlastenec: document.getElementById('checkbox-vlastenec').checked,
     };
 
     // Recalculate bonuses
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
-    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
+    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, pokroky.plazmy);
     const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
 
     // Recalculate and update the final bonus
-    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost);
-    const updatedBonuses = calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals);
+    const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
+    const updatedBonuses = calculateUpdatedBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals);
     const updatedBonusesEffect = {
         normalAttack: ((updatedBonuses.normalAttack - 1) * 100).toFixed(2),
         normalDefense: ((updatedBonuses.normalDefense - 1) * 100).toFixed(2),
@@ -356,10 +420,12 @@ function refreshBonuses() {
     document.getElementById('silaZbraniEffect').textContent = `+${silaZbraniEffect}%`;
     document.getElementById('vojenskeZakladny').textContent = `Vojenské základny (${vojenskeZakladny})`;
     document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
-    document.getElementById('zkušenostiEffect').textContent = `+${zkušenostiEffect}%`;
+    document.getElementById('zkusenostiEffect').textContent = `+${zkusenostiEffect}%`;
     document.getElementById('spokojenost').textContent = `Spokojenost (${spokojenost}%)`;
     document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
 
+    document.getElementById('vladaUtok').value = updatedBonuses.vladaUtok;
+    document.getElementById('vladaObrana').value = updatedBonuses.vladaObrana;
     document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
     document.getElementById('normalAttackBonus').textContent = `+${updatedBonusesEffect.normalAttack}%`;
     document.getElementById('tacticalAttackBonus').textContent = `+${updatedBonusesEffect.tacticalAttack}%`;
@@ -406,21 +472,21 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
     return (a - b * Math.exp(-c * x)).toFixed(1);
 }
 
-function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkušenostiEffect, spokojenostEffect, pripravenost) {
+function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost) {
     // Ensure all inputs are numbers
     silaZbraniEffect = parseFloat(silaZbraniEffect);
     zakladnyEffect = parseFloat(zakladnyEffect);
-    zkušenostiEffect = parseFloat(zkušenostiEffect);
+    zkusenostiEffect = parseFloat(zkusenostiEffect);
     spokojenostEffect = parseFloat(spokojenostEffect);
     pripravenost = parseFloat(pripravenost);
     const finalBonus = (1 + (silaZbraniEffect + zakladnyEffect) / 100) * 
-                       (1 + (zkušenostiEffect) / 100) * 
+                       (1 + (zkusenostiEffect) / 100) * 
                        (1 + (spokojenostEffect) / 100) * 
                        ((pripravenost) / 100);
     return (finalBonus * 100 - 100).toFixed(2);
 }
 
-function calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, generals) {
+function calculateUpdatedBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals) {
     // Initialize bonuses
     let normalAttackBonus = 1;
     let normalDefenseBonus = 1;
@@ -428,9 +494,49 @@ function calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana,
     let tacticalDefenseBonus = 1;
     finalBonus = 1 + parseFloat(finalBonus) / 100;
 
+    // Calculate bonuses from GWG
+    if (gwgBonus['+10% / -5%']) {
+        normalAttackBonus += 0.1;
+        normalDefenseBonus -= 0.05;
+    }
+    if (gwgBonus['+5% / +0%']) {
+        normalAttackBonus += 0.05;
+        normalDefenseBonus += 0.0;
+    }
+    if (gwgBonus['+0% / +5%']) {
+        normalAttackBonus += 0.0;
+        normalDefenseBonus += 0.05;
+    }
+    if (gwgBonus.H6) {
+        tacticalDefenseBonus *= 1.1;
+    }
+    if (gwgBonus.H14) {
+        normalAttackBonus += 0.1;
+        normalDefenseBonus += 0.1;
+    }
+
+    // Calculate bonuses from pokroky
+    if (pokroky.druzice) {
+        normalAttackBonus += 0.05;
+        normalDefenseBonus += 0.05;
+    }
+    if (pokroky.hranicky) {
+        normalDefenseBonus += 0.1;
+    }
+    if (pokroky.pacifismus) {
+        normalAttackBonus -= 0.2;
+        normalDefenseBonus += 0.15;
+    }
+    if (pokroky.pohranicne) {
+        tacticalDefenseBonus += 0.1;
+    }
+    if (pokroky.bezpecaky) {
+        tacticalDefenseBonus *= 1.5;
+    }
+
     // Calculate bonuses from generals
     if (generals.nacionalista) {
-        normalAttackBonus *= (1 + 0.03 * generalLevel);
+        normalAttackBonus += 0.03 * generalLevel;
     }
     if (generals.strateg) {
         tacticalAttackBonus *= (1 + 0.05 * generalLevel);
@@ -440,15 +546,25 @@ function calculateGeneralBonus(finalBonus, generalLevel, vladaUtok, vladaObrana,
         tacticalDefenseBonus *= (1 + 0.05 * generalLevel);
     }
     if (generals.vlastenec) {
-        normalDefenseBonus *= (1 + 0.04 * generalLevel);
+        normalDefenseBonus += 0.04 * generalLevel;
     }
 
     // Add bonuses from "Navíc vláda, gen. a ali. bonus"
-    normalAttackBonus *= (1 + (parseFloat(vladaUtok) || 0) / 100);
-    normalDefenseBonus *= (1 + (parseFloat(vladaObrana) || 0) / 100);
+    if (vladaUtok >= -100) {
+        vladaUtok = (normalAttackBonus - 1) * 100;
+    } else {
+        normalAttackBonus = 1 + vladaUtok / 100;
+    }
+    if (vladaObrana >= -100) {
+        vladaObrana = (normalDefenseBonus - 1) * 100;
+    } else {
+        normalDefenseBonus = 1 + vladaObrana / 100;
+    }
 
     // Combine with the previous final bonus
     const updatedFinalBonus = {
+        vladaUtok: vladaUtok,
+        vladaObrana: vladaObrana,
         normalAttack: finalBonus * normalAttackBonus,
         normalDefense: finalBonus * normalDefenseBonus,
         tacticalAttack: finalBonus * normalAttackBonus * tacticalAttackBonus,
@@ -495,7 +611,7 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
         </tr>
         <tr>
             <td class="rname l">Zkušenosti</td>
-            <td class="plus" id="zkušenostiEffect">+25%</td>
+            <td class="plus" id="zkusenostiEffect">+25%</td>
         </tr>
         <tr>
             <td class="rname l" id="spokojenost">Spokojenost (${spokojenost}%)</td>
