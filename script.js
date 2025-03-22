@@ -7,6 +7,7 @@ function processData() {
     const { jednotky, budovy, technologie, spokojenost, vlada, rozloha } = extractDetails(lines);
 
     const container = createOutputContainer();
+    const container2 = createOutputContainer(2);
     const baseUrl = "https://gold.webgame.cz/wg/index.php";
 
     // Clear the output container before appending new elements
@@ -22,6 +23,8 @@ function processData() {
 
     document.getElementById('output').appendChild(container);
 
+    appendBonusCalculationTable(container2, jednotky, tacticalDefenseBonus = 100);
+    document.getElementById('bonusOutput').appendChild(container2);
     // // Dynamically create or refresh the "Upravitelné hodnoty" section
     // createEditableInputs({
     //     pripravenost: 100,
@@ -31,7 +34,7 @@ function processData() {
     //     spokojenost,
     //     plazmy: 0, // Default value
     // });
-    createEditableInputs(budovy);
+    createEditableInputs(budovy, spokojenost);
 }
 
 const unitStats = {
@@ -42,7 +45,7 @@ const unitStats = {
     Mechové: { attack: 2, defense: 3 },
 };
 
-function createEditableInputs(budovy) {
+function createEditableInputs(budovy, spokojenost) {
     const editableInputsDiv = document.getElementById('editableInputs');
     editableInputsDiv.innerHTML = ''; // Clear existing inputs
 
@@ -53,7 +56,7 @@ function createEditableInputs(budovy) {
             silaZbraniEffect: 40,
             vojenskeZakladny: budovy.find(b => b.name === 'Vojenské základny')?.value || 0,
             zkusenostiEffect: 25,
-            spokojenost: 100,
+            spokojenost: spokojenost,
         },
         pokroky: {
             druzice: true,
@@ -239,9 +242,9 @@ function extractSection(lines, startIndex, count, shift) {
 }
 
 // Create the main output container
-function createOutputContainer() {
+function createOutputContainer(number = 1) {
     const container = document.createElement('div');
-    container.id = 'icontent';
+    container.id = 'icontent' + number;
     return container;
 }
 
@@ -406,7 +409,7 @@ function refreshBonuses() {
 
     // Recalculate and update the final bonus
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
-    const updatedBonuses = calculateUpdatedBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals);
+    const updatedBonuses = calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals);
     const updatedBonusesEffect = {
         normalAttack: ((updatedBonuses.normalAttack - 1) * 100).toFixed(2),
         normalDefense: ((updatedBonuses.normalDefense - 1) * 100).toFixed(2),
@@ -486,7 +489,7 @@ function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect,
     return (finalBonus * 100 - 100).toFixed(2);
 }
 
-function calculateUpdatedBonus(finalBonus, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals) {
+function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vladaObrana, gwgBonus, pokroky, generals) {
     // Initialize bonuses
     let normalAttackBonus = 1;
     let normalDefenseBonus = 1;
@@ -532,6 +535,9 @@ function calculateUpdatedBonus(finalBonus, generalLevel, vladaUtok, vladaObrana,
     }
     if (pokroky.bezpecaky) {
         tacticalDefenseBonus *= 1.5;
+        if (vlada === 'Technokracie') {
+            tacticalDefenseBonus *= 0.8;
+        }
     }
 
     // Calculate bonuses from generals
@@ -587,6 +593,57 @@ function calculateAttackDefense(jednotky) {
     });
 
     return { totalAttack, totalDefense };
+}
+
+function calculateBonusForUnits(jednotky) {
+    const zadajBonus = parseFloat(document.getElementById('zadajBonus').value) || 0;
+    if (zadajBonus <= 0) {
+        document.getElementById('bonusCalculationResult').textContent = 'Zadaj bonus musí byť väčší ako 0.';
+        return;
+    }
+
+    // Get the tactical defense value from the DOM
+    const tacticalDefenseText = document.getElementById('tacticalDefenseBonus').textContent;
+    const tacticalDefense = parseFloat(tacticalDefenseText.replace('+', '').replace('%', '')) || 0;
+
+    const results = [];
+    let stihackyValue = 0;
+    let bunkryValue = 0;
+
+    // Iterate through jednotky and calculate bonuses
+    jednotky.forEach(unit => {
+        const checkbox = document.getElementById(`checkbox-${unit.name.replace(/\s+/g, '_')}`);
+        if (checkbox && checkbox.checked) {
+            let newValue;
+
+            if (unit.name === 'Vojáci') {
+                // Special case for Vojáci: Multiply by 2/3
+                newValue = ((tacticalDefense / zadajBonus) * unit.value * (2 / 3)).toFixed(2);
+                results.push(`${unit.name}: ${newValue}`);
+            } else if (unit.name === 'Bunkry') {
+                // Special case for Bunkry: Add their value to Stíhačky
+                bunkryValue = unit.value;
+            } else if (unit.name === 'Stíhačky') {
+                // Special case for Stíhačky: Add Bunkry value and calculate
+                stihackyValue = unit.value;
+            } else {
+                // Default case for other units
+                newValue = ((tacticalDefense / zadajBonus) * unit.value).toFixed(2);
+                results.push(`${unit.name}: ${newValue}`);
+            }
+        }
+    });
+
+    // Handle the combined calculation for Stíhačky and Bunkry
+    if (stihackyValue > 0 || bunkryValue > 0) {
+        const combinedValue = stihackyValue + bunkryValue;
+        const combinedBonus = ((tacticalDefense / zadajBonus) * combinedValue).toFixed(2);
+        results.push(`Stíhačky: ${combinedBonus}`);
+    }
+
+    document.getElementById('bonusCalculationResult').textContent = results.length > 0
+        ? `Výsledky: ${results.join(', ')}`
+        : 'Žiadne jednotky neboli vybrané.';
 }
 
 function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus) {
@@ -678,3 +735,58 @@ function createAttackDefenseTable(jednotky, finalBonus) {
     table.appendChild(tbody);
     return table;
 }
+
+function appendBonusCalculationTable(container, jednotky, tacticalDefense) {
+    const table = document.createElement('table');
+    table.id = 'bonus-calculation-table';
+    table.className = 'vis_tbl';
+
+    const tbody = document.createElement('tbody');
+    tbody.innerHTML = `
+        <tr><th colspan="2">Zadaj bonus</th></tr>
+        <tr>
+            <td class="rname l">Bonus:</td>
+            <td class="rdata r">
+                <input id="zadajBonus" type="number" value="0" style="width: 80px;">
+            </td>
+        </tr>
+    `;
+
+    // Add checkboxes for jednotky
+    jednotky.forEach(unit => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="rname l">${unit.name}:</td>
+            <td class="rdata r">
+                <input type="checkbox" id="checkbox-${unit.name.replace(/\s+/g, '_')}" name="${unit.name}">
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+     // Add a confirm button
+     const confirmRow = document.createElement('tr');
+     const confirmCell = document.createElement('td');
+     confirmCell.colSpan = 2;
+     confirmCell.className = 'rdata r';
+ 
+     const confirmButton = document.createElement('button');
+     confirmButton.textContent = 'Potvrdiť';
+     confirmButton.addEventListener('click', () => {
+         calculateBonusForUnits(jednotky, tacticalDefense);
+     });
+ 
+     confirmCell.appendChild(confirmButton);
+     confirmRow.appendChild(confirmCell);
+     tbody.appendChild(confirmRow);
+ 
+     // Add a row to display results
+     const resultRow = document.createElement('tr');
+     resultRow.innerHTML = `
+         <td colspan="2" class="rdata r" id="bonusCalculationResult"></td>
+     `;
+     tbody.appendChild(resultRow);
+ 
+     table.appendChild(tbody);
+     container.appendChild(table);
+ }
