@@ -1,0 +1,9 @@
+# Personal formula files stay on each person's machine, so nobody's experiment
+# lands in someone else's checkout and no two people conflict over the same file.
+# The shared library is the one everybody does commit.
+formulas.*.json
+!formulas.shared.json
+
+# If you would rather keep personal files in the repo as a backup, delete the
+# two lines above and commit them - they never affect anyone else's results,
+# they are only loaded for whoever's profile name matches.

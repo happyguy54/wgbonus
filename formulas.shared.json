@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "formulas": [
+    {
+      "id": "zakladny_podil",
+      "label": "Podíl vojenských základen",
+      "expression": "vojenske_zakladny / rozloha * 100",
+      "unit": "%",
+      "note": "Kolik procent rozlohy tvoří vojenské základny.",
+      "created": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "zakladny_efekt_vzorec",
+      "label": "Základny efekt (vzorec)",
+      "expression": "20 - 20 * exp(-11 * vojenske_zakladny / rozloha)",
+      "unit": "%",
+      "note": "Replikuje calculateZakladnyEffect() ze script.js — ukázka exp().",
+      "created": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "utok_na_km2",
+      "label": "Útok na km²",
+      "expression": "total_attack / rozloha",
+      "unit": "",
+      "note": "Hustota útočné síly.",
+      "created": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "pomer_utok_obrana",
+      "label": "Poměr útok / obrana",
+      "expression": "round(total_attack / total_defense, 3)",
+      "unit": "",
+      "note": "Ukázka round() na 3 desetinná místa.",
+      "created": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "utok_nad_prahem",
+      "label": "Útok nad prahem 700k",
+      "expression": "if(total_attack > 700000, total_attack - 700000, 0)",
+      "unit": "",
+      "note": "Ukázka podmínky if() a porovnání.",
+      "created": "2026-09-13T00:00:00.000Z"
+    },
+    {
+      "id": "utok_na_km2_log",
+      "label": "Log útoku na km²",
+      "expression": "log10(max(utok_na_km2, 1))",
+      "unit": "",
+      "note": "Staví na jiném vzorci (utok_na_km2) — ukázka řetězení.",
+      "created": "2026-09-13T00:00:00.000Z"
+    }
+  ]
+}

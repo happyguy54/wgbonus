@@ -6,6 +6,12 @@ function processData() {
     const summaryData = extractSummaryData(lines);
     const { jednotky, budovy, technologie, spokojenost, vlada, rozloha } = extractDetails(lines);
 
+    // Publish the parsed values *before* the bonus maths runs, so a user
+    // override of a built-in equation can refer to them.
+    if (window.WGVars) {
+        WGVars.publishFromData({ jednotky, budovy, technologie, spokojenost, vlada, rozloha });
+    }
+
     const container = createOutputContainer();
     const container2 = createOutputContainer(2);
     const baseUrl = "https://gold.webgame.cz/wg/index.php";
@@ -13,6 +19,7 @@ function processData() {
     // Clear the output container before appending new elements
     const outputDiv = document.getElementById('output');
     outputDiv.innerHTML = ''; // Clear all existing content
+    document.getElementById('bonusOutput').innerHTML = ''; // Clear it too, or IDs duplicate on re-run
     const pokroky = [
         { name: 'plazmy', value: 0 } // Default placeholder
     ];
@@ -23,7 +30,7 @@ function processData() {
 
     document.getElementById('output').appendChild(container);
 
-    appendBonusCalculationTable(container2, jednotky, tacticalDefenseBonus = 100);
+    appendBonusCalculationTable(container2, jednotky, 100);
     document.getElementById('bonusOutput').appendChild(container2);
     // // Dynamically create or refresh the "Upravitelné hodnoty" section
     // createEditableInputs({
@@ -35,12 +42,19 @@ function processData() {
     //     plazmy: 0, // Default value
     // });
     createEditableInputs(budovy, spokojenost);
+
+    // Hand every parsed and computed quantity to the user-formula layer.
+    if (window.WGVars) {
+        WGVars.publishFromData({ jednotky, budovy, technologie, spokojenost, vlada, rozloha });
+        WGVars.publishComputed();
+        WGVars.emitChange();
+    }
 }
 
 const unitStats = {
     Vojáci: { attack: 1, defense: 1 },
     Tanky: { attack: 6, defense: 4 },
-    Stíhačhy: { attack: 6, defense: 0 },
+    Stíhačky: { attack: 6, defense: 0 },
     Bunkry: { attack: 0, defense: 6 },
     Mechové: { attack: 2, defense: 3 },
 };
@@ -345,12 +359,26 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
     const pripravenost = 100; // Default value
     const zkusenostiEffect = 25; // Default value
     //extract from pokroky plazmy
-    plazmy = pokroky.find(p => p.name === 'plazmy')?.value || 0;
-    const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []);
-    console.log('silaZbrani:', silaZbrani, 'rozloha:', rozloha, 'vlada:', vlada, 'pokroky:', pokroky);
-    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0);
-    const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
-    // const spokojenostBonus = calculateSpokojenostBonus(vlada, budovy.find(b => b.name === 'Zábavní střediska')?.value || 0, rozloha);
+    const plazmy = pokroky.find(p => p.name === 'plazmy')?.value || 0;
+
+    // Each built-in effect is published as it is computed, so that a user
+    // override of a later equation can refer to the earlier ones by name.
+    const pub = (slug, label, value) => {
+        if (window.WGVars) WGVars.set(slug, label, value, 'Bonusy');
+    };
+    pub('pripravenost', 'Připravenost', pripravenost);
+    pub('zkusenosti_effect', 'Zkušenosti efekt %', zkusenostiEffect);
+    pub('plazmy', 'Plazmy', plazmy);
+
+    const silaZbraniEffect = calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky);
+    pub('sila_zbrani_effect', 'Síla zbraní efekt %', silaZbraniEffect);
+
+    const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy);
+    pub('zakladny_effect', 'Základny efekt %', zakladnyEffect);
+
+    const spokojenostEffect = calculateSpokojenostEffect(spokojenost, vlada);
+    pub('spokojenost_effect', 'Spokojenost efekt %', spokojenostEffect);
+
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
     // Create and append the tables
     container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus));
@@ -365,6 +393,12 @@ function appendRefreshButton(container) {
 }
 
 function refreshBonuses() {
+    // Nothing to refresh until processData() has built the inputs and tables
+    if (!document.getElementById('input-pripravenost')) {
+        console.warn('Nejprve zpracujte tabulku ("Zpracovat").');
+        return;
+    }
+
     // Get updated values from inputs
     const pripravenost = parseFloat(document.getElementById('input-pripravenost').value) || 100;
     const silaZbraniEffect = parseFloat(document.getElementById('input-silaZbraniEffect').value) || 0;
@@ -375,8 +409,11 @@ function refreshBonuses() {
     const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
     const vlada = document.getElementById('Vláda')?.textContent || '';
 
-    const vladaUtok = parseFloat(document.getElementById('vladaUtok').value) || 0;
-    const vladaObrana = parseFloat(document.getElementById('vladaObrana').value) || 0;
+    // null means "untouched" - the field is then refilled from the computation.
+    const utokEl = document.getElementById('vladaUtok');
+    const obranaEl = document.getElementById('vladaObrana');
+    const vladaUtok = utokEl.dataset.userEdited ? (parseFloat(utokEl.value) || 0) : null;
+    const vladaObrana = obranaEl.dataset.userEdited ? (parseFloat(obranaEl.value) || 0) : null;
     const generalLevel = parseFloat(document.getElementById('input-generaloveLevel').value) || 0;
 
     const gwgBonus = {
@@ -405,7 +442,7 @@ function refreshBonuses() {
     const pripravenostEffect = (100 - pripravenost).toFixed(1);
     // const silaZbraniEffect = calculateSilaZbraniEffect(silaZbraniEffect, rozloha, vlada, plazmy);
     const zakladnyEffect = calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, pokroky.plazmy);
-    const spokojenostEffect = ((spokojenost - 100) / 2).toFixed(2);
+    const spokojenostEffect = calculateSpokojenostEffect(spokojenost, vlada);
 
     // Recalculate and update the final bonus
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
@@ -427,8 +464,9 @@ function refreshBonuses() {
     document.getElementById('spokojenost').textContent = `Spokojenost (${spokojenost}%)`;
     document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
 
-    document.getElementById('vladaUtok').value = updatedBonuses.vladaUtok;
-    document.getElementById('vladaObrana').value = updatedBonuses.vladaObrana;
+    // Refill the vláda fields only while the user has not typed in them.
+    if (!utokEl.dataset.userEdited) utokEl.value = Number(updatedBonuses.vladaUtok.toFixed(2));
+    if (!obranaEl.dataset.userEdited) obranaEl.value = Number(updatedBonuses.vladaObrana.toFixed(2));
     document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
     document.getElementById('normalAttackBonus').textContent = `+${updatedBonusesEffect.normalAttack}%`;
     document.getElementById('tacticalAttackBonus').textContent = `+${updatedBonusesEffect.tacticalAttack}%`;
@@ -441,21 +479,54 @@ function refreshBonuses() {
 
     document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toLocaleString();
     document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toLocaleString();
+
+    // Recomputed bonuses feed the user-formula layer too.
+    if (window.WGVars) {
+        WGVars.publishComputed();
+        WGVars.emitChange();
+    }
+}
+
+/**
+ * Value of a built-in equation the user has overridden in the formula editor,
+ * or null when no override is active. Overrides are opt-in and stored per
+ * person - see formula-ui.js.
+ */
+function builtinOverride(id) {
+    if (!window.WGFormulas || typeof WGFormulas.builtinOverride !== 'function') return null;
+    return WGFormulas.builtinOverride(id);
 }
 
 // Calculate the effect of silaZbrani
 function calculateSilaZbraniEffect(silaZbrani, rozloha, vlada, pokroky = []) {
-    return effect = 40;
+    const o = builtinOverride('sila_zbrani_effect');
+    if (o !== null) return Number(o.toFixed(2));
+    return 40;
 }
 
 // Calculate the effect of vojenskeZakladny
 function calculateZakladnyEffect(vojenskeZakladny, rozloha, vlada, plazmy = 0) {
+    const o = builtinOverride('zakladny_effect');
+    if (o !== null) return o.toFixed(2);
+
     const a = 0.2, b = 0.2, c = 11;
     const x = vojenskeZakladny / rozloha;
     let effect = a - b * Math.exp(-c * x);
     if (vlada === 'Fundamentalismus') effect *= 1.5;
     if (plazmy > 0) effect *= 1.25;
     return (effect * 100).toFixed(2);
+}
+
+// Calculate the effect of spokojenost.
+// Manual 5.6.1: 1 % of spokojenost moves military strength by 0.5 %, except
+// under Diktatura and Komunismus where it is only 0.25 %.
+function calculateSpokojenostEffect(spokojenost, vlada) {
+    const o = builtinOverride('spokojenost_effect');
+    if (o !== null) return o.toFixed(2);
+    const perPercent = window.WGGovernments
+        ? window.WGGovernments.forName(vlada).spokojenostVojenska
+        : 0.5;
+    return ((spokojenost - 100) * perPercent).toFixed(2);
 }
 
 // Calculate the spokojenost bonus
@@ -476,6 +547,9 @@ function calculateSpokojenostBonus(vlada, zabavniStrediska, rozloha) {
 }
 
 function calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost) {
+    const o = builtinOverride('final_bonus');
+    if (o !== null) return o.toFixed(2);
+
     // Ensure all inputs are numbers
     silaZbraniEffect = parseFloat(silaZbraniEffect);
     zakladnyEffect = parseFloat(zakladnyEffect);
@@ -555,16 +629,26 @@ function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vlada
         normalDefenseBonus += 0.04 * generalLevel;
     }
 
-    // Add bonuses from "Navíc vláda, gen. a ali. bonus"
-    if (vladaUtok >= -100) {
+    // The government's own combat modifier, from the manual (see governments.js).
+    const gov = window.WGGovernments
+        ? window.WGGovernments.forName(vlada)
+        : { utok: 0, obrana: 0 };
+    normalAttackBonus += gov.utok / 100;
+    normalDefenseBonus += gov.obrana / 100;
+
+    // "Navíc vláda, gen. a ali. bonus" is PREFILLED with everything computed
+    // above and then edited by hand for whatever we cannot derive. So a typed
+    // value REPLACES the computed figure - it is the total, not an extra.
+    // +40% -> x1.4, -40% -> x0.6; clamped at -100% so it cannot flip the sign.
+    if (vladaUtok === null || vladaUtok === undefined) {
         vladaUtok = (normalAttackBonus - 1) * 100;
     } else {
-        normalAttackBonus = 1 + vladaUtok / 100;
+        normalAttackBonus = 1 + Math.max(vladaUtok, -100) / 100;
     }
-    if (vladaObrana >= -100) {
+    if (vladaObrana === null || vladaObrana === undefined) {
         vladaObrana = (normalDefenseBonus - 1) * 100;
     } else {
-        normalDefenseBonus = 1 + vladaObrana / 100;
+        normalDefenseBonus = 1 + Math.max(vladaObrana, -100) / 100;
     }
 
     // Combine with the previous final bonus
@@ -679,14 +763,32 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
             <td class="plus" id="finalBonus">+${finalBonus}%</td>
         </tr>
         <tr>
-            <td class="sum l">Navíc vláda, gen. a ali. bonus (obr)</td>
+            <td class="sum l">Navíc vláda, gen. a ali. bonus (út/obr)</td>
             <td>
                 <span class="plus"><input id="vladaUtok" type="number" value="0" style="width: 50px;">%</span>
                 /
-                <span class="plus"><input id="vladaObrana" type="number" value="0" style="width: 50px;">%</span></td>
+                <span class="plus"><input id="vladaObrana" type="number" value="0" style="width: 50px;">%</span>
+                <button type="button" id="vladaReset" class="vlada-reset" title="Vrátit spočítanou hodnotu">↺</button>
             </td>
+        </tr>
     `;
     table.appendChild(tbody);
+
+    // Typing marks the field as owned by the user, so Refresh stops refilling it.
+    ['vladaUtok', 'vladaObrana'].forEach(id => {
+        const el = tbody.querySelector('#' + id);
+        if (el) el.addEventListener('input', () => { el.dataset.userEdited = '1'; });
+    });
+    const reset = tbody.querySelector('#vladaReset');
+    if (reset) {
+        reset.addEventListener('click', () => {
+            ['vladaUtok', 'vladaObrana'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) delete el.dataset.userEdited;
+            });
+            if (typeof refreshBonuses === 'function') refreshBonuses();
+        });
+    }
     return table;
 }
 

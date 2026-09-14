@@ -2023,3 +2023,460 @@ input.expNumber.checked {
 	border-bottom-style: solid;
 	border-left-style: solid;
 }
+
+/* ============================================================================
+   Vlastní vzorce (formula builder) - formula-ui.js
+   ========================================================================== */
+
+.formula-builder {
+	max-width: 1200px;
+	margin: 24px auto;
+	padding: 0 12px;
+	font: normal normal normal 12px verdana, arial, sans-serif;
+	color: #FFF;
+}
+
+.formula-builder h2 {
+	font: normal normal bold 16px verdana, arial, sans-serif;
+	color: #FF8000;
+	text-align: center;
+	margin: 12px 0 10px 0;
+}
+
+.formula-builder h3 {
+	font: normal normal bold 13px verdana, arial, sans-serif;
+	color: #FF8000;
+	margin: 14px 0 6px 0;
+}
+
+.formula-cols {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: flex-start;
+}
+
+.formula-col {
+	flex: 1 1 260px;
+	min-width: 0;
+}
+
+.formula-col-wide {
+	flex: 2 1 420px;
+}
+
+/* ---- inputs ---- */
+
+.formula-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 5px 7px;
+	background-color: #1a1a1a;
+	border: solid 1px #3a3a3a;
+	color: #d5e396;
+	font: normal normal normal 12px verdana, arial, sans-serif;
+}
+
+.formula-input:focus {
+	outline: none;
+	border-color: #FF8000;
+}
+
+.formula-expr-input {
+	font-family: "Courier New", monospace;
+	font-size: 13px;
+	color: #98CCFF;
+}
+
+.formula-field {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+.formula-field label {
+	flex: 0 0 100px;
+	text-align: right;
+	color: #bbb;
+}
+
+.formula-field .ac-wrap,
+.formula-field .formula-input {
+	flex: 1 1 auto;
+}
+
+/* ---- autocomplete ---- */
+
+.ac-wrap {
+	position: relative;
+}
+
+.ac-list {
+	display: none;
+	position: absolute;
+	z-index: 50;
+	left: 0;
+	right: 0;
+	top: 100%;
+	margin: 2px 0 0 0;
+	padding: 0;
+	list-style: none;
+	max-height: 260px;
+	overflow-y: auto;
+	background-color: #1a1a1a;
+	border: solid 1px #FF8000;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+.ac-item {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 4px 8px;
+	cursor: pointer;
+	border-bottom: solid 1px #2a2a2a;
+}
+
+.ac-item:hover,
+.ac-item.ac-active {
+	background-color: #3a3a2a;
+}
+
+.ac-name {
+	font-family: "Courier New", monospace;
+	font-size: 13px;
+	color: #d5e396;
+	flex: 0 0 auto;
+}
+
+.ac-kind {
+	font-size: 10px;
+	color: #FF8000;
+	flex: 0 0 auto;
+	text-transform: uppercase;
+}
+
+.ac-detail {
+	font-size: 11px;
+	color: #888;
+	margin-left: auto;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---- live preview ---- */
+
+.formula-preview {
+	min-height: 18px;
+	margin: 4px 0 8px 108px;
+	font-family: "Courier New", monospace;
+	font-size: 13px;
+	color: #888;
+}
+
+.formula-preview.ok {
+	color: #00CC00;
+}
+
+.formula-preview.err {
+	color: #CC6666;
+}
+
+.formula-error {
+	color: #CC0000;
+	min-height: 16px;
+	margin: 4px 0;
+}
+
+/* ---- variable chips ---- */
+
+.var-list {
+	margin-top: 6px;
+	max-height: 420px;
+	overflow-y: auto;
+	border: solid 1px #2a2a2a;
+	padding: 6px;
+	background-color: #151515;
+}
+
+.var-cat {
+	color: #FF8000;
+	font-weight: bold;
+	font-size: 11px;
+	text-transform: uppercase;
+	margin: 8px 0 4px 0;
+}
+
+.var-cat:first-child {
+	margin-top: 0;
+}
+
+.var-chip {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	text-align: left;
+	padding: 3px 6px;
+	margin-bottom: 2px;
+	background-color: #2a2a2a;
+	border: solid 1px #3a3a3a;
+	color: #FFF;
+	cursor: pointer;
+	font: normal normal normal 11px verdana, arial, sans-serif;
+}
+
+.var-chip:hover {
+	border-color: #FF8000;
+	background-color: #3a3a2a;
+}
+
+.var-chip {
+	flex-wrap: wrap;
+	align-items: baseline;
+}
+
+.var-chip .var-label {
+	color: #FFF;
+	flex: 1 1 auto;
+	text-align: left;
+}
+
+.var-chip .var-value {
+	color: #98CCFF;
+	white-space: nowrap;
+	flex: 0 0 auto;
+}
+
+.var-chip .var-slug {
+	font-family: "Courier New", monospace;
+	font-size: 10px;
+	color: #7b864a;
+	flex-basis: 100%;
+	text-align: left;
+}
+
+.var-chip:hover .var-slug {
+	color: #d5e396;
+}
+
+button.vlada-reset {
+	margin-left: 6px;
+	padding: 0 5px;
+	background-color: #2a2a2a;
+	border: solid 1px #3a3a3a;
+	color: #FF8000;
+	cursor: pointer;
+	font-size: 12px;
+	line-height: 16px;
+}
+
+button.vlada-reset:hover {
+	border-color: #FF8000;
+}
+
+/* ---- results table ---- */
+
+table.formula-results {
+	width: 100%;
+	margin-top: 6px;
+}
+
+table.formula-results code.formula-expr {
+	font-family: "Courier New", monospace;
+	font-size: 12px;
+	color: #98CCFF;
+	word-break: break-word;
+}
+
+code.formula-id {
+	font-family: "Courier New", monospace;
+	font-size: 11px;
+	color: #888;
+}
+
+.formula-value {
+	font-family: "Courier New", monospace;
+	font-size: 14px;
+	color: #00CC00 !important;
+	white-space: nowrap;
+}
+
+.formula-value.err {
+	color: #CC0000 !important;
+	font-size: 11px;
+	white-space: normal;
+}
+
+.formula-row-err {
+	background-color: #2a1a1a;
+}
+
+.formula-note {
+	color: #888;
+	font-size: 11px;
+	margin-top: 2px;
+}
+
+/* ---- persistence bar ---- */
+
+.formula-persist {
+	margin: 12px 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.formula-file-label {
+	cursor: pointer;
+	display: inline-block;
+}
+
+.formula-status {
+	color: #00CC00;
+	font-size: 11px;
+}
+
+.formula-status.dirty {
+	color: #FF8000;
+}
+
+.formula-hint {
+	color: #888;
+	font-size: 11px;
+	flex-basis: 100%;
+	margin: 4px 0 0 0;
+}
+
+.formula-help {
+	margin-top: 12px;
+	color: #bbb;
+	font-size: 11px;
+}
+
+.formula-help summary {
+	cursor: pointer;
+	color: #FF8000;
+}
+
+.formula-help code {
+	font-family: "Courier New", monospace;
+	color: #d5e396;
+}
+
+.formula-help p {
+	margin: 6px 0;
+}
+
+@media (max-width: 700px) {
+	.formula-field {
+		flex-wrap: wrap;
+	}
+	.formula-field label {
+		flex: 1 1 100%;
+		text-align: left;
+	}
+	.formula-preview {
+		margin-left: 0;
+	}
+}
+
+/* ---- profile bar, shared/personal layers, built-in override lock ---- */
+
+.profile-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+	padding: 6px 8px;
+	background-color: #151515;
+	border: solid 1px #2a2a2a;
+}
+
+.profile-bar label {
+	color: #FF8000;
+	font-weight: bold;
+}
+
+.profile-bar .formula-input {
+	width: auto;
+	flex: 0 0 auto;
+}
+
+.origin-badge {
+	display: inline-block;
+	padding: 1px 6px;
+	font-size: 10px;
+	text-transform: uppercase;
+	border: solid 1px #3a3a3a;
+	white-space: nowrap;
+}
+
+.origin-personal {
+	color: #d5e396;
+	background-color: #3a3a2a;
+	border-color: #7b864a;
+}
+
+.origin-shared {
+	color: #98CCFF;
+	background-color: #1a2a3a;
+	border-color: #2a4a6a;
+}
+
+.formula-actions button {
+	margin: 1px;
+	font-size: 11px;
+}
+
+/* ---- built-in override panel ---- */
+
+.builtin-lock {
+	margin: 16px 0 8px 0;
+	padding: 8px;
+	background-color: #2a1a1a;
+	border: solid 1px #5a3a3a;
+}
+
+.builtin-lock label {
+	color: #FF8000;
+	cursor: pointer;
+	display: inline-block;
+	margin-right: 8px;
+}
+
+.builtin-lock .formula-hint {
+	flex-basis: auto;
+	display: block;
+	margin-top: 4px;
+}
+
+.builtin-lock code {
+	font-family: "Courier New", monospace;
+	color: #d5e396;
+}
+
+.builtin-panel {
+	margin-bottom: 16px;
+}
+
+.builtin-panel .formula-input {
+	width: 100%;
+}
+
+code.builtin-default {
+	color: #888 !important;
+	font-size: 11px;
+}
+
+tr.builtin-overridden {
+	background-color: #2a2a1a;
+}
+
+tr.builtin-overridden .rname strong {
+	color: #FF8000;
+}

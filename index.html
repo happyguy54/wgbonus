@@ -22,6 +22,7 @@
     </script>
 </head>
 <body>
+<script src="governments.js"></script>
 <script src="script.js"></script>
 <h1>Vložte tabulku pro výpočet bonusu</h1>
 
@@ -123,12 +124,9 @@ Výzkum vesmíru 	16696
     <div id="bonusOutput"></div>
 </div>
 
-</br>
+<div id="formulaBuilder" class="formula-builder"></div>
 
-<div>
-    <p>Define your function using available variables: A, B</p>
-    <input id="functionInput" type="text" placeholder="e.g., A + B * 2">
-    <button id="calculate">Calculate</button>
-</div>
+<script src="formula-engine.js"></script>
+<script src="formula-ui.js"></script>
 </body>
 </html>
