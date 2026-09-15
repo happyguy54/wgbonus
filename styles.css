@@ -2480,3 +2480,15 @@ tr.builtin-overridden {
 tr.builtin-overridden .rname strong {
 	color: #FF8000;
 }
+
+/* Advances the current government cannot hold */
+tr.pokrok-disabled td,
+tr.pokrok-disabled .rname {
+	color: #666 !important;
+	font-style: italic;
+}
+
+tr.pokrok-disabled input {
+	opacity: 0.4;
+	cursor: not-allowed;
+}

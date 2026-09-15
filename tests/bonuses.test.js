@@ -99,4 +99,39 @@ section('spokojenost -> military strength (manual 5.6.1)');
         Number(sandbox.calculateSpokojenostEffect(110, 'Nesmysl')), 5);
 }
 
+section('pokroky come from the table and are gated by vláda');
+{
+    const G = sandbox.WGGovernments;
+    eq('Svatá válka útok', G.advance('svata_valka').utok, 5);
+    eq('Svatá válka obrana', G.advance('svata_valka').obrana, 5);
+    eq('Fašismus útok', G.advance('fasismus').utok, 10);
+    eq('Pacifismus is unchanged', G.advance('pacifismus').utok, -20);
+    eq('Družice is unchanged', G.advance('druzice').utok, 5);
+
+    ok('Svatá válka allowed for Fundamentalismus', G.advanceAllowed('svata_valka', 'Fundamentalismus'));
+    ok('Svatá válka NOT allowed for Feudalismus', !G.advanceAllowed('svata_valka', 'Feudalismus'));
+    ok('Fašismus allowed for Diktatura', G.advanceAllowed('fasismus', 'Diktatura'));
+    ok('Fašismus allowed for Republika', G.advanceAllowed('fasismus', 'Republika'));
+    ok('Fašismus NOT allowed for Komunismus', !G.advanceAllowed('fasismus', 'Komunismus'));
+    ok('ungated advance allowed anywhere', G.advanceAllowed('druzice', 'Anarchie'));
+
+    // ...and the gate is enforced in the actual calculation
+    const withSV = { ...NONE.pok, svata_valka: true };
+    eq('Svatá válka applies under Fundamentalismus',
+        calc('Fundamentalismus', null, null, { pok: withSV }).normalAttack, 1.05);
+    eq('Svatá válka ignored under Feudalismus',
+        calc('Feudalismus', null, null, { pok: withSV }).normalAttack, 1);
+
+    const withFas = { ...NONE.pok, fasismus: true };
+    eq('Fašismus under Diktatura stacks with its +10%',
+        calc('Diktatura', null, null, { pok: withFas }).normalAttack, 1.2);
+    eq('Fašismus ignored under Fundamentalismus',
+        calc('Fundamentalismus', null, null, { pok: withFas }).normalAttack, 1);
+}
+
+section('prefilled percentage has no float noise');
+[['Republika', -5], ['Technokracie', -10], ['Anarchie', -20], ['Diktatura', 10]].forEach(([v, want]) => {
+    eq(`${v} útok`, calc(v, null, null).vladaUtok, want);
+});
+
 process.exit(done() ? 1 : 0);

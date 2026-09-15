@@ -70,6 +70,44 @@
         },
     };
 
+    /**
+     * Pokroky that change NORMAL attack/defence strength, from manual 7.2.
+     * `vlady: null` means any government may have it; a list means only those.
+     * Tactical-only advances (Pohraniční stráž, Bezpečnostní senzory) and
+     * Plazmové zbraně are applied elsewhere and deliberately not listed here,
+     * so nothing is counted twice.
+     */
+    const ADVANCES = {
+        druzice: {
+            label: 'Družice', utok: 5, obrana: 5, vlady: null,
+            popis: '+5 % síla armády',
+        },
+        hranicky: {
+            label: 'Hraniční pevnosti', utok: 0, obrana: 10, vlady: null,
+            popis: '+10 % obrana',
+        },
+        pacifismus: {
+            label: 'Pacifismus', utok: -20, obrana: 15, vlady: null,
+            popis: '-20 % útok, +15 % obrana',
+        },
+        svata_valka: {
+            label: 'Svatá válka', utok: 5, obrana: 5, vlady: ['Fundamentalismus'],
+            popis: '+5 % síla armády (jen Fundamentalismus, hodnost alespoň Velitel mechů)',
+        },
+        fasismus: {
+            label: 'Fašismus', utok: 10, obrana: 0, vlady: ['Diktatura', 'Republika'],
+            popis: '+10 % síla útoku (jen Diktatura nebo Republika)',
+        },
+        vojensky_stat: {
+            label: 'Vojenský stát', utok: 10, obrana: 10, vlady: null,
+            popis: '+10 % síla armády (vylučuje Kulturní centrum a Pacifismus)',
+        },
+        kulturni_centrum: {
+            label: 'Kulturní centrum', utok: -10, obrana: 0, vlady: null,
+            popis: '-10 % útok (vylučuje Vojenský stát)',
+        },
+    };
+
     const names = () => Object.keys(GOVERNMENTS);
 
     /** Modifiers for a government, or a neutral set when the name is unknown. */
@@ -77,5 +115,14 @@
         return GOVERNMENTS[vlada] || { utok: 0, obrana: 0, spokojenostVojenska: 0.5, poznamky: [], unknown: true };
     }
 
-    return { GOVERNMENTS, names, forName };
+    const advance = id => ADVANCES[id] || null;
+
+    /** Whether `vlada` is permitted to hold this advance at all. */
+    function advanceAllowed(id, vlada) {
+        const a = ADVANCES[id];
+        if (!a) return false;
+        return !a.vlady || a.vlady.indexOf(vlada) !== -1;
+    }
+
+    return { GOVERNMENTS, ADVANCES, names, forName, advance, advanceAllowed };
 });

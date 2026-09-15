@@ -41,7 +41,12 @@ function processData() {
     //     spokojenost,
     //     plazmy: 0, // Default value
     // });
-    createEditableInputs(budovy, spokojenost);
+    createEditableInputs(budovy, spokojenost, vlada);
+
+    // The attack/defence tables are rendered with the bare "síla armády" figure;
+    // vláda, GWG, pokroky and generálové are applied by refreshBonuses(). Run it
+    // now so the first render is already complete instead of needing a click.
+    refreshBonuses();
 
     // Hand every parsed and computed quantity to the user-formula layer.
     if (window.WGVars) {
@@ -59,9 +64,25 @@ const unitStats = {
     Mechové: { attack: 2, defense: 3 },
 };
 
-function createEditableInputs(budovy, spokojenost) {
+function createEditableInputs(budovy, spokojenost, vlada) {
     const editableInputsDiv = document.getElementById('editableInputs');
     editableInputsDiv.innerHTML = ''; // Clear existing inputs
+
+    // Advances affecting normal combat come from the table; the tactical-only
+    // ones are appended after it. An advance this vláda cannot hold is shown
+    // disabled rather than hidden, so it is clear why it is unavailable.
+    const pokroky = {};
+    const disabled = {};
+    if (window.WGGovernments) {
+        Object.keys(window.WGGovernments.ADVANCES).forEach(id => {
+            const allowed = window.WGGovernments.advanceAllowed(id, vlada);
+            pokroky[id] = allowed && ['druzice', 'hranicky', 'pacifismus'].includes(id);
+            if (!allowed) disabled[id] = `Nedostupné pro vládu ${vlada || '—'}`;
+        });
+    }
+    pokroky.pohranicne = false;
+    pokroky.bezpecaky = false;
+    pokroky.plazmy = false;
 
     // Default values grouped into categories
     const defaultValues = {
@@ -72,14 +93,7 @@ function createEditableInputs(budovy, spokojenost) {
             zkusenostiEffect: 25,
             spokojenost: spokojenost,
         },
-        pokroky: {
-            druzice: true,
-            hranicky: true,
-            pacifismus: true,
-            pohranicne: false,
-            bezpecaky: false,
-            plazmy: false,
-        },
+        pokroky,
         generalove: {
             generaloveLevel: 0,
             nacionalista: false,
@@ -112,7 +126,7 @@ function createEditableInputs(budovy, spokojenost) {
     flexContainer2.className = 'flex-container';
 
     // Create the "Pokroky" table
-    const pokrokyTable = createTable('Pokroky', defaultValues.pokroky);
+    const pokrokyTable = createTable('Pokroky', defaultValues.pokroky, disabled);
     flexContainer2.appendChild(pokrokyTable);
 
     // Create the "Generálové" table
@@ -121,14 +135,19 @@ function createEditableInputs(budovy, spokojenost) {
     editableInputsDiv.appendChild(flexContainer2);
 }
 
-// Helper function to create a table
-function createTable(title, values) {
+// Helper function to create a table.
+// `disabled` maps a key to a reason string; such rows render greyed out.
+function createTable(title, values, disabled) {
     const table = document.createElement('table');
     table.className = 'vis_tbl';
     table.innerHTML = `<tr><th colspan="2">${title}</th></tr>`;
+    const labels = (window.WGGovernments && window.WGGovernments.ADVANCES) || {};
 
     Object.entries(values).forEach(([key, value]) => {
         const row = document.createElement('tr');
+        const why = disabled && disabled[key];
+        const shown = labels[key] ? labels[key].label : key;
+        const hint = labels[key] ? labels[key].popis : '';
 
         const cleanId = key
             .replace(/[^\w]/g, '_') // Replace non-alphanumeric characters with underscores
@@ -138,10 +157,13 @@ function createTable(title, values) {
         
         if (typeof value === 'boolean') {
             // Checkbox for boolean values
+            if (why) row.className = 'pokrok-disabled';
             row.innerHTML = `
-                <td class="rname l">${key}</td>
+                <td class="rname l" title="${why || hint}">${shown}</td>
                 <td class="rdata c">
-                    <input type="checkbox" id="checkbox-${cleanId}" name="${key}" ${value ? 'checked' : ''}>
+                    <input type="checkbox" id="checkbox-${cleanId}" name="${key}"
+                           ${value ? 'checked' : ''} ${why ? 'disabled' : ''}
+                           title="${why || hint}">
                 </td>
             `;
         } else {
@@ -423,14 +445,14 @@ function refreshBonuses() {
         H6: document.getElementById('checkbox-H6').checked,
         H14: document.getElementById('checkbox-H14').checked,
     };
-    const pokroky = {
-        druzice: document.getElementById('checkbox-druzice').checked,
-        hranicky: document.getElementById('checkbox-hranicky').checked,
-        pacifismus: document.getElementById('checkbox-pacifismus').checked,
-        pohranicne: document.getElementById('checkbox-pohranicne').checked,
-        bezpecaky: document.getElementById('checkbox-bezpecaky').checked,
-        plazmy: document.getElementById('checkbox-plazmy').checked,
-    }
+    // Read every advance checkbox, so adding one to the table needs no change here.
+    const pokroky = {};
+    const advanceIds = (window.WGGovernments ? Object.keys(window.WGGovernments.ADVANCES) : [])
+        .concat(['pohranicne', 'bezpecaky', 'plazmy']);
+    advanceIds.forEach(id => {
+        const el = document.getElementById('checkbox-' + id);
+        pokroky[id] = !!(el && el.checked && !el.disabled);
+    });
     const generals = {
         nacionalista: document.getElementById('checkbox-nacionalista').checked,
         strateg: document.getElementById('checkbox-strateg').checked,
@@ -592,18 +614,20 @@ function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vlada
         normalDefenseBonus += 0.1;
     }
 
-    // Calculate bonuses from pokroky
-    if (pokroky.druzice) {
-        normalAttackBonus += 0.05;
-        normalDefenseBonus += 0.05;
+    // Pokroky affecting normal combat come from the table in governments.js,
+    // which also says which governments may hold each one. A ticked advance the
+    // current vláda cannot have is ignored.
+    if (window.WGGovernments) {
+        Object.keys(pokroky).forEach(id => {
+            if (!pokroky[id]) return;
+            const a = window.WGGovernments.advance(id);
+            if (!a || !window.WGGovernments.advanceAllowed(id, vlada)) return;
+            normalAttackBonus += a.utok / 100;
+            normalDefenseBonus += a.obrana / 100;
+        });
     }
-    if (pokroky.hranicky) {
-        normalDefenseBonus += 0.1;
-    }
-    if (pokroky.pacifismus) {
-        normalAttackBonus -= 0.2;
-        normalDefenseBonus += 0.15;
-    }
+
+    // Tactical-only advances - these never touch normal attack/defence.
     if (pokroky.pohranicne) {
         tacticalDefenseBonus += 0.1;
     }
@@ -640,13 +664,15 @@ function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vlada
     // above and then edited by hand for whatever we cannot derive. So a typed
     // value REPLACES the computed figure - it is the total, not an extra.
     // +40% -> x1.4, -40% -> x0.6; clamped at -100% so it cannot flip the sign.
+    // round() keeps float noise out of the field (-5 rather than -5.000000000000004)
+    const pct = x => Math.round((x - 1) * 1e6) / 1e4;
     if (vladaUtok === null || vladaUtok === undefined) {
-        vladaUtok = (normalAttackBonus - 1) * 100;
+        vladaUtok = pct(normalAttackBonus);
     } else {
         normalAttackBonus = 1 + Math.max(vladaUtok, -100) / 100;
     }
     if (vladaObrana === null || vladaObrana === undefined) {
-        vladaObrana = (normalDefenseBonus - 1) * 100;
+        vladaObrana = pct(normalDefenseBonus);
     } else {
         normalDefenseBonus = 1 + Math.max(vladaObrana, -100) / 100;
     }
