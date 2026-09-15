@@ -5,6 +5,7 @@ function processData() {
 
     const summaryData = extractSummaryData(lines);
     const { jednotky, budovy, technologie, spokojenost, vlada, rozloha } = extractDetails(lines);
+    window.__jednotky = jednotky;   // so refreshBonuses() can redraw the needed-units table
 
     // Publish the parsed values *before* the bonus maths runs, so a user
     // override of a built-in equation can refer to them.
@@ -48,6 +49,9 @@ function processData() {
     // now so the first render is already complete instead of needing a click.
     refreshBonuses();
 
+    // Show the needed-units table straight away - it updates live afterwards.
+    calculateBonusForUnits(jednotky);
+
     // Hand every parsed and computed quantity to the user-formula layer.
     if (window.WGVars) {
         WGVars.publishFromData({ jednotky, budovy, technologie, spokojenost, vlada, rozloha });
@@ -80,8 +84,10 @@ function createEditableInputs(budovy, spokojenost, vlada) {
             if (!allowed) disabled[id] = `Nedostupné pro vládu ${vlada || '—'}`;
         });
     }
+    // Tactical-only advances - they never touch normal attack/defence.
     pokroky.pohranicne = false;
     pokroky.bezpecaky = false;
+    pokroky.protiletecka = false;
     pokroky.plazmy = false;
 
     // Default values grouped into categories
@@ -141,7 +147,12 @@ function createTable(title, values, disabled) {
     const table = document.createElement('table');
     table.className = 'vis_tbl';
     table.innerHTML = `<tr><th colspan="2">${title}</th></tr>`;
-    const labels = (window.WGGovernments && window.WGGovernments.ADVANCES) || {};
+    const labels = Object.assign({
+        pohranicne:   { label: 'Pohraniční stráž',     popis: '+10 % obrana proti taktickým útokům' },
+        bezpecaky:    { label: 'Bezpečnostní senzory', popis: '+50 % obrana proti agentům a partyzánům' },
+        protiletecka: { label: 'Protiletecká obrana',  popis: 'dvojnásobná obrana bunkrů proti bombardování a taktickému náletu' },
+        plazmy:       { label: 'Plazmové zbraně',      popis: 'zvyšuje efekt vojenských základen' },
+    }, (window.WGGovernments && window.WGGovernments.ADVANCES) || {});
 
     Object.entries(values).forEach(([key, value]) => {
         const row = document.createElement('tr');
@@ -448,7 +459,7 @@ function refreshBonuses() {
     // Read every advance checkbox, so adding one to the table needs no change here.
     const pokroky = {};
     const advanceIds = (window.WGGovernments ? Object.keys(window.WGGovernments.ADVANCES) : [])
-        .concat(['pohranicne', 'bezpecaky', 'plazmy']);
+        .concat(['pohranicne', 'bezpecaky', 'protiletecka', 'plazmy']);
     advanceIds.forEach(id => {
         const el = document.getElementById('checkbox-' + id);
         pokroky[id] = !!(el && el.checked && !el.disabled);
@@ -501,6 +512,11 @@ function refreshBonuses() {
 
     document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toLocaleString();
     document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toLocaleString();
+
+    // The needed-units table reads the tactical defence figure, so refresh it too.
+    if (document.getElementById('typUtoku') && Array.isArray(window.__jednotky)) {
+        calculateBonusForUnits(window.__jednotky);
+    }
 
     // Recomputed bonuses feed the user-formula layer too.
     if (window.WGVars) {
@@ -606,9 +622,10 @@ function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vlada
         normalAttackBonus += 0.0;
         normalDefenseBonus += 0.05;
     }
-    if (gwgBonus.H6) {
-        tacticalDefenseBonus *= 1.1;
-    }
+    // H6 is "+10 % obrana proti nočnímu tažení" (manual 6.2), i.e. it helps only
+    // mechs in one attack type - applied per attack in the needed-units table,
+    // not as a blanket tactical bonus here.
+
     if (gwgBonus.H14) {
         normalAttackBonus += 0.1;
         normalDefenseBonus += 0.1;
@@ -631,12 +648,9 @@ function calculateUpdatedBonus(finalBonus, vlada, generalLevel, vladaUtok, vlada
     if (pokroky.pohranicne) {
         tacticalDefenseBonus += 0.1;
     }
-    if (pokroky.bezpecaky) {
-        tacticalDefenseBonus *= 1.5;
-        if (vlada === 'Technokracie') {
-            tacticalDefenseBonus *= 0.8;
-        }
-    }
+    // Bezpečnostní senzory are "+50 % obrana proti agentům a partyzánským útokům",
+    // so they too are scoped to one attack type rather than all tactical defence.
+
 
     // Calculate bonuses from generals
     if (generals.nacionalista) {
@@ -705,55 +719,146 @@ function calculateAttackDefense(jednotky) {
     return { totalAttack, totalDefense };
 }
 
+/**
+ * Units the attacker needs to match `count` defending units.
+ *   count * (1 + defenderPct/100) / (1 + attackerPct/100)
+ * Returns null when the attacker's multiplier is zero or negative.
+ */
+function neededUnits(count, defenderPct, attackerPct) {
+    const attackerMul = 1 + attackerPct / 100;
+    if (!(attackerMul > 0)) return null;
+    return Math.ceil(count * (1 + defenderPct / 100) / attackerMul);
+}
+
+/**
+ * How many units the attacker needs to overcome the defender shown on the page.
+ *
+ *   potreba = obrance_jednotek * (1 + obrana% / 100) / (1 + utok% / 100)
+ *
+ * Both sides are entered as a plain percentage (+182) and turned into a
+ * multiplier (x2.82) here - that conversion is the whole point of the table.
+ * The defender's figure is his TACTICAL defence bonus, read off the page above.
+ */
 function calculateBonusForUnits(jednotky) {
-    const zadajBonus = parseFloat(document.getElementById('zadajBonus').value) || 0;
-    if (zadajBonus <= 0) {
-        document.getElementById('bonusCalculationResult').textContent = 'Zadaj bonus musí byť väčší ako 0.';
+    const out = document.getElementById('bonusCalculationResult');
+    const G = window.WGGovernments;
+    if (!G) { out.textContent = 'governments.js se nenačetl.'; return; }
+
+    const raw = document.getElementById('zadajBonus').value;
+    const attackerPct = parseFloat(raw);
+    if (raw === '' || Number.isNaN(attackerPct)) {
+        out.innerHTML = '<span class="minus">Zadejte bonus útočníka v %.</span>';
+        return;
+    }
+    if (1 + attackerPct / 100 <= 0) {
+        out.innerHTML = '<span class="minus">Bonus útočníka musí být větší než -100 %.</span>';
         return;
     }
 
-    // Get the tactical defense value from the DOM
-    const tacticalDefenseText = document.getElementById('tacticalDefenseBonus').textContent;
-    const tacticalDefense = parseFloat(tacticalDefenseText.replace('+', '').replace('%', '')) || 0;
+    const utokId = document.getElementById('typUtoku').value;
+    const utok = G.TACTICAL_ATTACKS[utokId];
+    if (!utok) { out.textContent = 'Neznámý typ útoku.'; return; }
 
-    const results = [];
-    let stihackyValue = 0;
-    let bunkryValue = 0;
+    // Defender's overall tactical defence bonus, as shown in the table above.
+    const defEl = document.getElementById('tacticalDefenseBonus');
+    const defenderPct = defEl
+        ? (parseFloat(String(defEl.textContent).replace('+', '').replace('%', '')) || 0)
+        : 0;
 
-    // Iterate through jednotky and calculate bonuses
-    jednotky.forEach(unit => {
-        const checkbox = document.getElementById(`checkbox-${unit.name.replace(/\s+/g, '_')}`);
-        if (checkbox && checkbox.checked) {
-            let newValue;
-
-            if (unit.name === 'Vojáci') {
-                // Special case for Vojáci: Multiply by 2/3
-                newValue = ((tacticalDefense / zadajBonus) * unit.value * (2 / 3)).toFixed(2);
-                results.push(`${unit.name}: ${newValue}`);
-            } else if (unit.name === 'Bunkry') {
-                // Special case for Bunkry: Add their value to Stíhačky
-                bunkryValue = unit.value;
-            } else if (unit.name === 'Stíhačky') {
-                // Special case for Stíhačky: Add Bunkry value and calculate
-                stihackyValue = unit.value;
-            } else {
-                // Default case for other units
-                newValue = ((tacticalDefense / zadajBonus) * unit.value).toFixed(2);
-                results.push(`${unit.name}: ${newValue}`);
-            }
-        }
+    // What the defender has and which advances/bonuses are ticked.
+    const ctx = {
+        vlada: (document.getElementById('Vláda') || {}).textContent || '',
+        pokroky: {},
+        gwg: {},
+    };
+    document.querySelectorAll('#editableInputs input[type="checkbox"]').forEach(inp => {
+        const key = inp.getAttribute('name') || '';
+        if (inp.checked && !inp.disabled) { ctx.pokroky[key] = true; ctx.gwg[key] = true; }
     });
 
-    // Handle the combined calculation for Stíhačky and Bunkry
-    if (stihackyValue > 0 || bunkryValue > 0) {
-        const combinedValue = stihackyValue + bunkryValue;
-        const combinedBonus = ((tacticalDefense / zadajBonus) * combinedValue).toFixed(2);
-        results.push(`Stíhačky: ${combinedBonus}`);
-    }
+    const countOf = name => {
+        const u = jednotky.find(j => j.name === name);
+        return u ? u.value : 0;
+    };
 
-    document.getElementById('bonusCalculationResult').textContent = results.length > 0
-        ? `Výsledky: ${results.join(', ')}`
-        : 'Žiadne jednotky neboli vybrané.';
+    const defMul = 1 + defenderPct / 100;
+    const atkMul = 1 + attackerPct / 100;
+
+    // Per defending unit: raw count, strength once every bonus is applied,
+    // and how many attacking units that strength demands.
+    const parts = utok.brani.map(b => {
+        const has = countOf(b.unit);
+        const m = G.unitDefenceMultiplier(b.unit, utokId, ctx);
+        const sBonusy = has * b.podil * m.mul * defMul;
+        return {
+            unit: b.unit,
+            has,
+            podil: b.podil,
+            mul: m.mul,
+            duvody: m.duvody,
+            sBonusy,
+            potreba: sBonusy / atkMul,
+        };
+    });
+
+    const totalHas = parts.reduce((a, p) => a + p.has, 0);
+    const totalBonus = parts.reduce((a, p) => a + p.sBonusy, 0);
+    const totalNeed = Math.ceil(totalBonus / atkMul);
+
+    const n = x => Math.round(x).toLocaleString('cs-CZ');
+    const up = x => Math.ceil(x - 1e-9).toLocaleString('cs-CZ');   // units are whole
+    const frac = p => (p === 1 ? '' : (p === 0.5 ? '×1/2' : (Math.abs(p - 2 / 3) < 1e-9 ? '×2/3' : `×${p}`)));
+
+    // One defending unit -> a single row carries everything. Several (stíhačky
+    // and bunkry) -> a row each for the counts, then one combined requirement.
+    const single = parts.length === 1;
+
+    const unitCell = p => {
+        const bits = [frac(p.podil), p.mul !== 1 ? `×${p.mul}` : ''].filter(Boolean).join(' ');
+        return `${p.unit}${bits ? ` <span class="formula-note">${bits}</span>` : ''}`
+             + (p.duvody.length ? `<div class="formula-note">${p.duvody.join('; ')}</div>` : '');
+    };
+
+    const body = single
+        ? `
+            <tr>
+                <td class="sum l">${unitCell(parts[0])}</td>
+                <td class="sum r">${n(parts[0].has)}</td>
+                <td class="sum r">${n(parts[0].sBonusy)}</td>
+                <td class="sum r needed-value">${up(totalBonus / atkMul)}</td>
+            </tr>`
+        : `
+            ${parts.map(p => `
+                <tr>
+                    <td class="rname l">${unitCell(p)}</td>
+                    <td class="rdata r">${n(p.has)}</td>
+                    <td class="rdata r">${n(p.sBonusy)}</td>
+                    <td class="rdata r"></td>
+                </tr>`).join('')}
+            <tr>
+                <td class="sum l">Celkem</td>
+                <td class="sum r">${n(totalHas)}</td>
+                <td class="sum r">${n(totalBonus)}</td>
+                <td class="sum r needed-value">${up(totalBonus / atkMul)}</td>
+            </tr>`;
+
+    out.innerHTML = `
+        <table class="vis_tbl needed-units">
+            <tr>
+                <th>${utok.label}</th>
+                <th>Bez bonusů</th>
+                <th>S bonusy</th>
+                <th>Potřeba ${utok.utoci}</th>
+            </tr>
+            ${body}
+        </table>
+        <div class="formula-note needed-explain">
+            obrana ×${defMul.toFixed(4)} (${defenderPct >= 0 ? '+' : ''}${defenderPct} %)
+            / útok ×${atkMul.toFixed(4)} (${attackerPct >= 0 ? '+' : ''}${attackerPct} %)
+            = ×${(defMul / atkMul).toFixed(4)}
+        </div>
+        ${utok.poznamka ? `<div class="formula-note">${utok.poznamka}</div>` : ''}
+    `;
 }
 
 function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus) {
@@ -865,56 +970,46 @@ function createAttackDefenseTable(jednotky, finalBonus) {
 }
 
 function appendBonusCalculationTable(container, jednotky, tacticalDefense) {
+    const G = window.WGGovernments;
     const table = document.createElement('table');
     table.id = 'bonus-calculation-table';
     table.className = 'vis_tbl';
 
+    const attacks = G ? G.TACTICAL_ATTACKS : {};
+    const options = Object.keys(attacks)
+        .map(id => `<option value="${id}"${id === 'nocni' ? ' selected' : ''}>${attacks[id].label}</option>`)
+        .join('');
+
     const tbody = document.createElement('tbody');
     tbody.innerHTML = `
-        <tr><th colspan="2">Zadaj bonus</th></tr>
+        <tr><th colspan="2">Zadej bonus útočníka</th></tr>
         <tr>
-            <td class="rname l">Bonus:</td>
+            <td class="rname l"><label for="typUtoku">Typ útoku:</label></td>
+            <td class="rdata r"><select id="typUtoku" class="formula-input">${options}</select></td>
+        </tr>
+        <tr>
+            <td class="rname l"><label for="zadajBonus">Bonus útočníka:</label></td>
             <td class="rdata r">
-                <input id="zadajBonus" type="number" value="0" style="width: 80px;">
+                <input id="zadajBonus" type="number" value="0" style="width: 80px;">&nbsp;%
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" class="formula-note l">
+                Zadejte svůj bonus v procentech (např. 182 = x2,82).
+                Bránící jednotky a jejich podíl určuje typ útoku.
             </td>
         </tr>
     `;
 
-    // Add checkboxes for jednotky
-    jednotky.forEach(unit => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="rname l">${unit.name}:</td>
-            <td class="rdata r">
-                <input type="checkbox" id="checkbox-${unit.name.replace(/\s+/g, '_')}" name="${unit.name}">
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
+    const resultRow = document.createElement('tr');
+    resultRow.innerHTML = '<td colspan="2" class="rdata r" id="bonusCalculationResult"></td>';
+    tbody.appendChild(resultRow);
 
-     // Add a confirm button
-     const confirmRow = document.createElement('tr');
-     const confirmCell = document.createElement('td');
-     confirmCell.colSpan = 2;
-     confirmCell.className = 'rdata r';
- 
-     const confirmButton = document.createElement('button');
-     confirmButton.textContent = 'Potvrdiť';
-     confirmButton.addEventListener('click', () => {
-         calculateBonusForUnits(jednotky, tacticalDefense);
-     });
- 
-     confirmCell.appendChild(confirmButton);
-     confirmRow.appendChild(confirmCell);
-     tbody.appendChild(confirmRow);
- 
-     // Add a row to display results
-     const resultRow = document.createElement('tr');
-     resultRow.innerHTML = `
-         <td colspan="2" class="rdata r" id="bonusCalculationResult"></td>
-     `;
-     tbody.appendChild(resultRow);
- 
-     table.appendChild(tbody);
-     container.appendChild(table);
- }
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    // Recalculate as soon as either input changes.
+    const rerun = () => calculateBonusForUnits(jednotky);
+    tbody.querySelector('#typUtoku').addEventListener('change', rerun);
+    tbody.querySelector('#zadajBonus').addEventListener('input', rerun);
+}

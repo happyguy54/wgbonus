@@ -134,4 +134,94 @@ section('prefilled percentage has no float noise');
     eq(`${v} útok`, calc(v, null, null).vladaUtok, want);
 });
 
+section('needed units: count x (1+obrana/100) / (1+utok/100)');
+{
+    const nu = sandbox.neededUnits;
+
+    // The worked example: defender has 100k units at +182 % tactical defence.
+    eq('attacker +0%',   nu(100000, 182, 0),   282000);
+    eq('attacker +50%',  nu(100000, 182, 50),  188000);
+    eq('attacker +100%', nu(100000, 182, 100), 141000);
+    eq('attacker +300%', nu(100000, 182, 300), 70500);
+
+    // Equal bonuses must cancel exactly, whatever they are.
+    [0, 50, 182, 400].forEach(p =>
+        eq(`equal bonuses +${p}% cancel`, nu(100000, p, p), 100000));
+
+    // Percentages are converted, never used raw: +182 means x2.82, not x182.
+    eq('defence doubles the requirement', nu(1000, 100, 0), 2000);
+    eq('attack halves the requirement', nu(1000, 0, 100), 500);
+
+    // Negative bonuses behave symmetrically.
+    eq('defender -50% needs half', nu(1000, -50, 0), 500);
+    eq('attacker -50% needs double', nu(1000, 0, -50), 2000);
+
+    // Whole units only - you cannot send 0.4 of a tank.
+    eq('rounds up to a whole unit', nu(1000, 1, 0), 1010);
+    ok('result is an integer', Number.isInteger(nu(12345, 37, 13)));
+
+    // An attacker multiplier of zero or less has no answer.
+    ok('-100% attacker is rejected', nu(1000, 0, -100) === null);
+    ok('below -100% attacker is rejected', nu(1000, 0, -150) === null);
+}
+
+section('tactical attack table (manual 6.2)');
+{
+    const A = sandbox.WGGovernments.TACTICAL_ATTACKS;
+    eq('five attack types', Object.keys(A).length, 5);
+
+    eq('partyzánský attacks with Vojáci', A.partyzansky.utoci, 'Vojáci');
+    eq('partyzánský: vojáci defend at 2/3', A.partyzansky.brani[0].podil, 2 / 3);
+    eq('týl attacks with Tanky', A.tyl.utoci, 'Tanky');
+    eq('noční tažení attacks with Mechové', A.nocni.utoci, 'Mechové');
+    eq('nálet attacks with Stíhačky', A.nalet.utoci, 'Stíhačky');
+    eq('nálet: stíhačky at full', A.nalet.brani[0].podil, 1);
+    eq('nálet: bunkry at 1/2', A.nalet.brani[1].podil, 0.5);
+    ok('bombardování folded into nálet (identical numbers)', !A.bombardovani);
+    eq('vniknout do bunkrů: vojáci at full', A.bunkry.brani[0].podil, 1);
+}
+
+section('defence modifiers are scoped to unit AND attack type');
+{
+    const G = sandbox.WGGovernments;
+    const mul = (u, a, ctx) => G.unitDefenceMultiplier(u, a, ctx).mul;
+
+    const PL = { pokroky: { protiletecka: true } };
+    eq('protiletecká doubles bunkers vs nálet', mul('Bunkry', 'nalet', PL), 2);
+    eq('...but not vs noční tažení', mul('Bunkry', 'nocni', PL), 1);
+    eq('...and never fighters', mul('Stíhačky', 'nalet', PL), 1);
+
+    const H6 = { gwg: { H6: true } };
+    eq('H6 helps mechs vs noční tažení', mul('Mechové', 'nocni', H6), 1.1);
+    eq('...but not vs other attacks', mul('Mechové', 'nalet', H6), 1);
+    eq('...and not other units', mul('Vojáci', 'nocni', H6), 1);
+
+    const BZ = { pokroky: { bezpecaky: true } };
+    eq('bezpečnostní senzory vs partisans', mul('Vojáci', 'partyzansky', BZ), 1.5);
+    eq('...not vs bunker entry', mul('Vojáci', 'bunkry', BZ), 1);
+
+    const RB = { vlada: 'Robokracie' };
+    eq('Robokracie on noční tažení', mul('Mechové', 'nocni', RB), 1.2);
+    eq('Robokracie on taktický nálet', mul('Stíhačky', 'nalet', RB), 1.2);
+    eq('Robokracie NOT on partisans', mul('Vojáci', 'partyzansky', RB), 1);
+    eq('Robokracie NOT on týl', mul('Tanky', 'tyl', RB), 1);
+    eq('other governments unaffected', mul('Mechové', 'nocni', { vlada: 'Diktatura' }), 1);
+
+    eq('modifiers stack', mul('Bunkry', 'nalet', { vlada: 'Robokracie', pokroky: { protiletecka: true } }), 2.4);
+}
+
+section('needed units for a worked case');
+{
+    const G = sandbox.WGGovernments;
+    const nu = sandbox.neededUnits;
+    // Taktický nálet: 18 589 stíhaček + 14 067 bunkrů, defender +100 %, attacker +0 %.
+    const strength = 18589 * 1 + 14067 * 0.5;
+    eq('bunkers count at half', strength, 18589 + 7033.5);
+    eq('needed attackers', nu(strength, 100, 0), Math.ceil(strength * 2));
+
+    // With Protiletecká obrana the bunkers double, so the half becomes full.
+    const withPL = 18589 * 1 + 14067 * 0.5 * G.unitDefenceMultiplier('Bunkry', 'nalet', { pokroky: { protiletecka: true } }).mul;
+    eq('protiletecká restores bunkers to full weight', withPL, 18589 + 14067);
+}
+
 process.exit(done() ? 1 : 0);

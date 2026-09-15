@@ -108,6 +108,89 @@
         },
     };
 
+    /**
+     * Taktické útoky, from manual 6.2. Each names the attacking unit and the
+     * defending units with the share of their strength that actually counts.
+     *   podil 2/3 - vojáci defending against partisans
+     *   podil 1/2 - bunkry defending against bombing / tactical air raid
+     */
+    const TACTICAL_ATTACKS = {
+        partyzansky: {
+            label: 'Partyzánský útok', utoci: 'Vojáci',
+            brani: [{ unit: 'Vojáci', podil: 2 / 3 }],
+            poznamka: 'Brání i agenti — ve zprávě z rozvědky nejsou, takže výpočet je bez nich a je tedy podhodnocený.',
+        },
+        bunkry: {
+            label: 'Vniknout do bunkrů', utoci: 'Vojáci',
+            brani: [{ unit: 'Vojáci', podil: 1 }],
+        },
+        tyl: {
+            label: 'Zaútočit na týl', utoci: 'Tanky',
+            brani: [{ unit: 'Tanky', podil: 1 }],
+        },
+        nalet: {
+            label: 'Taktický nálet', utoci: 'Stíhačky',
+            brani: [{ unit: 'Stíhačky', podil: 1 }, { unit: 'Bunkry', podil: 0.5 }],
+        },
+        nocni: {
+            label: 'Noční tažení', utoci: 'Mechové',
+            brani: [{ unit: 'Mechové', podil: 1 }],
+        },
+    };
+
+    /**
+     * Defence modifiers that apply only to certain units and certain tactical
+     * attacks. These are NOT part of the "Taktická obrana" figure shown in the
+     * bonus table, so they are applied on top of it without double counting.
+     *
+     * `unit: '*'` means every defending unit; `utoky: '*'` means every attack.
+     * `when` is matched against { vlada, pokroky, gwg }.
+     */
+    const UNIT_DEFENCE_MODIFIERS = [
+        {
+            unit: 'Bunkry', mul: 2, utoky: ['nalet'],
+            when: { pokrok: 'protiletecka' },
+            popis: 'Protiletecká obrana — dvojnásobná obrana bunkrů',
+        },
+        {
+            unit: 'Mechové', mul: 1.1, utoky: ['nocni'],
+            when: { gwg: 'H6' },
+            popis: 'H6 (6. hodnost) — +10 % obrana proti nočnímu tažení',
+        },
+        {
+            unit: 'Vojáci', mul: 1.5, utoky: ['partyzansky'],
+            when: { pokrok: 'bezpecaky' },
+            popis: 'Bezpečnostní senzory — +50 % obrana proti partyzánům',
+        },
+        {
+            unit: '*', mul: 1.2, utoky: ['nocni', 'nalet'],
+            when: { vlada: 'Robokracie' },
+            popis: 'Robokracie — +20 % na noční tažení a taktický nálet',
+        },
+    ];
+
+    /**
+     * Combined defence multiplier for one unit under one tactical attack.
+     * ctx: { vlada, pokroky: {id:bool}, gwg: {key:bool} }
+     * Returns { mul, duvody: [string] }.
+     */
+    function unitDefenceMultiplier(unitName, utokId, ctx) {
+        const c = ctx || {};
+        let mul = 1;
+        const duvody = [];
+        UNIT_DEFENCE_MODIFIERS.forEach(m => {
+            if (m.unit !== '*' && m.unit !== unitName) return;
+            if (m.utoky !== '*' && utokId && m.utoky.indexOf(utokId) === -1) return;
+            const w = m.when || {};
+            if (w.vlada && c.vlada !== w.vlada) return;
+            if (w.pokrok && !(c.pokroky && c.pokroky[w.pokrok])) return;
+            if (w.gwg && !(c.gwg && c.gwg[w.gwg])) return;
+            mul *= m.mul;
+            duvody.push(m.popis);
+        });
+        return { mul, duvody };
+    }
+
     const names = () => Object.keys(GOVERNMENTS);
 
     /** Modifiers for a government, or a neutral set when the name is unknown. */
@@ -124,5 +207,6 @@
         return !a.vlady || a.vlady.indexOf(vlada) !== -1;
     }
 
-    return { GOVERNMENTS, ADVANCES, names, forName, advance, advanceAllowed };
+    return { GOVERNMENTS, ADVANCES, TACTICAL_ATTACKS, UNIT_DEFENCE_MODIFIERS,
+             names, forName, advance, advanceAllowed, unitDefenceMultiplier };
 });
