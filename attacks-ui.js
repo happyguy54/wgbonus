@@ -446,6 +446,24 @@
         renderAll();
     }
 
+    function onKonflikty() {
+        const text = ui.konfliktPaste.value;
+        if (!text.trim()) { ui.konfliktInfo.textContent = 'Vložte výpis z Konfliktů.'; return; }
+
+        const rows = A.parseKonflikty(text);
+        if (!rows.length) {
+            ui.konfliktInfo.textContent = 'Nerozpoznán žádný řádek — očekává se „---> zeme(#id) … 1234k pr.“.';
+            return;
+        }
+        const res = A.applyKonflikty(store.records, rows);
+        ui.konfliktInfo.textContent =
+            `Načteno ${res.rows} řádků, prestiž doplněna k ${res.matched} útokům`
+            + (res.unmatched ? `, ${res.unmatched} útoků bez shody (čas nebo cíl nesedí)` : '') + '.';
+        if (res.matched) ui.konfliktPaste.value = '';
+        writeLocal();
+        renderAll();
+    }
+
     function readSettings() {
         settings = {
             prestizUtocnik: parseFloat(ui.prestizU.value) || 0,
@@ -506,6 +524,12 @@
                         placeholder="Zkopírujte řádky útoků ze hry (Ctrl+C / Ctrl+V) a vložte sem…"></textarea>
                     <button type="button" class="submit" id="attackAdd">Načíst útoky</button>
                     <div id="attackPasteInfo" class="formula-hint"></div>
+
+                    <h3>Prestiž z Konfliktů</h3>
+                    <textarea id="konfliktPaste" class="formula-input attack-paste" rows="5"
+                        placeholder="Vložte výpis z menu Konflikty — doplní prestiž útočníka i obránce k už načteným útokům podle času a cíle…"></textarea>
+                    <button type="button" class="submit" id="konfliktAdd">Doplnit prestiž</button>
+                    <div id="konfliktInfo" class="formula-hint"></div>
                 </div>
 
                 <div class="formula-col">
@@ -597,6 +621,8 @@
         ui = {
             paste: document.getElementById('attackPaste'),
             pasteInfo: document.getElementById('attackPasteInfo'),
+            konfliktPaste: document.getElementById('konfliktPaste'),
+            konfliktInfo: document.getElementById('konfliktInfo'),
             prestizU: document.getElementById('prestizU'),
             prestizO: document.getElementById('prestizO'),
             hodnostU: document.getElementById('hodnostU'),
@@ -646,6 +672,7 @@
 
         ['prestizU', 'prestizO', 'hodnostU', 'hodnostO']
             .forEach(k => ui[k].addEventListener('input', readSettings));
+        document.getElementById('konfliktAdd').addEventListener('click', onKonflikty);
         ui.plotX.addEventListener('input', renderPlot);
         ui.plotType.addEventListener('change', renderPlot);
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';

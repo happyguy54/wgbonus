@@ -241,6 +241,141 @@
         tanky: 5,
     };
 
+    /**
+     * Full prestiž table, read off the in-game "Detaily prestiže" screen.
+     * The unit rows match PRESTIGE_VALUES above, which confirms them.
+     */
+    const PRESTIGE_TABLE = {
+        rozloha: 15,
+        budovy: 5,
+        ruiny: 2,
+        technologie: 1,
+        vojaci: 1,
+        tanky: 5,
+        stihacky: 3.5,
+        bunkry: 3.5,
+        mechove: 2.7,
+        agenti: 15,
+        rakety: 500,
+        penize: 0.002,
+        jidlo: 0.02,
+        energie: 0.02,
+    };
+
+    /**
+     * Prestiž you can account for from a rozvědka report, i.e. everything the
+     * report actually shows: land, buildings, technologies and units.
+     * Agents, rockets, money, food and energy are invisible there.
+     */
+    function visiblePrestige(d) {
+        const T = PRESTIGE_TABLE;
+        const n = x => Number(x) || 0;
+        const sum = (list, per) => (list || []).reduce((a, i) => a + n(i.value) * per, 0);
+        return n(d.rozloha) * T.rozloha
+             + sum(d.budovy, T.budovy)
+             + sum(d.technologie, T.technologie)
+             + (d.jednotky || []).reduce((a, u) => {
+                 const key = { 'Vojáci': 'vojaci', 'Tanky': 'tanky', 'Stíhačky': 'stihacky',
+                               'Bunkry': 'bunkry', 'Mechové': 'mechove' }[u.name];
+                 return a + (key ? n(u.value) * T[key] : 0);
+             }, 0);
+    }
+
+    /** Prestiž the report cannot see: total minus what it can account for. */
+    function deadPrestige(totalPrestige, d) {
+        const total = Number(totalPrestige) || 0;
+        if (!total) return null;
+        return total - visiblePrestige(d);
+    }
+
+    /**
+     * Parse the in-game "Konflikty" list. Each entry carries the prestiž of BOTH
+     * sides at the moment of the attack, which the attack log itself never
+     * shows - so these rows are what lets a record stop relying on defaults.
+     *
+     * A row looks roughly like:
+     *   15.09. 08:59  Izril(#115)[EJZ] - mazereon (zástupce) 94 1254k pr.
+     *                 ---> Farmím pro Barunku(#103)[Yozzefy] - Kugis 79 1360k pr.
+     *                 Noční tažení   56 voj.z. + 15218 jedn.
+     */
+    const KONFLIKT_RE = new RegExp(
+        '(\\d{1,2})\\.\\s*(\\d{1,2})\\.' +      // 15.09.
+        '[\\s\\S]{0,40}?(\\d{1,2}):(\\d{2})' +  // 08:59
+        '([\\s\\S]{0,300}?)-+>' +               // attacker side, then --->
+        '([\\s\\S]{0,300}?)' +                  // defender side
+        '(\\d[\\d\\s]*)\\s*voj\\.?\\s*z\\.' +   // 56 voj.z.
+        '[\\s\\S]{0,20}?(\\d[\\d\\s]*)\\s*jedn', 'g');
+
+    /** "1254k pr." -> 1254000 ; "1 174 618" -> 1174618 */
+    function prestigeNum(text) {
+        if (!text) return null;
+        // Only the number immediately before "k pr." - a preceding rank number
+        // like "94 1254k pr." must not be swallowed into it.
+        const k = text.match(/(\d+(?:[.,]\d+)?)\s*k\s*pr/i);
+        if (k) return Math.round(parseFloat(k[1].replace(',', '.')) * 1000);
+        const plain = text.match(/([\d\s]{4,})\s*pr/i);
+        return plain ? num(plain[1]) : null;
+    }
+
+    function sideInfo(chunk) {
+        const id = chunk.match(/\(#?(\d+)\)/);
+        const ali = chunk.match(/\[([^\]]*)\]/);
+        return {
+            id: id ? Number(id[1]) : null,
+            aliance: ali ? ali[1] : null,
+            prestiz: prestigeNum(chunk),
+        };
+    }
+
+    function parseKonflikty(text, year) {
+        const rows = [];
+        const src = String(text || '');
+        const Y = year || new Date().getFullYear();
+        let m;
+        KONFLIKT_RE.lastIndex = 0;
+        while ((m = KONFLIKT_RE.exec(src)) !== null) {
+            const [, dd, mm, hh, mi, atkChunk, defChunk, zakl, jedn] = m;
+            const utocnik = sideInfo(atkChunk);
+            const obrance = sideInfo(defChunk);
+            if (!obrance.id && !utocnik.id) continue;
+            const typ = detectType(defChunk) || detectType(atkChunk) || null;
+            rows.push({
+                cas: `${Y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')} `
+                   + `${String(hh).padStart(2, '0')}:${mi}`,
+                typ,
+                utocnik_id: utocnik.id,
+                obrance_id: obrance.id,
+                obrance_aliance: obrance.aliance,
+                prestiz_utocnik: utocnik.prestiz,
+                prestiz_obrance: obrance.prestiz,
+                zakladny: num(zakl),
+                jednotky: num(jedn),
+            });
+        }
+        return rows;
+    }
+
+    /**
+     * Attach prestiž from konflikty rows onto stored attacks, matching on the
+     * defender and the minute the attack happened. Returns what it managed to do.
+     */
+    function applyKonflikty(records, rows) {
+        const key = (id, cas) => `${id}|${String(cas || '').slice(0, 16)}`;
+        const byKey = new Map();
+        rows.forEach(r => { if (r.obrance_id) byKey.set(key(r.obrance_id, r.cas), r); });
+
+        let matched = 0, unmatched = 0;
+        records.forEach(rec => {
+            if (!rec.cil_id || !rec.cas) { unmatched++; return; }
+            const hit = byKey.get(key(rec.cil_id, rec.cas));
+            if (!hit) { unmatched++; return; }
+            if (hit.prestiz_utocnik) rec.prestiz_utocnik = hit.prestiz_utocnik;
+            if (hit.prestiz_obrance) rec.prestiz_obrance = hit.prestiz_obrance;
+            matched++;
+        });
+        return { matched, unmatched, rows: rows.length };
+    }
+
     function scopeFor(rec, settings) {
         const s = settings || {};
         const out = Object.create(null);
@@ -341,5 +476,11 @@
         num,
         DEFAULT_WEIGHT,
         PRESTIGE_VALUES,
+        PRESTIGE_TABLE,
+        parseKonflikty,
+        applyKonflikty,
+        prestigeNum,
+        visiblePrestige,
+        deadPrestige,
     };
 });

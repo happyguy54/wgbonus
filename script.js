@@ -25,7 +25,7 @@ function processData() {
         { name: 'plazmy', value: 0 } // Default placeholder
     ];
     appendSummaryTable(container, summaryData, baseUrl);
-    appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha);
+    appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha, summaryData);
     appendBonusAndAttackDefenseTables(container, technologie, budovy, spokojenost, rozloha, vlada, jednotky, pokroky);
     // appendRefreshButton(container);
 
@@ -339,7 +339,7 @@ function appendSummaryTable(container, summaryData, baseUrl) {
 }
 
 // Append the detail table
-function appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha) {
+function appendDetailTable(container, jednotky, budovy, technologie, spokojenost, vlada, rozloha, summaryData) {
     const detailTable = document.createElement('table');
     detailTable.id = 'spy-message-detail';
     detailTable.className = 'vis_tbl vtop';
@@ -354,7 +354,8 @@ function appendDetailTable(container, jednotky, budovy, technologie, spokojenost
     detailTableBody.appendChild(headerRow);
 
     const dataRow = document.createElement('tr');
-    appendDetailSection(dataRow, jednotky, spokojenost, vlada, rozloha);
+    appendDetailSection(dataRow, jednotky, spokojenost, vlada, rozloha,
+        { jednotky, budovy, technologie, rozloha, summaryData });
     appendDetailSection(dataRow, budovy);
     appendDetailSection(dataRow, technologie);
 
@@ -364,11 +365,22 @@ function appendDetailTable(container, jednotky, budovy, technologie, spokojenost
 }
 
 // Append a section to the detail table
-function appendDetailSection(row, section, spokojenost, vlada, rozloha) {
+function appendDetailSection(row, section, spokojenost, vlada, rozloha,全) {
     const namesCell = document.createElement('td');
     namesCell.className = 'rname l';
+    // Prestiž the rozvědka cannot see: total minus land + buildings + tech + units.
+    let mrtva = null;
+    if (ctx && window.WGAttacks) {
+        const total = window.WGAttacks.prestigeNum(String((ctx.summaryData && ctx.summaryData.data
+            && ctx.summaryData.data['Prestiž']) || '') + ' pr.');
+        if (total) mrtva = window.WGAttacks.deadPrestige(total, ctx);
+    }
+
     namesCell.innerHTML = section.map(item => item.name).join('<br>') +
-        (spokojenost !== undefined ? `<br><br>Spokojenost<br><br>Vláda<br>Rozloha` : '');
+        (spokojenost !== undefined
+            ? `<br><br>Spokojenost<br><br>Vláda<br>Rozloha`
+              + (mrtva !== null ? `<br>Mrtvá prestiž` : '')
+            : '');
     row.appendChild(namesCell);
 
     const valuesCell = document.createElement('td');
@@ -381,7 +393,10 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha) {
         (spokojenost !== undefined ? `
             <br><br><span id="Spokojenost">${spokojenost}%</span>
             <br><br><span id="Vláda">${vlada}</span>
-            <br><span id="Rozloha">${rozloha} km²</span>` : '');
+            <br><span id="Rozloha">${rozloha} km²</span>`
+            + (mrtva !== null
+                ? `<br><span id="MrtvaPrestiz" title="Prestiž, kterou rozvědka nevidí: agenti, rakety, peníze, jídlo, energie">${Math.round(mrtva).toLocaleString('cs-CZ')}</span>`
+                : '') : '');
     row.appendChild(valuesCell);
 }
 

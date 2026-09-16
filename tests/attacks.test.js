@@ -223,4 +223,75 @@ section('prestiž-valued body count');
     eq('settings override the weights', custom.zabito_prestiz, 200);
 }
 
+section('konflikty parsing (prestiž per attack)');
+{
+    const A = require('../attacks.js');
+    const text = [
+        '15.09.', '08:59\tIzril(#115)[EJZ] - mazereon (zástupce) 94 1254k pr.',
+        '---> Farmím pro Barunku(#103)[Yozzefy] - Kugis 79 1360k pr.\tNoční tažení',
+        '56 voj.z. + 15218 jedn.',
+        '15.09.', '08:47\tIzril(#115)[EJZ] - mazereon (zástupce) 94 1267k pr.',
+        '---> kiLa Restů(#61)[.B.I.S.] - lugh 1885k pr.\tNoční tažení',
+        '77 voj.z. + 8317 jedn.',
+    ].join('\n');
+
+    const rows = A.parseKonflikty(text, 2026);
+    eq('two rows parsed', rows.length, 2);
+    eq('time', rows[0].cas, '2026-09-15 08:59');
+    eq('defender id', rows[0].obrance_id, 103);
+    eq('attacker id', rows[0].utocnik_id, 115);
+    eq('bases', rows[0].zakladny, 56);
+    eq('units', rows[0].jednotky, 15218);
+
+    // The rank number before the prestiž must not be swallowed into it.
+    eq('attacker prestiž', rows[0].prestiz_utocnik, 1254000);
+    eq('defender prestiž', rows[0].prestiz_obrance, 1360000);
+    eq('defender without a rank number', rows[1].prestiz_obrance, 1885000);
+
+    eq('"94 1254k pr."', A.prestigeNum('94 1254k pr.'), 1254000);
+    eq('plain "1 174 618 pr."', A.prestigeNum('1 174 618 pr.'), 1174618);
+
+    // Joining onto stored attacks by defender + minute.
+    const recs = [
+        { cas: '2026-09-15 08:59:38', cil_id: 103, xp: 1 },
+        { cas: '2026-09-15 08:47:06', cil_id: 61, xp: 2 },
+        { cas: '2026-09-15 08:47:06', cil_id: 999, xp: 3 },
+    ];
+    const res = A.applyKonflikty(recs, rows);
+    eq('two matched', res.matched, 2);
+    eq('one unmatched', res.unmatched, 1);
+    eq('prestiž attached', recs[0].prestiz_obrance, 1360000);
+    ok('non-matching record untouched', recs[2].prestiz_obrance === undefined);
+
+    // ...and a matched record now counts at full weight.
+    const sc = A.scopeFor({ ...recs[0], hodnost_utocnik: 15, hodnost_obrance: 12 }, {});
+    eq('own values -> full weight', sc.vaha, 1);
+}
+
+section('prestiž table and mrtvá prestiž');
+{
+    const A = require('../attacks.js');
+    eq('rozloha', A.PRESTIGE_TABLE.rozloha, 15);
+    eq('budovy', A.PRESTIGE_TABLE.budovy, 5);
+    eq('agenti', A.PRESTIGE_TABLE.agenti, 15);
+    eq('rakety', A.PRESTIGE_TABLE.rakety, 500);
+    eq('units match PRESTIGE_VALUES', A.PRESTIGE_TABLE.mechove, A.PRESTIGE_VALUES.mechove);
+
+    // From the in-game "Detaily prestiže" screen: total 1 174 618.
+    const d = {
+        rozloha: 14131,
+        budovy: [{ name: 'b', value: 13795 }],
+        technologie: [{ name: 't', value: 256003 }],
+        jednotky: [
+            { name: 'Vojáci', value: 147780 }, { name: 'Tanky', value: 6290 },
+            { name: 'Stíhačky', value: 5088 }, { name: 'Bunkry', value: 0 },
+            { name: 'Mechové', value: 149641 },
+        ],
+    };
+    eq('visible prestiž', Math.round(A.visiblePrestige(d)), 1138012);
+    // agenti 29505 + rakety 1500 + peníze 4698 + jídlo 482 + energie 421
+    eq('mrtvá prestiž', Math.round(A.deadPrestige(1174618, d)), 36606);
+    ok('no total -> null', A.deadPrestige(0, d) === null);
+}
+
 process.exit(done() ? 1 : 0);

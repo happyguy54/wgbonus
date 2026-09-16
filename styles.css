@@ -2617,3 +2617,20 @@ table.attack-table th { position: sticky; top: 0; background-color: #2a2a2a; z-i
 	margin-right: 4px;
 	vertical-align: middle;
 }
+
+/* Spy-report detail table: keep labels and their values on the same baseline */
+table#spy-message-detail td.rname,
+table#spy-message-detail td.rdata {
+	line-height: 1.55;
+	white-space: nowrap;
+	vertical-align: top;
+}
+
+table#spy-message-detail td.rname {
+	padding-right: 10px;
+}
+
+table#spy-message-detail td.rdata {
+	padding-left: 4px;
+	padding-right: 14px;
+}
