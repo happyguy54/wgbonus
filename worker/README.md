@@ -14,22 +14,30 @@ požadavků denně, bez platební karty).
    Pak v její záložce **Console** vložte a spusťte celý obsah
    [`schema.sql`](schema.sql) — vytvoří tabulky `attacks` a `konflikty`.
 
-3. **Worker**: **Compute (Workers) → Create → Start from Hello World → Deploy**.
-   Pojmenujte ho třeba `wgbonus`.
+3. **Worker**: v levém menu **Workers & Pages** (v novějším rozhraní
+   **Compute (Workers)**) → **Create application** → záložka **Workers** →
+   **Create Worker**. Pojmenujte ho třeba `wgbonus` a dejte **Deploy**.
 
-4. **Kód**: u workeru **Edit code**, smažte obsah a vložte celý
-   [`wgbonus-worker.js`](wgbonus-worker.js). **Deploy**.
+4. **Kód**: u workeru **Edit code** (nebo **Quick edit**), označte vše, smažte
+   a vložte celý [`wgbonus-worker.js`](wgbonus-worker.js).
+   **Save and deploy**.
 
-5. **Propojení databáze**: **Settings → Bindings → Add → D1 database**
-   - Variable name: `DB`  (přesně takto)
+5. **Propojení databáze**: u workeru **Settings → Bindings → Add → D1 database**
+   (ve starším rozhraní **Settings → Variables → D1 database bindings**)
+   - Variable name: `DB`  (přesně takto — worker hledá právě tento název)
    - D1 database: `wg_attack_exp`
 
 6. **Heslo pro zápis**: **Settings → Variables and Secrets → Add**
+   (ve starším rozhraní **Settings → Environment Variables → Add → Encrypt**)
    - Type: **Secret**
    - Name: `WG_SECRET`
    - Value: libovolné heslo, které pošlete těm pěti lidem
 
 7. **Deploy** ještě jednou, aby se binding i secret projevily.
+
+> Rozhraní Cloudflare se mění — pokud některý název nesedí, hledejte
+> **Workers & Pages** / **Compute**, uvnitř workeru **Settings**, a v něm
+> **Bindings** (databáze) a **Variables and Secrets** (heslo).
 
 Adresa workeru vypadá jako `https://wgbonus.<vas-ucet>.workers.dev`.
 Ověření, že běží — otevřete ji v prohlížeči, má odpovědět:
