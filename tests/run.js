@@ -12,7 +12,10 @@ const summary = [];
 
 for (const f of files) {
     console.log(`\n${'='.repeat(64)}\n${f}\n${'='.repeat(64)}`);
-    const res = spawnSync(process.execPath, [path.join(dir, f)], { stdio: 'inherit' });
+    // worker.test.js needs node:sqlite, which is behind a flag on Node 22.
+    const args = f === 'worker.test.js' ? ['--experimental-sqlite'] : [];
+    const res = spawnSync(process.execPath, [...args, path.join(dir, f)],
+        { stdio: 'inherit', env: { ...process.env, NODE_NO_WARNINGS: '1' } });
     const bad = res.status !== 0;
     if (bad) failed++;
     summary.push(`${bad ? 'FAIL' : 'ok  '}  ${f}`);

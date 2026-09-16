@@ -1,44 +1,80 @@
-/* The Cloudflare Worker's merge and auth logic, exercised against a fake KV.
- * Run with the rest: node tests/run.js */
+/* The Cloudflare Worker, exercised against a real SQLite database standing in
+ * for D1 — so the SQL, the schema and INSERT OR IGNORE are genuinely executed,
+ * not mocked.
+ *
+ * Needs node:sqlite, which is behind a flag on Node 22; tests/run.js passes it.
+ * If the flag is unavailable this suite skips rather than failing the run.
+ */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { harness } = require('./helpers');
 
+let DatabaseSync;
+try { ({ DatabaseSync } = require('node:sqlite')); }
+catch (e) {
+    console.log('  (skipped: node:sqlite not available — run with --experimental-sqlite)');
+    process.exit(0);
+}
+
 const { ok, eq, section, done } = harness();
 
-// Load the worker as an ES module would be loaded, without a bundler.
+// Load the worker the way a module loader would, without a bundler.
 const src = fs.readFileSync(path.join(__dirname, '..', 'worker', 'wgbonus-worker.js'), 'utf8')
     .replace('export default', 'globalThis.__worker =');
-const sandbox = { console, Response, Request, URL, JSON, Date, Number, String, Array, Map, Set };
+const sandbox = { console, Response, Request, URL, JSON, Date, Number, String, Array, Boolean };
 vm.createContext(sandbox);
 vm.runInContext(src, sandbox);
 const worker = sandbox.__worker;
 
-/** Minimal in-memory stand-in for a KV namespace. */
-function makeEnv(secret) {
-    const kv = new Map();
+const SCHEMA = fs.readFileSync(path.join(__dirname, '..', 'worker', 'schema.sql'), 'utf8');
+
+/** A D1-shaped wrapper over real SQLite. */
+function makeEnv(secret, { withSchema = true } = {}) {
+    const db = new DatabaseSync(':memory:');
+    if (withSchema) db.exec(SCHEMA);
+
+    const prepare = sql => {
+        let bound = [];
+        const stmt = {
+            bind(...args) { bound = args; return stmt; },
+            all() {
+                const rows = db.prepare(sql).all(...bound);
+                return { results: rows };
+            },
+            first() { return db.prepare(sql).get(...bound) ?? null; },
+            run() {
+                const r = db.prepare(sql).run(...bound);
+                return { meta: { changes: Number(r.changes) } };
+            },
+        };
+        return stmt;
+    };
+
     return {
         WG_SECRET: secret,
-        WGDATA: {
-            get: async k => (kv.has(k) ? kv.get(k) : null),
-            put: async (k, v) => { kv.set(k, v); },
+        DB: {
+            prepare,
+            batch: async stmts => stmts.map(s => s.run()),
         },
-        _kv: kv,
+        _db: db,
     };
 }
 
-const call = (env, method, path, body, secret) => worker.fetch(new Request(
-    `https://w.dev/${path}`,
+const call = (env, method, p, body, secret) => worker.fetch(new Request(
+    `https://w.dev/${p}`,
     {
         method,
-        headers: secret ? { 'Content-Type': 'application/json', 'X-WG-Secret': secret }
-                        : { 'Content-Type': 'application/json' },
+        headers: Object.assign({ 'Content-Type': 'application/json' },
+            secret !== undefined ? { 'X-WG-Secret': secret } : {}),
         body: body === undefined ? undefined : JSON.stringify(body),
     },
 ), env);
 
-const rec = (id, xp) => ({ id, xp, typ: 'nocni' });
+const atk = (id, extra = {}) => Object.assign({
+    id, cas: '2026-09-15 08:59:00', typ: 'nocni', cil_id: 103, xp: 1000,
+    zabito_vojaci: 10, ztraty_utocnik: 5, ztraty_obrance: 3,
+}, extra);
 
 (async () => {
     section('health and routing');
@@ -46,100 +82,152 @@ const rec = (id, xp) => ({ id, xp, typ: 'nocni' });
         const env = makeEnv('pw');
         const r = await (await call(env, 'GET', 'health')).json();
         ok('health responds', r.ok === true);
-        eq('starts empty', r.attacks, 0);
+        eq('attacks starts empty', r.attacks, 0);
+        eq('konflikty starts empty', r.konflikty, 0);
 
-        const bad = await call(env, 'GET', 'nonsense');
-        eq('unknown collection is 404', bad.status, 404);
-
-        const wrongMethod = await call(env, 'DELETE', 'attacks');
-        eq('DELETE refused', wrongMethod.status, 405);
+        eq('unknown collection is 404', (await call(env, 'GET', 'nonsense')).status, 404);
+        eq('DELETE refused', (await call(env, 'DELETE', 'attacks')).status, 405);
     }
 
-    section('writes need the shared secret');
+    section('a missing schema is reported clearly, not as a raw crash');
     {
-        const env = makeEnv('pw');
-        const noSecret = await call(env, 'POST', 'attacks', { records: [rec('a', 1)] });
-        eq('no secret -> 403', noSecret.status, 403);
-
-        const wrong = await call(env, 'POST', 'attacks', { records: [rec('a', 1)] }, 'nope');
-        eq('wrong secret -> 403', wrong.status, 403);
-
-        const good = await call(env, 'POST', 'attacks', { records: [rec('a', 1)] }, 'pw');
-        eq('right secret -> 200', good.status, 200);
-
-        // A secret in the body works too, for clients that cannot set headers.
-        const viaBody = await call(env, 'POST', 'attacks', { secret: 'pw', records: [rec('b', 2)] });
-        eq('secret in body accepted', viaBody.status, 200);
-
-        const env2 = makeEnv('');
-        const noServerSecret = await call(env2, 'POST', 'attacks', { records: [rec('a', 1)] }, '');
-        eq('unset server secret refuses everything', noServerSecret.status, 403);
+        const env = makeEnv('pw', { withSchema: false });
+        const res = await call(env, 'GET', 'health');
+        const body = await res.json();
+        eq('500', res.status, 500);
+        ok('names the fix', /schema\.sql/.test(body.error), body.error);
     }
 
-    section('merging never destroys anyone else’s records');
+    section('writes need the shared password');
     {
         const env = makeEnv('pw');
-        await call(env, 'POST', 'attacks', { records: [rec('a', 1), rec('b', 2)] }, 'pw');
+        eq('no secret -> 403', (await call(env, 'POST', 'attacks', { records: [atk('a')] })).status, 403);
+        eq('wrong secret -> 403', (await call(env, 'POST', 'attacks', { records: [atk('a')] }, 'nope')).status, 403);
+        eq('right secret -> 200', (await call(env, 'POST', 'attacks', { records: [atk('a')] }, 'pw')).status, 200);
+        eq('secret in body works', (await call(env, 'POST', 'attacks', { secret: 'pw', records: [atk('b')] })).status, 200);
 
-        // Someone else uploads their own, overlapping by one.
+        const noServerSecret = makeEnv('');
+        eq('unset server secret refuses all writes',
+            (await call(noServerSecret, 'POST', 'attacks', { records: [atk('a')] }, '')).status, 403);
+    }
+
+    section('INSERT OR IGNORE: an upload never overwrites anyone else’s row');
+    {
+        const env = makeEnv('pw');
+        await call(env, 'POST', 'attacks', { records: [atk('a', { xp: 111 }), atk('b', { xp: 222 })] }, 'pw');
+
+        // Someone else uploads, overlapping on "b" with a different value.
         const second = await (await call(env, 'POST', 'attacks',
-            { records: [rec('b', 999), rec('c', 3)] }, 'pw')).json();
-        eq('one new', second.added, 1);
+            { records: [atk('b', { xp: 999 }), atk('c', { xp: 333 })] }, 'pw')).json();
+        eq('one new row', second.added, 1);
         eq('one duplicate', second.duplicates, 1);
-        eq('three in total', second.total, 3);
+        eq('three rows total', second.total, 3);
 
         const all = await (await call(env, 'GET', 'attacks')).json();
         eq('nothing lost', all.count, 3);
-        const b = all.records.find(r => r.id === 'b');
-        eq('existing record NOT overwritten', b.xp, 2);
+        eq('the original value survived', all.records.find(r => r.id === 'b').xp, 222);
 
-        // An upload of only things already there changes nothing.
         const noop = await (await call(env, 'POST', 'attacks',
-            { records: [rec('a', 1), rec('b', 2)] }, 'pw')).json();
-        eq('nothing added', noop.added, 0);
-        eq('still three', noop.total, 3);
+            { records: [atk('a'), atk('b')] }, 'pw')).json();
+        eq('re-uploading adds nothing', noop.added, 0);
+        eq('count unchanged', noop.total, 3);
     }
 
-    section('bad input is rejected, not stored');
+    section('server-side filtering');
     {
         const env = makeEnv('pw');
-        const noId = await (await call(env, 'POST', 'attacks',
-            { records: [{ xp: 1 }, rec('ok', 2), null] }, 'pw')).json();
-        eq('records without an id are skipped', noId.skipped, 2);
-        eq('the valid one is kept', noId.added, 1);
+        await call(env, 'POST', 'attacks', {
+            records: [
+                atk('n1', { typ: 'nocni', cas: '2026-09-10 10:00:00' }),
+                atk('n2', { typ: 'nocni', cas: '2026-09-15 10:00:00' }),
+                atk('t1', { typ: 'nalet', cas: '2026-09-15 11:00:00' }),
+            ],
+        }, 'pw');
+
+        const nocni = await (await call(env, 'GET', 'attacks?typ=nocni')).json();
+        eq('filter by type', nocni.count, 2);
+        ok('only that type came back', nocni.records.every(r => r.typ === 'nocni'));
+
+        const since = await (await call(env, 'GET', 'attacks?since=2026-09-15')).json();
+        eq('filter by date', since.count, 2);
+
+        const both = await (await call(env, 'GET', 'attacks?typ=nocni&since=2026-09-15')).json();
+        eq('filters combine', both.count, 1);
+
+        const star = await (await call(env, 'GET', 'attacks?typ=*')).json();
+        eq('typ=* means all', star.count, 3);
+
+        const limited = await (await call(env, 'GET', 'attacks?limit=1')).json();
+        eq('limit respected', limited.count, 1);
+
+        eq('newest first', (await (await call(env, 'GET', 'attacks')).json()).records[0].id, 't1');
+    }
+
+    section('bad input is skipped, never stored');
+    {
+        const env = makeEnv('pw');
+        const r = await (await call(env, 'POST', 'attacks',
+            { records: [{ xp: 1 }, atk('good'), null, { id: '' }] }, 'pw')).json();
+        eq('three unusable records skipped', r.skipped, 3);
+        eq('the valid one stored', r.added, 1);
+        eq('only one row', r.total, 1);
 
         const empty = await (await call(env, 'POST', 'attacks', { records: [] }, 'pw')).json();
         eq('empty upload is a no-op', empty.added, 0);
+
+        // Unknown fields must not break the insert.
+        const extra = await (await call(env, 'POST', 'attacks',
+            { records: [atk('x', { neznamy_sloupec: 'ahoj' })] }, 'pw')).json();
+        eq('unknown fields ignored', extra.added, 1);
     }
 
-    section('the two collections are independent');
+    section('real values survive the round trip');
     {
         const env = makeEnv('pw');
-        await call(env, 'POST', 'attacks', { records: [rec('a', 1)] }, 'pw');
-        await call(env, 'POST', 'konflikty', { records: [rec('k', 1)] }, 'pw');
+        const full = atk('rt', {
+            cil_zeme: 'Ankh-Morpork', cil_aliance: 'HOLY', cil_hrac: 'mikrobbb',
+            zabito_tanky: 1244, zabito_stihacky: 1303, zabito_bunkry: null,
+            zakladny: 102, ztraty_utocnik: 6787, ztraty_obrance: 4387, xp: 10251,
+            prestiz_utocnik: 1254000, prestiz_obrance: 1360000,
+            raw: 'Našim mechům se podařilo…',
+        });
+        await call(env, 'POST', 'attacks', { records: [full] }, 'pw');
+        const back = (await (await call(env, 'GET', 'attacks')).json()).records[0];
+        ['cil_zeme', 'cil_aliance', 'cil_hrac', 'zabito_tanky', 'zakladny',
+         'ztraty_utocnik', 'ztraty_obrance', 'xp', 'prestiz_utocnik', 'prestiz_obrance']
+            .forEach(k => eq(k, back[k], full[k]));
+        ok('null stays null', back.zabito_bunkry === null);
+        ok('vlozeno stamped', typeof back.vlozeno === 'string' && back.vlozeno.length > 10);
+    }
+
+    section('the two tables are independent');
+    {
+        const env = makeEnv('pw');
+        await call(env, 'POST', 'attacks', { records: [atk('a')] }, 'pw');
+        await call(env, 'POST', 'konflikty', {
+            records: [{ id: 'k1', cas: '2026-09-15 08:59', obrance_id: 103, utocnik_id: 115,
+                        prestiz_utocnik: 1254000, prestiz_obrance: 1360000, zakladny: 56, jednotky: 15218 }],
+        }, 'pw');
 
         const a = await (await call(env, 'GET', 'attacks')).json();
         const k = await (await call(env, 'GET', 'konflikty')).json();
         eq('attacks holds one', a.count, 1);
         eq('konflikty holds one', k.count, 1);
-        ok('attacks does not contain the konflikt', !a.records.some(r => r.id === 'k'));
+        eq('konflikt prestiž stored', k.records[0].prestiz_obrance, 1360000);
 
-        const health = await (await call(env, 'GET', 'health')).json();
-        eq('health counts attacks', health.attacks, 1);
-        eq('health counts konflikty', health.konflikty, 1);
+        const h = await (await call(env, 'GET', 'health')).json();
+        eq('health counts attacks', h.attacks, 1);
+        eq('health counts konflikty', h.konflikty, 1);
     }
 
-    section('CORS is open so the Pages site can call it');
+    section('CORS lets the Pages site call it');
     {
         const env = makeEnv('pw');
         const pre = await worker.fetch(new Request('https://w.dev/attacks', { method: 'OPTIONS' }), env);
         eq('preflight 204', pre.status, 204);
-        eq('allows any origin', pre.headers.get('Access-Control-Allow-Origin'), '*');
-        ok('allows the secret header',
-            /X-WG-Secret/i.test(pre.headers.get('Access-Control-Allow-Headers') || ''));
-
-        const get = await call(env, 'GET', 'attacks');
-        eq('GET carries CORS too', get.headers.get('Access-Control-Allow-Origin'), '*');
+        eq('any origin', pre.headers.get('Access-Control-Allow-Origin'), '*');
+        ok('secret header allowed', /X-WG-Secret/i.test(pre.headers.get('Access-Control-Allow-Headers') || ''));
+        eq('GET carries CORS', (await call(env, 'GET', 'attacks')).headers.get('Access-Control-Allow-Origin'), '*');
     }
 
     process.exit(done() ? 1 : 0);

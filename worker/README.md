@@ -8,8 +8,11 @@ požadavků denně, bez platební karty).
 
 1. **Účet**: https://dash.cloudflare.com/sign-up — zdarma, bez karty.
 
-2. **KV úložiště**: v levém menu **Storage & Databases → KV → Create instance**.
-   Pojmenujte ho `wgbonus`.
+2. **Databáze D1**: v levém menu **Storage & Databases → D1 → Create**.
+   Pojmenujte ji např. `wg_attack_exp`.
+
+   Pak v její záložce **Console** vložte a spusťte celý obsah
+   [`schema.sql`](schema.sql) — vytvoří tabulky `attacks` a `konflikty`.
 
 3. **Worker**: **Compute (Workers) → Create → Start from Hello World → Deploy**.
    Pojmenujte ho třeba `wgbonus`.
@@ -17,9 +20,9 @@ požadavků denně, bez platební karty).
 4. **Kód**: u workeru **Edit code**, smažte obsah a vložte celý
    [`wgbonus-worker.js`](wgbonus-worker.js). **Deploy**.
 
-5. **Propojení KV**: **Settings → Bindings → Add → KV namespace**
-   - Variable name: `WGDATA`  (přesně takto)
-   - KV namespace: `wgbonus`
+5. **Propojení databáze**: **Settings → Bindings → Add → D1 database**
+   - Variable name: `DB`  (přesně takto)
+   - D1 database: `wg_attack_exp`
 
 6. **Heslo pro zápis**: **Settings → Variables and Secrets → Add**
    - Type: **Secret**
@@ -47,10 +50,12 @@ heslo se tak nedostane do veřejného repozitáře.
 
 Pak:
 
-- **Stáhnout sdílené** — načte, co nahráli ostatní, a sloučí to s vaším.
-- **Nahrát moje** — pošle vaše záznamy nahoru.
+- **Stáhnout sdílené** — načte, co nahráli ostatní, sloučí to s vaším a rovnou
+  doplní prestiž z konfliktů.
+- **Nahrát moje** — pošle vaše útoky i konflikty nahoru.
 
-Čtení je otevřené, zápis vyžaduje heslo.
+Čtení je otevřené, zápis vyžaduje heslo. Filtrovat jde i přes adresu, např.
+`…/attacks?typ=nocni&since=2026-09-15&limit=500`.
 
 ## Jak se data slučují
 
@@ -58,11 +63,11 @@ Záznamy se spojují podle `id` (podpis nad hodnotami útoku). Co už nahoře je
 se nepřepisuje — započítá se jako duplicita. **Nikdo tedy nemůže svým nahráním
 smazat data někoho jiného.**
 
-Jediné, na co si dát pozor: pokud dva lidé nahrají *přesně ve stejnou vteřinu*,
-může se jedno nahrání ztratit (KV nemá transakce). Stačí nahrát znovu.
+Zápis probíhá přes `INSERT OR IGNORE` v jedné transakci, takže ani dvě
+současná nahrání se navzájem nepřepíšou ani neztratí.
 
 ## Náklady
 
-Free tier: 100 000 požadavků/den, 1 000 zápisů do KV/den. Pět lidí, kteří
-několikrát denně něco vloží, spotřebuje jednotky až desítky. Placený plán
-není potřeba a účet bez karty se sám nepřepne.
+Free tier: 100 000 požadavků na Worker/den, D1 5 milionů přečtených řádků
+a 100 000 zápisů denně. Pět lidí, kteří několikrát denně něco vloží, spotřebuje
+zlomek. Placený plán není potřeba a účet bez karty se sám nepřepne.
