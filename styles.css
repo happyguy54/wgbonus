@@ -2519,3 +2519,101 @@ td.needed-value {
 #bonusCalculationResult {
 	text-align: left !important;
 }
+
+/* ---- Útoky: paste, plot, equations ---- */
+
+textarea.attack-paste {
+	width: 100%;
+	box-sizing: border-box;
+	font-family: "Courier New", monospace;
+	font-size: 11px;
+	resize: vertical;
+	margin-bottom: 6px;
+}
+
+.plot-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 6px;
+}
+
+.plot-controls label { color: #FF8000; }
+.plot-controls .formula-input { width: auto; flex: 0 0 auto; }
+
+svg.attack-plot {
+	width: 100%;
+	max-width: 660px;
+	height: auto;
+	background-color: #151515;
+	border: solid 1px #2a2a2a;
+}
+
+.plot-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 6px 0 12px 0;
+	font-size: 11px;
+}
+
+.plot-key { display: flex; align-items: center; gap: 5px; color: #ccc; }
+
+.plot-dot {
+	display: inline-block;
+	width: 10px; height: 10px;
+	border-radius: 50%;
+}
+
+.eq-form {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.eq-form .formula-expr-input { flex: 1 1 320px; }
+.eq-form select { flex: 0 0 auto; width: auto; }
+
+.eq-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	padding: 5px 7px;
+	margin-bottom: 4px;
+	background-color: #1a1a1a;
+	border: solid 1px #2a2a2a;
+}
+
+.eq-row > div:first-child { flex: 1 1 260px; }
+.eq-row.eq-good { border-color: #00CC00; }
+.eq-row.eq-bad { border-color: #5a3a3a; background-color: #2a1a1a; }
+
+.eq-stats {
+	font-family: "Courier New", monospace;
+	font-size: 12px;
+	color: #98CCFF;
+	white-space: nowrap;
+}
+
+.eq-stats strong { color: #FF8000; }
+
+.attack-table-wrap {
+	max-height: 420px;
+	overflow: auto;
+	border: solid 1px #2a2a2a;
+}
+
+table.attack-table { width: 100%; font-size: 11px; }
+table.attack-table th { position: sticky; top: 0; background-color: #2a2a2a; z-index: 1; }
+
+.plot-dash {
+	display: inline-block;
+	width: 14px;
+	height: 0;
+	border-top: 2px dashed currentColor;
+	margin-right: 4px;
+	vertical-align: middle;
+}
