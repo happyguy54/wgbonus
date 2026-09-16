@@ -446,6 +446,8 @@
         renderAll();
     }
 
+    let konfliktRows = [];      // last parsed konflikty, kept so they can be shared
+
     function onKonflikty() {
         const text = ui.konfliktPaste.value;
         if (!text.trim()) { ui.konfliktInfo.textContent = 'Vložte výpis z Konfliktů.'; return; }
@@ -455,6 +457,13 @@
             ui.konfliktInfo.textContent = 'Nerozpoznán žádný řádek — očekává se „---> zeme(#id) … 1234k pr.“.';
             return;
         }
+        // Keep them (deduped by their own key) so "Nahrát moje" can share them.
+        const seen = new Set(konfliktRows.map(r => r.id));
+        rows.forEach(r => {
+            r.id = r.id || `${r.cas}|${r.obrance_id}|${r.prestiz_obrance}|${r.prestiz_utocnik}`;
+            if (!seen.has(r.id)) { konfliktRows.push(r); seen.add(r.id); }
+        });
+
         const res = A.applyKonflikty(store.records, rows);
         ui.konfliktInfo.textContent =
             `Načteno ${res.rows} řádků, prestiž doplněna k ${res.matched} útokům`
@@ -462,6 +471,91 @@
         if (res.matched) ui.konfliktPaste.value = '';
         writeLocal();
         renderAll();
+    }
+
+    /* ------------------------------------------------- shared store (Worker) */
+
+    // The URL and password live only in this browser. They are deliberately
+    // NOT part of the saved data file, so the password cannot reach the repo.
+    const SYNC_KEY = 'wgbonus.sync.v1';
+
+    function readSync() {
+        try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }
+        catch (e) { return {}; }
+    }
+    function writeSync(cfg) {
+        try { localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); } catch (e) { /* blocked */ }
+    }
+
+    const syncBase = () => String(readSync().url || '').replace(/\/+$/, '');
+
+    async function syncCall(collection, method, records) {
+        const base = syncBase();
+        if (!base) throw new Error('Nejprve vyplňte adresu sdíleného úložiště.');
+        const opts = { method, headers: {} };
+        if (method === 'POST') {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.headers['X-WG-Secret'] = readSync().secret || '';
+            opts.body = JSON.stringify({ records });
+        }
+        const res = await fetch(`${base}/${collection}`, opts);
+        let data;
+        try { data = await res.json(); }
+        catch (e) { throw new Error(`Úložiště odpovědělo nečekaně (HTTP ${res.status}).`); }
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+    }
+
+    /** Pull both collections down and merge them into what is here. */
+    async function pullShared() {
+        ui.syncInfo.textContent = 'Stahuji…';
+        try {
+            const atk = await syncCall('attacks', 'GET');
+            const res = store.addMany(atk.records || []);
+
+            let konfNote = '';
+            try {
+                const konf = await syncCall('konflikty', 'GET');
+                const rows = konf.records || [];
+                if (rows.length) {
+                    const applied = A.applyKonflikty(store.records, rows);
+                    konfNote = `, prestiž doplněna k ${applied.matched} útokům`;
+                }
+            } catch (e) { konfNote = `, konflikty se nepodařilo načíst (${e.message})`; }
+
+            writeLocal();
+            renderAll();
+            ui.syncInfo.textContent =
+                `Staženo ${(atk.records || []).length} útoků — nových ${res.added}`
+                + (res.duplicates ? `, ${res.duplicates} už jste měli` : '') + konfNote + '.';
+        } catch (err) {
+            ui.syncInfo.textContent = 'Stažení selhalo: ' + err.message;
+        }
+    }
+
+    /** Push what is here up, so the others see it. */
+    async function pushShared() {
+        if (!readSync().secret) {
+            ui.syncInfo.textContent = 'Pro nahrání vyplňte heslo.';
+            return;
+        }
+        ui.syncInfo.textContent = 'Nahrávám…';
+        try {
+            const atk = await syncCall('attacks', 'POST', store.records);
+            let konfNote = '';
+            if (konfliktRows.length) {
+                try {
+                    const k = await syncCall('konflikty', 'POST', konfliktRows);
+                    konfNote = `, konfliktů nových ${k.added}`;
+                } catch (e) { konfNote = `, konflikty se nepodařilo nahrát (${e.message})`; }
+            }
+            ui.syncInfo.textContent =
+                `Nahráno: nových ${atk.added}`
+                + (atk.duplicates ? `, ${atk.duplicates} už tam bylo` : '')
+                + `, celkem nahoře ${atk.total}` + konfNote + '.';
+        } catch (err) {
+            ui.syncInfo.textContent = 'Nahrání selhalo: ' + err.message;
+        }
     }
 
     function readSettings() {
@@ -608,6 +702,28 @@
                 </table>
             </div>
 
+            <h3>Sdílené úložiště</h3>
+            <div class="sync-panel">
+                <div class="formula-field">
+                    <label for="syncUrl">Adresa</label>
+                    <input type="text" id="syncUrl" class="formula-input"
+                           placeholder="https://wgbonus.vas-ucet.workers.dev">
+                </div>
+                <div class="formula-field">
+                    <label for="syncSecret">Heslo</label>
+                    <input type="password" id="syncSecret" class="formula-input"
+                           placeholder="sdílené heslo pro zápis">
+                </div>
+                <button type="button" class="submit" id="syncPull">Stáhnout sdílené</button>
+                <button type="button" class="submit" id="syncPush">Nahrát moje</button>
+                <div id="syncInfo" class="formula-hint"></div>
+                <div class="formula-hint">
+                    Adresa i heslo zůstávají jen ve vašem prohlížeči — neukládají se
+                    do souboru ani do repozitáře. Nastavení workeru viz
+                    <code>worker/README.md</code>.
+                </div>
+            </div>
+
             <div class="formula-persist">
                 <button type="button" class="submit" id="attackDelSelected">Smazat vybrané</button>
                 <button type="button" class="submit" id="attackSave">Uložit útoky</button>
@@ -622,6 +738,9 @@
             paste: document.getElementById('attackPaste'),
             pasteInfo: document.getElementById('attackPasteInfo'),
             konfliktPaste: document.getElementById('konfliktPaste'),
+            syncUrl: document.getElementById('syncUrl'),
+            syncSecret: document.getElementById('syncSecret'),
+            syncInfo: document.getElementById('syncInfo'),
             konfliktInfo: document.getElementById('konfliktInfo'),
             prestizU: document.getElementById('prestizU'),
             prestizO: document.getElementById('prestizO'),
@@ -673,6 +792,16 @@
         ['prestizU', 'prestizO', 'hodnostU', 'hodnostO']
             .forEach(k => ui[k].addEventListener('input', readSettings));
         document.getElementById('konfliktAdd').addEventListener('click', onKonflikty);
+        document.getElementById('syncPull').addEventListener('click', pullShared);
+        document.getElementById('syncPush').addEventListener('click', pushShared);
+        const saveSync = () => writeSync({ url: ui.syncUrl.value.trim(), secret: ui.syncSecret.value });
+        ui.syncUrl.addEventListener('change', saveSync);
+        ui.syncSecret.addEventListener('change', saveSync);
+        {
+            const cfg = readSync();
+            ui.syncUrl.value = cfg.url || '';
+            ui.syncSecret.value = cfg.secret || '';
+        }
         ui.plotX.addEventListener('input', renderPlot);
         ui.plotType.addEventListener('change', renderPlot);
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';
