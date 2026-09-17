@@ -365,7 +365,7 @@ function appendDetailTable(container, jednotky, budovy, technologie, spokojenost
 }
 
 // Append a section to the detail table
-function appendDetailSection(row, section, spokojenost, vlada, rozloha,全) {
+function appendDetailSection(row, section, spokojenost, vlada, rozloha, ctx) {
     const namesCell = document.createElement('td');
     namesCell.className = 'rname l';
     // Prestiž the rozvědka cannot see: total minus land + buildings + tech + units.
