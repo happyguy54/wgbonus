@@ -61,6 +61,18 @@
         // a file must never silently drop what is already here. Duplicates are
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
+
+        // The signature covers only the values read off the log, so a record
+        // already present is treated as a duplicate even when the file carries
+        // better prestiž/hodnost for it. Those fields are curated, not observed,
+        // so take them from the file for records we already hold.
+        const byId = new Map((data.records || []).map(r => [r.id, r]));
+        store.records.forEach(rec => {
+            const src = byId.get(rec.id);
+            if (!src) return;
+            ['prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance']
+                .forEach(k => { if (src[k] !== undefined && src[k] !== null) rec[k] = src[k]; });
+        });
         if (data.settings) settings = Object.assign(settings, data.settings);
         if (Array.isArray(data.equations)) equations = data.equations;
         return res.added;
