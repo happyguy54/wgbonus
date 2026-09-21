@@ -294,4 +294,75 @@ section('prestiž table and mrtvá prestiž');
     ok('no total -> null', A.deadPrestige(0, d) === null);
 }
 
+section('útok na týl: our losses vs theirs must not be confused');
+{
+    const A = require('../attacks.js');
+    const r = A.parseLine('18.9.2026 6:44:03\tNaší tankové brigádě se podařilo bleskovým úderem '
+        + 'napadnout týl nepřátelské armády Form(#124)[SOLO] - formalldehyd a snížit tak její '
+        + 'připravenost o 3%. My jsme při tom přišli o 4213 tanků a nepřítel o 1532 tanků. '
+        + 'Získáno 7590 zkušeností.');
+
+    eq('type detected', r.typ, 'tyl');
+    eq('target name stops at the country', r.cil_zeme, 'Form');
+    eq('target id', r.cil_id, 124);
+    eq('target player', r.cil_hrac, 'formalldehyd');
+    eq('OUR tanks are attacker losses', r.ztraty_utocnik, 4213);
+    eq('THEIR tanks are defender losses', r.ztraty_obrance, 1532);
+    eq('and count as kills', r.zabito_tanky, 1532);
+    ok('no soldiers in this attack type', r.zabito_vojaci === null);
+    ok('no bases in this attack type', r.zakladny === null);
+    eq('připravenost drop', r.pripravenost_pokles, 3);
+    eq('xp', r.xp, 7590);
+}
+
+section('taktický nálet: fighters on each side, and a decimal percentage');
+{
+    const A = require('../attacks.js');
+    const r = A.parseLine('Úplné vítězství! Naši elitní piloti podnikli taktický nálet proti zemi '
+        + 'TES-Skill ti manka kupi(#38)[UTOPSE] - CoolD a zasáhli strategická vojenská zařízení '
+        + 'nepřítele. Bylo zničeno 92 vojenských základen nepřítele, 9741 našich stíhaček, '
+        + '4114 nepřátelských stíhaček, 316 bunkrů a spokojenost v nepřátelské zemi klesá o 1.6%. '
+        + 'Získáno 12366 zkušeností.');
+
+    eq('type detected', r.typ, 'nalet');
+    eq('multi-word target name', r.cil_zeme, 'TES-Skill ti manka kupi');
+    eq('OUR fighters are attacker losses', r.ztraty_utocnik, 9741);
+    eq('THEIR fighters are defender losses', r.ztraty_obrance, 4114);
+    eq('and count as kills', r.zabito_stihacky, 4114);
+    eq('bases', r.zakladny, 92);
+    eq('bunkers', r.zabito_bunkry, 316);
+    // "1.6" must not be read as 1 6 -> 16 the way a thousands separator would be.
+    eq('decimal percentage kept', r.spokojenost_pokles, 1.6);
+    eq('xp', r.xp, 12366);
+    ok('no soldiers or tanks here', r.zabito_vojaci === null && r.zabito_tanky === null);
+}
+
+section('noční tažení still parses as before');
+{
+    const A = require('../attacks.js');
+    const r = A.parseLine('18.9.2026 19:26:52\tNašim mechům se podařilo během nočního tažení zemí '
+        + 'C8H10N4O2(#93)[MaNTiNeL] - Hollandan zlikvidovat 14514 nepřipravených vojáků, 1298 tanků '
+        + 'a 311 stíhaček. S nimi bylo zničeno 43 vojenských základen. Zničeno bylo 12889 útočících '
+        + 'a 8090 bránících mechů. Získáno 11399 zkušeností.');
+    eq('type', r.typ, 'nocni');
+    eq('target', r.cil_zeme, 'C8H10N4O2');
+    eq('soldiers', r.zabito_vojaci, 14514);
+    eq('our mechs', r.ztraty_utocnik, 12889);
+    eq('their mechs', r.ztraty_obrance, 8090);
+    eq('body count excludes mechs', r.zabito_celkem, 14514 + 1298 + 311);
+}
+
+section('the shipped data covers all three types');
+{
+    const d = JSON.parse(require('fs').readFileSync(__dirname + '/../attacks.default.json', 'utf8'));
+    const byType = d.records.reduce((a, r) => (a[r.typ] = (a[r.typ] || 0) + 1, a), {});
+    ok('noční tažení present', byType.nocni > 0, String(byType.nocni));
+    ok('týl present', byType.tyl > 0, String(byType.tyl));
+    ok('nálet present', byType.nalet > 0, String(byType.nalet));
+    ok('no duplicate ids', new Set(d.records.map(r => r.id)).size === d.records.length);
+    ok('every record has xp', d.records.every(r => Number.isFinite(r.xp)));
+    ok('every record has both sides\u2019 losses',
+        d.records.every(r => Number.isFinite(r.ztraty_utocnik) && Number.isFinite(r.ztraty_obrance)));
+}
+
 process.exit(done() ? 1 : 0);

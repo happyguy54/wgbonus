@@ -46,7 +46,7 @@
         { id: 'nalet', label: 'Taktický nálet', re: /taktick\S*\s+n[áa]let/i },
         { id: 'bombardovani', label: 'Bombardování', re: /bombardov[áa]n/i },
         { id: 'partyzansky', label: 'Partyzánský útok', re: /partyz[áa]n/i },
-        { id: 'tyl', label: 'Útok na týl', re: /(na\s+t[ýy]l|[úu]tok[uy]?\s+na\s+t[ýy]l)/i },
+        { id: 'tyl', label: 'Útok na týl', re: /(napadnout\s+t[ýy]l|t[ýy]l\s+nep[řr][áa]telsk|na\s+t[ýy]l|tankov[ée]\s+brig[áa]d)/i },
         { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /(vniknut|vnikl).{0,20}bunkr/i },
         { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n/i },
         { id: 'loupezivy', label: 'Loupeživý útok', re: /loupe[žz]iv/i },
@@ -90,7 +90,10 @@
         // Anchored on "zem/zemí" so the timestamp column cannot be swallowed;
         // the fallback stops at a tab for logs that word it differently.
         const TARGET = '\\s*\\(#(\\d+)\\)\\s*\\[([^\\]]*)\\]\\s*-\\s*(\\S+)';
-        const cil = first(text, new RegExp('zem[íi]?\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
+        // Anchored on the word that introduces the target in each wording, so
+        // the rest of the sentence cannot be swallowed into the country name.
+        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi';
+        const cil = first(text, new RegExp('(?:' + ANCHORS + ')\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
                  || first(text, new RegExp('([^\\t(]{1,60}?)' + TARGET, 'i'));
 
         const rec = {
@@ -122,7 +125,37 @@
         // Total enemy units killed, handy as a single regressor.
         const killed = [rec.zabito_vojaci, rec.zabito_tanky, rec.zabito_stihacky, rec.zabito_bunkry]
             .filter(v => v !== null);
-        rec.zabito_celkem = killed.length ? killed.reduce((a, b) => a + b, 0) : null;
+        // Each attack type words its losses differently, and the generic rules
+        // above read the ATTACKER's losses as if they were the defender's. Fix
+        // that per type, so "ztraty_utocnik" always means our dead and
+        // "ztraty_obrance" always means theirs.
+        if (rec.typ === 'tyl') {
+            // "My jsme při tom přišli o 4159 tanků a nepřítel o 1668 tanků."
+            rec.ztraty_utocnik = grab(text, /p[řr][ii]šli\s+o\s+([\d\s .]+)\s*tank/i);
+            rec.ztraty_obrance = grab(text, /nep[řr][íi]tel\s+o\s+([\d\s .]+)\s*tank/i);
+            rec.zabito_tanky = rec.ztraty_obrance;
+            rec.zabito_vojaci = null;
+            rec.zabito_stihacky = null;
+            rec.zabito_bunkry = null;
+            rec.zakladny = null;
+            // "snížit tak její připravenost o 3%"
+            rec.pripravenost_pokles = pct(text, /p[řr]ipravenost\s+o\s+([\d.,]+)\s*%/i);
+        } else if (rec.typ === 'nalet' || rec.typ === 'bombardovani') {
+            // "Bylo zničeno 92 vojenských základen nepřítele, 9741 našich
+            //  stíhaček, 4114 nepřátelských stíhaček, 316 bunkrů"
+            rec.ztraty_utocnik = grab(text, /([\d\s .]+)\s*na[šs]ich\s+st[íi]ha[čc]ek/i);
+            rec.ztraty_obrance = grab(text, /([\d\s .]+)\s*nep[řr][áa]telsk[ýy]ch\s+st[íi]ha[čc]ek/i);
+            rec.zabito_stihacky = rec.ztraty_obrance;
+            rec.zabito_vojaci = null;
+            rec.zabito_tanky = null;
+            // "spokojenost v nepřátelské zemi klesá o 1.6%"
+            rec.spokojenost_pokles = pct(text, /spokojenost[^.]{0,60}?kles[áa]\s+o\s+([\d.,]+)\s*%/i);
+        }
+
+        // Only the defender's dead count towards the body count.
+        const killed2 = [rec.zabito_vojaci, rec.zabito_tanky, rec.zabito_stihacky, rec.zabito_bunkry]
+            .filter(v => typeof v === 'number');
+        rec.zabito_celkem = killed2.length ? killed2.reduce((a, b) => a + b, 0) : null;
 
         rec.id = signature(rec);
         return rec;
@@ -374,6 +407,14 @@
             matched++;
         });
         return { matched, unmatched, rows: rows.length };
+    }
+
+    /** "1.6" / "1,6" -> 1.6 ; grab() would read the dot as a separator. */
+    function pct(text, re) {
+        const m = String(text).match(re);
+        if (!m) return null;
+        const v = parseFloat(String(m[1]).replace(',', '.'));
+        return Number.isFinite(v) ? v : null;
     }
 
     function scopeFor(rec, settings) {
