@@ -198,6 +198,15 @@
     const COLORS = ['#FF8000', '#98CCFF', '#00CC00', '#CC66CC', '#FFD700', '#FF6666', '#66FFCC'];
     const CURVE_COLORS = ['#FFFFFF', '#FFAA55', '#AADDFF', '#AAFFAA', '#FFAAFF'];
 
+    /** Darken a hex colour towards black. f = 0.35 (oldest) .. 1 (newest). */
+    function shade(hex, f) {
+        const n = parseInt(hex.slice(1), 16);
+        const r = Math.round(((n >> 16) & 255) * f);
+        const g = Math.round(((n >> 8) & 255) * f);
+        const b = Math.round((n & 255) * f);
+        return `rgb(${r},${g},${b})`;
+    }
+
     /** Dependency-free SVG scatter plot. */
     function scatter(series, xLabel, yLabel, curves) {
         const W = 640, H = 360, P = { t: 14, r: 14, b: 42, l: 66 };
@@ -236,10 +245,17 @@
 
         const dots = series.map((s, i) => {
             const c = COLORS[i % COLORS.length];
-            return s.points.map(p =>
-                `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="3.5"
-                         fill="${c}" fill-opacity="0.75" stroke="${c}"><title>${p.title || ''}</title></circle>`
-            ).join('');
+            // Within a series the oldest point is darkest, the newest brightest,
+            // so the order of a round is readable without leaving the colour.
+            const ordered = s.points.some(p => p.cas)
+                ? s.points.slice().sort((a, b) => String(a.cas || '').localeCompare(String(b.cas || '')))
+                : s.points;
+            const n = Math.max(1, ordered.length - 1);
+            return ordered.map((p, j) => {
+                const col = s.shaded === false ? c : shade(c, 0.4 + 0.6 * (j / n));
+                return `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="4"
+                         fill="${col}" fill-opacity="0.9" stroke="${col}"><title>${p.title || ''}</title></circle>`;
+            }).join('');
         }).join('');
 
         // Equation predictions, drawn as a polyline over the points.
@@ -260,7 +276,9 @@
 
         const legend = series.map((s, i) => {
             const c = COLORS[i % COLORS.length];
-            return `<span class="plot-key"><span class="plot-dot" style="background:${c}"></span>${s.label} (${s.points.length})</span>`;
+            const grad = s.shaded === false ? c
+                : `linear-gradient(90deg, ${shade(c, 0.4)}, ${c})`;
+            return `<span class="plot-key"><span class="plot-dot" style="background:${grad}"></span>${s.label} (${s.points.length})</span>`;
         }).join('') + curveKeys;
 
         return `
@@ -366,7 +384,7 @@
             if (!Number.isFinite(x) || !Number.isFinite(rec.xp)) return;
             if (!grouped.has(typ)) grouped.set(typ, []);
             grouped.get(typ).push({
-                x, y: rec.xp, cas: rec.cas,
+                x, y: rec.xp, cas: rec.cas, cil_id: rec.cil_id, cil_zeme: rec.cil_zeme,
                 title: `${A.typeLabel(typ)}\n${rec.cas || ''}\nx = ${fmtNum(x)}\nxp = ${fmtNum(rec.xp)}`
                      + (scope.vlastni_hodnoty ? '' : `\n(výchozí prestiž/hodnost, váha ${scope.vaha})`),
             });
@@ -374,22 +392,25 @@
 
         let series;
         if (ui.plotByTime && ui.plotByTime.checked) {
-            // Split the selection into time-ordered buckets. A change partway
-            // through a sequence shows up as one colour sitting off the others.
-            const pts = [...grouped.values()].flat()
-                .map((p, i) => p)
-                .sort((a, b) => String(a.cas || '').localeCompare(String(b.cas || '')));
-            const BUCKETS = Math.min(5, Math.max(2, Math.ceil(pts.length / 4)));
-            const per = Math.ceil(pts.length / BUCKETS);
-            series = [];
-            for (let i = 0; i < pts.length; i += per) {
-                const chunk = pts.slice(i, i + per);
-                const from = (chunk[0].cas || '').slice(11, 16);
-                const to = (chunk[chunk.length - 1].cas || '').slice(11, 16);
-                series.push({ label: from && to ? `${from}–${to}` : `část ${series.length + 1}`, points: chunk });
-            }
+            // One colour per batch - a batch being one target on one day, i.e.
+            // a single run of attacks. Shading inside it carries the time.
+            const batches = new Map();
+            [...grouped.values()].flat().forEach(p => {
+                const key = `${p.cil_id || '?'}|${(p.cas || '').slice(0, 10)}`;
+                if (!batches.has(key)) batches.set(key, []);
+                batches.get(key).push(p);
+            });
+            series = [...batches.entries()]
+                .sort((a, b) => String(a[1][0].cas || '').localeCompare(String(b[1][0].cas || '')))
+                .map(([, pts]) => {
+                    const p0 = pts.slice().sort((a, b) => String(a.cas || '').localeCompare(String(b.cas || '')))[0];
+                    const den = (p0.cas || '').slice(8, 10) + '.' + (p0.cas || '').slice(5, 7) + '.';
+                    return { label: `${p0.cil_zeme || ('#' + p0.cil_id)} ${den}`, points: pts };
+                });
         } else {
-            series = [...grouped.entries()].map(([typ, points]) => ({ label: A.typeLabel(typ), points }));
+            series = [...grouped.entries()].map(([typ, points]) => ({
+                label: A.typeLabel(typ), points, shaded: false,
+            }));
         }
 
         // Overlay each equation that applies to what is being shown, so you can
@@ -692,7 +713,7 @@
                 <select id="plotType" class="formula-input"></select>
                 <label for="plotTarget">Cíl:</label>
                 <select id="plotTarget" class="formula-input"></select>
-                <label class="plot-check"><input type="checkbox" id="plotByTime"> Obarvit podle času</label>
+                <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input"
                        list="attackVars" value="zabito_vse" spellcheck="false"
