@@ -444,10 +444,14 @@
             ? s.prestigeValues : PRESTIGE_VALUES;
         const v = k => Number(rec[k]) || 0;
 
-        // Mechs destroyed on each side. In a noční tažení the defender's losses
-        // ARE dead units, so they belong in the body count, not just in a
-        // separate "losses" field.
-        out.zabito_mechove = v('ztraty_obrance');
+        // The defender's losses. In a noční tažení these are mechs, which the
+        // message reports separately from the units it lists as "zlikvidovat",
+        // so they must be ADDED to the body count. In týl and nálet the same
+        // number is already one of the zabito_* fields, so adding it again
+        // would count the defender's dead twice - at two different rates.
+        const defenderInZabito = rec.typ === 'tyl' || rec.typ === 'nalet' || rec.typ === 'bombardovani';
+        out.zabito_mechove = defenderInZabito ? 0 : v('ztraty_obrance');
+        out.zabito_obrance_kusu = v('ztraty_obrance');
         out.ztraty_mechove_utocnik = v('ztraty_utocnik');   // kept: old name
         out.ztraty_utocnik_kusu = v('ztraty_utocnik');
         const atkUnit = ATTACKER_UNIT[rec.typ] || 'mechove';
@@ -469,8 +473,13 @@
 
         // Plain attacker_/defender_ names, so an equation reads the way you
         // would say it out loud: attack_mech + defense_mech * 2 + ...
-        out.attack_mech    = out.ztraty_mechove_utocnik;
-        out.defense_mech   = out.zabito_mechove;
+        // Type-neutral names. The unit that dies depends on the attack -
+        // mechs in noční tažení, tanks in týl, fighters in nálet - so naming
+        // these "mech" was wrong everywhere but noční tažení.
+        out.attack_lost    = out.ztraty_utocnik_kusu;     // our units lost
+        out.defense_lost   = out.zabito_obrance_kusu;     // their units lost
+        out.attack_mech    = out.ztraty_utocnik_kusu;     // old name, kept
+        out.defense_mech   = out.zabito_obrance_kusu;     // old name, kept
         out.defense_vojaci   = v('zabito_vojaci');
         out.defense_tanky    = v('zabito_tanky');
         out.defense_stihacky = v('zabito_stihacky');

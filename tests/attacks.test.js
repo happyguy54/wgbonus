@@ -386,4 +386,35 @@ section('attacker losses are weighted by the unit that actually dies');
     eq('total uses the tank rate for our dead', tyl.ztraty_prestiz_celkem, tyl.zabito_prestiz + 100 * 5);
 }
 
+section('the defender is counted once, not twice');
+{
+    const A = require('../attacks.js');
+
+    // týl: the enemy's dead tanks are already in zabito_tanky, so adding
+    // ztraty_obrance again would double them at a second prestiž rate.
+    const tyl = A.scopeFor({ typ: 'tyl', ztraty_utocnik: 19085, ztraty_obrance: 10129,
+                             zabito_tanky: 10129, xp: 1 }, {});
+    eq('defense_lost is their real loss', tyl.defense_lost, 10129);
+    eq('body count not doubled', tyl.defense_all, 10129);
+    eq('prestiž at the tank rate only', tyl.defense_prestiz, 10129 * 5);
+    eq('attack_lost is our loss', tyl.attack_lost, 19085);
+
+    // noční tažení: the defender's mechs are reported separately from the
+    // units listed as killed, so they DO add to the body count.
+    const noc = A.scopeFor({ typ: 'nocni', zabito_vojaci: 6138, zabito_tanky: 1244,
+                             zabito_stihacky: 1303, ztraty_utocnik: 6787,
+                             ztraty_obrance: 4387, xp: 1 }, {});
+    eq('mechs counted for noční tažení', noc.defense_lost, 4387);
+    eq('body count includes them once', noc.defense_all, 6138 + 1244 + 1303 + 4387);
+
+    // nálet: same rule as týl.
+    const nal = A.scopeFor({ typ: 'nalet', ztraty_utocnik: 9741, ztraty_obrance: 4114,
+                             zabito_stihacky: 4114, zabito_bunkry: 316, xp: 1 }, {});
+    eq('nálet not doubled', nal.defense_all, 4114 + 316);
+
+    // The old names still resolve, so existing equations keep working.
+    eq('attack_mech alias', tyl.attack_mech, tyl.attack_lost);
+    eq('defense_mech alias', tyl.defense_mech, tyl.defense_lost);
+}
+
 process.exit(done() ? 1 : 0);

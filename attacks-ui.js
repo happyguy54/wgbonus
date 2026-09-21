@@ -132,8 +132,10 @@
         ['zabito_vse', 'všechny zabité jednotky obránce včetně mechů'],
         ['zabito_prestiz', 'zabité jednotky vážené prestiží (voják 1, mech 2,7, stíhačka/bunkr 3,5, tank 5)'],
         ['ztraty_prestiz_celkem', 'zabito_prestiz + vlastní padlí mechové vážení prestiží'],
-        ['attack_mech', 'padlí útočící mechové'],
-        ['defense_mech', 'padlí bránící mechové'],
+        ['attack_lost', 'naše ztracené jednotky (mechové/tanky/stíhačky dle typu útoku)'],
+        ['defense_lost', 'jejich ztracené jednotky'],
+        ['attack_mech', 'starý název pro attack_lost'],
+        ['defense_mech', 'starý název pro defense_lost'],
         ['defense_vojaci', 'zabití vojáci obránce'],
         ['defense_tanky', 'zabité tanky obránce'],
         ['defense_stihacky', 'zabité stíhačky obránce'],
@@ -694,7 +696,7 @@
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input"
                        list="attackVars" value="zabito_vse" spellcheck="false"
-                       placeholder="např. attack_mech + defense_mech * 2 + defense_tanky * 5">
+                       placeholder="např. defense_lost + attack_lost * 0.32">
             </div>
             <div id="plotError" class="formula-error"></div>
             <div class="formula-hint">
