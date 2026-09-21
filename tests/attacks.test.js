@@ -365,4 +365,25 @@ section('the shipped data covers all three types');
         d.records.every(r => Number.isFinite(r.ztraty_utocnik) && Number.isFinite(r.ztraty_obrance)));
 }
 
+section('attacker losses are weighted by the unit that actually dies');
+{
+    const A = require('../attacks.js');
+    const base = { ztraty_utocnik: 1000, ztraty_obrance: 0, xp: 1 };
+
+    // A tank is worth 5 prestiž and a mech 2.7 - weighting every attacker loss
+    // at the mech rate was wrong for every type except noční tažení.
+    eq('noční tažení loses mechs', A.scopeFor({ ...base, typ: 'nocni' }, {}).attack_jednotka_cena, 2.7);
+    eq('týl loses tanks', A.scopeFor({ ...base, typ: 'tyl' }, {}).attack_jednotka_cena, 5);
+    eq('nálet loses fighters', A.scopeFor({ ...base, typ: 'nalet' }, {}).attack_jednotka_cena, 3.5);
+    eq('partyzánský loses soldiers', A.scopeFor({ ...base, typ: 'partyzansky' }, {}).attack_jednotka_cena, 1);
+    eq('unknown type falls back to mechs', A.scopeFor({ ...base, typ: 'nic' }, {}).attack_jednotka_cena, 2.7);
+
+    eq('týl attacker prestiž', A.scopeFor({ ...base, typ: 'tyl' }, {}).attack_prestiz, 5000);
+    eq('nocni attacker prestiž', A.scopeFor({ ...base, typ: 'nocni' }, {}).attack_prestiz, 2700);
+
+    // ...and it feeds the combined total.
+    const tyl = A.scopeFor({ typ: 'tyl', ztraty_utocnik: 100, ztraty_obrance: 10, zabito_tanky: 10, xp: 1 }, {});
+    eq('total uses the tank rate for our dead', tyl.ztraty_prestiz_celkem, tyl.zabito_prestiz + 100 * 5);
+}
+
 process.exit(done() ? 1 : 0);

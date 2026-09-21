@@ -417,6 +417,20 @@
         return Number.isFinite(v) ? v : null;
     }
 
+    /**
+     * Which unit the attacker loses, per attack type (manual 6.2). Their prestiž
+     * is NOT the same: a tank is worth 5 and a mech 2.7, so weighting every
+     * attacker loss at the mech rate is simply wrong outside noční tažení.
+     */
+    const ATTACKER_UNIT = {
+        nocni: 'mechove',
+        tyl: 'tanky',
+        nalet: 'stihacky',
+        bombardovani: 'stihacky',
+        partyzansky: 'vojaci',
+        bunkry: 'vojaci',
+    };
+
     function scopeFor(rec, settings) {
         const s = settings || {};
         const out = Object.create(null);
@@ -434,7 +448,10 @@
         // ARE dead units, so they belong in the body count, not just in a
         // separate "losses" field.
         out.zabito_mechove = v('ztraty_obrance');
-        out.ztraty_mechove_utocnik = v('ztraty_utocnik');
+        out.ztraty_mechove_utocnik = v('ztraty_utocnik');   // kept: old name
+        out.ztraty_utocnik_kusu = v('ztraty_utocnik');
+        const atkUnit = ATTACKER_UNIT[rec.typ] || 'mechove';
+        const atkRate = P[atkUnit] || 0;
 
         // Plain head count, now including the defending mechs.
         out.zabito_vse = v('zabito_vojaci') + v('zabito_tanky') + v('zabito_stihacky')
@@ -448,8 +465,7 @@
                            + out.zabito_mechove * (P.mechove || 0);
 
         // Same, but counting the attacker's own dead mechs as well.
-        out.ztraty_prestiz_celkem = out.zabito_prestiz
-                                  + out.ztraty_mechove_utocnik * (P.mechove || 0);
+        out.ztraty_prestiz_celkem = out.zabito_prestiz + out.ztraty_utocnik_kusu * atkRate;
 
         // Plain attacker_/defender_ names, so an equation reads the way you
         // would say it out loud: attack_mech + defense_mech * 2 + ...
@@ -461,7 +477,8 @@
         out.defense_bunkry   = v('zabito_bunkry');
         out.defense_zakladny = v('zakladny');
         out.defense_all    = out.zabito_vse;
-        out.attack_prestiz  = out.ztraty_mechove_utocnik * (P.mechove || 0);
+        out.attack_prestiz  = out.ztraty_utocnik_kusu * atkRate;
+        out.attack_jednotka_cena = atkRate;   // prestiž of one unit we lose
         out.defense_prestiz = out.zabito_prestiz;
 
         // Prestiž and hodnost are per-attack in the game, but the message log

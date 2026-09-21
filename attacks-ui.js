@@ -323,6 +323,23 @@
         }
     }
 
+    /** Targets present for the chosen type, so one round can be isolated. */
+    function renderTargetOptions() {
+        if (!ui.plotTarget) return;
+        const typ = ui.plotType.value;
+        const seen = new Map();
+        store.records.forEach(r => {
+            if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
+            const key = String(r.cil_id || '?');
+            if (!seen.has(key)) seen.set(key, { label: r.cil_zeme || ('#' + key), n: 0 });
+            seen.get(key).n++;
+        });
+        const keep = ui.plotTarget.value;
+        ui.plotTarget.innerHTML = '<option value="*">Všechny cíle</option>'
+            + [...seen.entries()].map(([k, v]) => `<option value="${k}">${v.label} (#${k}, ${v.n})</option>`).join('');
+        if ([...ui.plotTarget.options].some(o => o.value === keep)) ui.plotTarget.value = keep;
+    }
+
     function renderPlot() {
         const expr = (ui.plotX.value || '').trim();
         const onlyType = ui.plotType.value;      // '*' = all types together
@@ -333,10 +350,14 @@
         try { compiled = Engine.compile(expr); }
         catch (err) { ui.plotError.textContent = 'Osa X: ' + err.message; ui.plot.innerHTML = ''; return; }
 
+        const onlyTarget = ui.plotTarget ? ui.plotTarget.value : '*';
+        const wanted = rec => (onlyType === '*' || (rec.typ || 'neznámý') === onlyType)
+                           && (onlyTarget === '*' || String(rec.cil_id || '?') === onlyTarget);
+
         const grouped = new Map();
         store.records.forEach(rec => {
             const typ = rec.typ || 'neznámý';
-            if (onlyType !== '*' && typ !== onlyType) return;
+            if (!wanted(rec)) return;
             const scope = A.scopeFor(rec, settings);
             let x;
             try { x = compiled.eval(scope); } catch (e) { return; }
@@ -361,7 +382,7 @@
             const pts = [];
             store.records.forEach(rec => {
                 const typ = rec.typ || 'neznámý';
-                if (onlyType !== '*' && typ !== onlyType) return;
+                if (!wanted(rec)) return;
                 if (eq.typ !== '*' && eq.typ !== typ) return;
                 const scope = A.scopeFor(rec, settings);
                 let x, y;
@@ -420,6 +441,7 @@
     }
 
     function renderAll() {
+        renderTargetOptions();
         renderTypeOptions();
         renderTable();
         renderPlot();
@@ -648,6 +670,8 @@
             <div class="plot-controls">
                 <label for="plotType">Typ útoku:</label>
                 <select id="plotType" class="formula-input"></select>
+                <label for="plotTarget">Cíl:</label>
+                <select id="plotTarget" class="formula-input"></select>
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input"
                        list="attackVars" value="zabito_vse" spellcheck="false"
@@ -748,6 +772,7 @@
             hodnostO: document.getElementById('hodnostO'),
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
+            plotTarget: document.getElementById('plotTarget'),
             plotError: document.getElementById('plotError'),
             eqSubmit: document.getElementById('eqSubmit'),
             eqCancel: document.getElementById('eqCancel'),
@@ -803,7 +828,8 @@
             ui.syncSecret.value = cfg.secret || '';
         }
         ui.plotX.addEventListener('input', renderPlot);
-        ui.plotType.addEventListener('change', renderPlot);
+        ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderPlot(); });
+        ui.plotTarget.addEventListener('change', renderPlot);
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';
             ui.eqSubmit.textContent = 'Přidat rovnici'; ui.eqCancel.style.display = 'none'; });
         ui.typeFilter.addEventListener('change', renderTable);
