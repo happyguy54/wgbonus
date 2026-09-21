@@ -298,13 +298,25 @@
 
     const fmtNum = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString('cs-CZ'));
 
+    /** Which unit WE lose in this attack type - the column is otherwise unlabelled. */
+    function ourUnit(r) {
+        return ({ nocni: 'mechové', tyl: 'tanky', nalet: 'stíhačky', bombardovani: 'stíhačky',
+                  partyzansky: 'vojáci', bunkry: 'vojáci' })[r.typ] || 'jednotky';
+    }
+
+    /** The defender's mechs, which only noční tažení reports separately. The
+     *  other types already list their dead under their own unit column. */
+    function defenderMechs(r) {
+        return r.typ === 'nocni' ? r.ztraty_obrance : null;
+    }
+
     function renderTable() {
         const filter = ui.typeFilter.value;
         const rows = store.byType(filter === '*' ? null : filter);
         ui.count.textContent = `${store.records.length} útoků celkem, zobrazeno ${rows.length}`;
 
         if (!rows.length) {
-            ui.tableBody.innerHTML = '<tr><td colspan="10" class="rdata c">Zatím žádné útoky — vložte je výše.</td></tr>';
+            ui.tableBody.innerHTML = '<tr><td colspan="11" class="rdata c">Zatím žádné útoky — vložte je výše.</td></tr>';
             return;
         }
 
@@ -316,8 +328,9 @@
                 <td class="rdata r">${fmtNum(r.zabito_vojaci)}</td>
                 <td class="rdata r">${fmtNum(r.zabito_tanky)}</td>
                 <td class="rdata r">${fmtNum(r.zabito_stihacky)}</td>
-                <td class="rdata r">${fmtNum(r.ztraty_utocnik)}</td>
-                <td class="rdata r">${fmtNum(r.ztraty_obrance)}</td>
+                <td class="rdata r">${fmtNum(r.zabito_bunkry)}</td>
+                <td class="rdata r">${fmtNum(defenderMechs(r))}</td>
+                <td class="rdata r" title="${ourUnit(r)}">${fmtNum(r.ztraty_utocnik)}</td>
                 <td class="sum r needed-value">${fmtNum(r.xp)}</td>
                 <td class="rdata c"><input type="checkbox" data-del="${r.id}" title="Označit ke smazání"></td>
             </tr>`).join('');
@@ -762,7 +775,7 @@
                     <thead><tr>
                         <th>Čas</th><th>Typ</th><th>Cíl</th>
                         <th>Vojáci</th><th>Tanky</th><th>Stíhačky</th>
-                        <th>Ztráty út.</th><th>Ztráty obr.</th><th>XP</th><th></th>
+                        <th>Bunkry</th><th>Mechové</th><th>Naše ztráty</th><th>XP</th><th></th>
                     </tr></thead>
                     <tbody id="attackTableBody"></tbody>
                 </table>
