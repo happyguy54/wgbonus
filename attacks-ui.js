@@ -364,13 +364,31 @@
             if (!Number.isFinite(x) || !Number.isFinite(rec.xp)) return;
             if (!grouped.has(typ)) grouped.set(typ, []);
             grouped.get(typ).push({
-                x, y: rec.xp,
+                x, y: rec.xp, cas: rec.cas,
                 title: `${A.typeLabel(typ)}\n${rec.cas || ''}\nx = ${fmtNum(x)}\nxp = ${fmtNum(rec.xp)}`
                      + (scope.vlastni_hodnoty ? '' : `\n(výchozí prestiž/hodnost, váha ${scope.vaha})`),
             });
         });
 
-        const series = [...grouped.entries()].map(([typ, points]) => ({ label: A.typeLabel(typ), points }));
+        let series;
+        if (ui.plotByTime && ui.plotByTime.checked) {
+            // Split the selection into time-ordered buckets. A change partway
+            // through a sequence shows up as one colour sitting off the others.
+            const pts = [...grouped.values()].flat()
+                .map((p, i) => p)
+                .sort((a, b) => String(a.cas || '').localeCompare(String(b.cas || '')));
+            const BUCKETS = Math.min(5, Math.max(2, Math.ceil(pts.length / 4)));
+            const per = Math.ceil(pts.length / BUCKETS);
+            series = [];
+            for (let i = 0; i < pts.length; i += per) {
+                const chunk = pts.slice(i, i + per);
+                const from = (chunk[0].cas || '').slice(11, 16);
+                const to = (chunk[chunk.length - 1].cas || '').slice(11, 16);
+                series.push({ label: from && to ? `${from}–${to}` : `část ${series.length + 1}`, points: chunk });
+            }
+        } else {
+            series = [...grouped.entries()].map(([typ, points]) => ({ label: A.typeLabel(typ), points }));
+        }
 
         // Overlay each equation that applies to what is being shown, so you can
         // see the fit against the cloud rather than only its R².
@@ -672,6 +690,7 @@
                 <select id="plotType" class="formula-input"></select>
                 <label for="plotTarget">Cíl:</label>
                 <select id="plotTarget" class="formula-input"></select>
+                <label class="plot-check"><input type="checkbox" id="plotByTime"> Obarvit podle času</label>
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input"
                        list="attackVars" value="zabito_vse" spellcheck="false"
@@ -773,6 +792,7 @@
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
+            plotByTime: document.getElementById('plotByTime'),
             plotError: document.getElementById('plotError'),
             eqSubmit: document.getElementById('eqSubmit'),
             eqCancel: document.getElementById('eqCancel'),
@@ -830,6 +850,7 @@
         ui.plotX.addEventListener('input', renderPlot);
         ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderPlot(); });
         ui.plotTarget.addEventListener('change', renderPlot);
+        ui.plotByTime.addEventListener('change', renderPlot);
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';
             ui.eqSubmit.textContent = 'Přidat rovnici'; ui.eqCancel.style.display = 'none'; });
         ui.typeFilter.addEventListener('change', renderTable);

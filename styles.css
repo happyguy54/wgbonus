@@ -2645,3 +2645,9 @@ table#spy-message-detail td.rdata {
 .sync-panel .formula-field label {
 	flex: 0 0 70px;
 }
+
+.plot-check {
+	color: #bbb;
+	white-space: nowrap;
+	cursor: pointer;
+}
