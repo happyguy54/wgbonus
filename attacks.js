@@ -89,7 +89,10 @@
         // "zemí Ankh-Morpork(#53)[HOLY] - mikrobbb"
         // Anchored on "zem/zemí" so the timestamp column cannot be swallowed;
         // the fallback stops at a tab for logs that word it differently.
-        const TARGET = '\\s*\\(#(\\d+)\\)\\s*\\[([^\\]]*)\\]\\s*-\\s*(\\S+)';
+        // The alliance tag is optional - a country outside any alliance shows as
+        // "dzarov(#108) - dzara" with no [...] at all, and requiring it made the
+        // whole target unparseable, losing the id too.
+        const TARGET = '\\s*\\(#(\\d+)\\)\\s*(?:\\[([^\\]]*)\\])?\\s*-\\s*(\\S+)';
         // Anchored on the word that introduces the target in each wording, so
         // the rest of the sentence cannot be swallowed into the country name.
         const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi';
@@ -103,7 +106,7 @@
 
             cil_zeme: cil ? cil[1].trim() : null,
             cil_id: cil ? num(cil[2]) : null,
-            cil_aliance: cil ? cil[3].trim() : null,
+            cil_aliance: (cil && cil[3]) ? cil[3].trim() : null,
             cil_hrac: cil ? cil[4].trim() : null,
 
             // What the defender lost.

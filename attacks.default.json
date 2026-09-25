@@ -310,33 +310,13 @@
       "id": "2026-09-10 12:01:51|nocni|117|11620|1259|183||118|12750|6391|14768"
     },
     {
-      "cas": null,
-      "typ": "nocni",
-      "typLabel": "Noční tažení",
-      "cil_zeme": "Pošta .B.I.S. gg zem",
-      "cil_id": 113,
-      "cil_aliance": ".B.I.S.",
-      "cil_hrac": "istvanko",
-      "zabito_vojaci": 23004,
-      "zabito_tanky": 751,
-      "zabito_stihacky": 11,
-      "zabito_bunkry": null,
-      "zakladny": 118,
-      "ztraty_utocnik": 10263,
-      "ztraty_obrance": 4360,
-      "xp": 11139,
-      "raw": "Našim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 23004 nepřipravených vojáků, 751 tanků a 11 stíhaček. S nimi bylo zničeno 118 vojenských základen. Zničeno bylo 10263 útočících a 4360 bránících mechů. Získáno 11139 zkušeností.",
-      "zabito_celkem": 23766,
-      "id": "?|nocni|113|23004|751|11||118|10263|4360|11139"
-    },
-    {
       "cas": "2026-09-16 10:12:51",
       "typ": "nocni",
       "typLabel": "Noční tažení",
-      "cil_zeme": null,
-      "cil_id": null,
+      "cil_zeme": "Pošta dzarov",
+      "cil_id": 108,
       "cil_aliance": null,
-      "cil_hrac": null,
+      "cil_hrac": "dzara",
       "zabito_vojaci": 8899,
       "zabito_tanky": 3698,
       "zabito_stihacky": 3810,
@@ -347,7 +327,9 @@
       "xp": 4459,
       "raw": "16.9.2026 10:12:51\tNašim mechům se podařilo během nočního tažení zemí Pošta dzarov(#108) - dzara zlikvidovat 8899 nepřipravených vojáků, 3698 tanků a 3810 stíhaček. S nimi bylo zničeno 65 vojenských základen. Zničeno bylo 10161 útočících a 6531 bránících mechů. Získáno 4459 zkušeností.",
       "zabito_celkem": 16407,
-      "id": "2026-09-16 10:12:51|nocni|?|8899|3698|3810||65|10161|6531|4459"
+      "id": "2026-09-16 10:12:51|nocni|?|8899|3698|3810||65|10161|6531|4459",
+      "prestiz_utocnik": 1316000,
+      "prestiz_obrance": 1500000
     },
     {
       "cas": "2026-09-16 09:45:08",
@@ -367,7 +349,9 @@
       "xp": 11139,
       "raw": "16.9.2026 9:45:08\tNašim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 23004 nepřipravených vojáků, 751 tanků a 11 stíhaček. S nimi bylo zničeno 118 vojenských základen. Zničeno bylo 10263 útočících a 4360 bránících mechů. Získáno 11139 zkušeností.",
       "zabito_celkem": 23766,
-      "id": "2026-09-16 09:45:08|nocni|113|23004|751|11||118|10263|4360|11139"
+      "id": "2026-09-16 09:45:08|nocni|113|23004|751|11||118|10263|4360|11139",
+      "prestiz_utocnik": 1307000,
+      "prestiz_obrance": 1309000
     },
     {
       "cas": "2026-09-16 09:44:07",
@@ -387,7 +371,9 @@
       "xp": 12324,
       "raw": "16.9.2026 9:44:07\tNašim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 25004 nepřipravených vojáků, 854 tanků a 13 stíhaček. S nimi bylo zničeno 125 vojenských základen. Zničeno bylo 10890 útočících a 4541 bránících mechů. Získáno 12324 zkušeností.",
       "zabito_celkem": 25871,
-      "id": "2026-09-16 09:44:07|nocni|113|25004|854|13||125|10890|4541|12324"
+      "id": "2026-09-16 09:44:07|nocni|113|25004|854|13||125|10890|4541|12324",
+      "prestiz_utocnik": 1291000,
+      "prestiz_obrance": 1351000
     },
     {
       "cas": "2026-09-16 09:43:31",
@@ -407,7 +393,9 @@
       "xp": 13441,
       "raw": "16.9.2026 9:43:31\tNašim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 27178 nepřipravených vojáků, 970 tanků a 15 stíhaček. S nimi bylo zničeno 133 vojenských základen. Zničeno bylo 10742 útočících a 4730 bránících mechů. Získáno 13441 zkušeností.",
       "zabito_celkem": 28163,
-      "id": "2026-09-16 09:43:31|nocni|113|27178|970|15||133|10742|4730|13441"
+      "id": "2026-09-16 09:43:31|nocni|113|27178|970|15||133|10742|4730|13441",
+      "prestiz_utocnik": 1279000,
+      "prestiz_obrance": 1397000
     },
     {
       "cas": "2026-09-16 09:43:16",
@@ -427,7 +415,9 @@
       "xp": 14049,
       "raw": "16.9.2026 9:43:16\tNašim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 29542 nepřipravených vojáků, 1103 tanků a 16 stíhaček. S nimi bylo zničeno 142 vojenských základen. Zničeno bylo 10605 útočících a 4927 bránících mechů. Získáno 14049 zkušeností.",
       "zabito_celkem": 30661,
-      "id": "2026-09-16 09:43:16|nocni|113|29542|1103|16||142|10605|4927|14049"
+      "id": "2026-09-16 09:43:16|nocni|113|29542|1103|16||142|10605|4927|14049",
+      "prestiz_utocnik": 1266000,
+      "prestiz_obrance": 1446000
     },
     {
       "cas": "2026-09-16 09:42:34",
@@ -447,7 +437,9 @@
       "xp": 14744,
       "raw": "16.9.2026 9:42:34\tNašim mechům se podařilo během nočního tažení zemí Pošta .B.I.S. gg zem(#113)[.B.I.S.] - istvanko zlikvidovat 32111 nepřipravených vojáků, 1253 tanků a 19 stíhaček. S nimi bylo zničeno 151 vojenských základen. Zničeno bylo 10506 útočících a 5133 bránících mechů. Získáno 14744 zkušeností.",
       "zabito_celkem": 33383,
-      "id": "2026-09-16 09:42:34|nocni|113|32111|1253|19||151|10506|5133|14744"
+      "id": "2026-09-16 09:42:34|nocni|113|32111|1253|19||151|10506|5133|14744",
+      "prestiz_utocnik": 1254000,
+      "prestiz_obrance": 1499000
     },
     {
       "cas": "2026-09-16 08:54:30",
@@ -467,7 +459,9 @@
       "xp": 11559,
       "raw": "16.9.2026 8:54:30\tNašim mechům se podařilo během nočního tažení zemí Pošta Blueberry(#157)[MHD] - neyto zlikvidovat 21108 nepřipravených vojáků, 2044 tanků a 343 stíhaček. S nimi bylo zničeno 46 vojenských základen. Zničeno bylo 17385 útočících a 4511 bránících mechů. Získáno 11559 zkušeností.",
       "zabito_celkem": 23495,
-      "id": "2026-09-16 08:54:30|nocni|157|21108|2044|343||46|17385|4511|11559"
+      "id": "2026-09-16 08:54:30|nocni|157|21108|2044|343||46|17385|4511|11559",
+      "prestiz_utocnik": 1239000,
+      "prestiz_obrance": 1446000
     },
     {
       "cas": "2026-09-16 08:54:12",
@@ -487,7 +481,9 @@
       "xp": 14018,
       "raw": "16.9.2026 8:54:12\tNašim mechům se podařilo během nočního tažení zemí Pošta Blueberry(#157)[MHD] - neyto zlikvidovat 22944 nepřipravených vojáků, 2323 tanků a 390 stíhaček. S nimi bylo zničeno 49 vojenských základen. Zničeno bylo 17844 útočících a 4699 bránících mechů. Získáno 14018 zkušeností.",
       "zabito_celkem": 25657,
-      "id": "2026-09-16 08:54:12|nocni|157|22944|2323|390||49|17844|4699|14018"
+      "id": "2026-09-16 08:54:12|nocni|157|22944|2323|390||49|17844|4699|14018",
+      "prestiz_utocnik": 1246000,
+      "prestiz_obrance": 1494000
     },
     {
       "cas": "2026-09-16 08:53:43",
@@ -507,7 +503,9 @@
       "xp": 14791,
       "raw": "16.9.2026 8:53:43\tNašim mechům se podařilo během nočního tažení zemí Pošta Blueberry(#157)[MHD] - neyto zlikvidovat 24939 nepřipravených vojáků, 2639 tanků a 443 stíhaček. S nimi bylo zničeno 52 vojenských základen. Zničeno bylo 18518 útočících a 4895 bránících mechů. Získáno 14791 zkušeností.",
       "zabito_celkem": 28021,
-      "id": "2026-09-16 08:53:43|nocni|157|24939|2639|443||52|18518|4895|14791"
+      "id": "2026-09-16 08:53:43|nocni|157|24939|2639|443||52|18518|4895|14791",
+      "prestiz_utocnik": 1255000,
+      "prestiz_obrance": 1548000
     },
     {
       "cas": "2026-09-16 08:35:43",
@@ -527,7 +525,9 @@
       "xp": 12509,
       "raw": "16.9.2026 8:35:43\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 4276 nepřipravených vojáků, 2829 tanků a 650 stíhaček. S nimi bylo zničeno 154 vojenských základen. Zničeno bylo 12910 útočících a 6860 bránících mechů. Získáno 12509 zkušeností.",
       "zabito_celkem": 7755,
-      "id": "2026-09-16 08:35:43|nocni|61|4276|2829|650||154|12910|6860|12509"
+      "id": "2026-09-16 08:35:43|nocni|61|4276|2829|650||154|12910|6860|12509",
+      "prestiz_utocnik": 1183000,
+      "prestiz_obrance": 1961000
     },
     {
       "cas": "2026-09-16 08:35:33",
@@ -547,7 +547,9 @@
       "xp": 12986,
       "raw": "16.9.2026 8:35:33\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 4647 nepřipravených vojáků, 3215 tanků a 739 stíhaček. S nimi bylo zničeno 163 vojenských základen. Zničeno bylo 13258 útočících a 7146 bránících mechů. Získáno 12986 zkušeností.",
       "zabito_celkem": 8601,
-      "id": "2026-09-16 08:35:33|nocni|61|4647|3215|739||163|13258|7146|12986"
+      "id": "2026-09-16 08:35:33|nocni|61|4647|3215|739||163|13258|7146|12986",
+      "prestiz_utocnik": 1182000,
+      "prestiz_obrance": 2004000
     },
     {
       "cas": "2026-09-16 08:35:25",
@@ -567,7 +569,9 @@
       "xp": 13799,
       "raw": "16.9.2026 8:35:25\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 5052 nepřipravených vojáků, 3654 tanků a 839 stíhaček. S nimi bylo zničeno 174 vojenských základen. Zničeno bylo 13217 útočících a 7444 bránících mechů. Získáno 13799 zkušeností.",
       "zabito_celkem": 9545,
-      "id": "2026-09-16 08:35:25|nocni|61|5052|3654|839||174|13217|7444|13799"
+      "id": "2026-09-16 08:35:25|nocni|61|5052|3654|839||174|13217|7444|13799",
+      "prestiz_utocnik": 1187000,
+      "prestiz_obrance": 2051000
     },
     {
       "cas": "2026-09-16 08:35:17",
@@ -587,7 +591,9 @@
       "xp": 14415,
       "raw": "16.9.2026 8:35:17\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 5491 nepřipravených vojáků, 4152 tanků a 954 stíhaček. S nimi bylo zničeno 185 vojenských základen. Zničeno bylo 13602 útočících a 7754 bránících mechů. Získáno 14415 zkušeností.",
       "zabito_celkem": 10597,
-      "id": "2026-09-16 08:35:17|nocni|61|5491|4152|954||185|13602|7754|14415"
+      "id": "2026-09-16 08:35:17|nocni|61|5491|4152|954||185|13602|7754|14415",
+      "prestiz_utocnik": 1188000,
+      "prestiz_obrance": 2103000
     },
     {
       "cas": "2026-09-16 08:35:05",
@@ -607,7 +613,9 @@
       "xp": 15407,
       "raw": "16.9.2026 8:35:05\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 5968 nepřipravených vojáků, 4679 tanků a 1084 stíhaček. S nimi bylo zničeno 197 vojenských základen. Zničeno bylo 13590 útočících a 8077 bránících mechů. Získáno 15407 zkušeností.",
       "zabito_celkem": 11731,
-      "id": "2026-09-16 08:35:05|nocni|61|5968|4679|1084||197|13590|8077|15407"
+      "id": "2026-09-16 08:35:05|nocni|61|5968|4679|1084||197|13590|8077|15407",
+      "prestiz_utocnik": 1193000,
+      "prestiz_obrance": 2159000
     },
     {
       "cas": "2026-09-15 22:14:26",
@@ -627,7 +635,9 @@
       "xp": 11340,
       "raw": "15.9.2026 22:14:26\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 4285 nepřipravených vojáků, 1439 tanků a 516 stíhaček. S nimi bylo zničeno 106 vojenských základen. Zničeno bylo 12055 útočících a 6889 bránících mechů. Získáno 11340 zkušeností.",
       "zabito_celkem": 6240,
-      "id": "2026-09-15 22:14:26|nocni|61|4285|1439|516||106|12055|6889|11340"
+      "id": "2026-09-15 22:14:26|nocni|61|4285|1439|516||106|12055|6889|11340",
+      "prestiz_utocnik": 1192000,
+      "prestiz_obrance": 1967000
     },
     {
       "cas": "2026-09-15 12:09:24",
@@ -647,7 +657,9 @@
       "xp": 12954,
       "raw": "15.9.2026 12:09:24\tNašim mechům se podařilo během nočního tažení zemí Pošta TheFiveElementsOfEart(#98)[Yozzefy] - Seiger zlikvidovat 6688 nepřipravených vojáků, 1268 tanků a 1270 stíhaček. S nimi bylo zničeno 56 vojenských základen. Zničeno bylo 12109 útočících a 7191 bránících mechů. Získáno 12954 zkušeností.",
       "zabito_celkem": 9226,
-      "id": "2026-09-15 12:09:24|nocni|98|6688|1268|1270||56|12109|7191|12954"
+      "id": "2026-09-15 12:09:24|nocni|98|6688|1268|1270||56|12109|7191|12954",
+      "prestiz_utocnik": 1209000,
+      "prestiz_obrance": 1584000
     },
     {
       "cas": "2026-09-15 10:41:12",
@@ -667,7 +679,9 @@
       "xp": 9976,
       "raw": "15.9.2026 10:41:12\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 8306 nepřipravených vojáků, 1430 tanků a 699 stíhaček. S nimi bylo zničeno 57 vojenských základen. Zničeno bylo 14291 útočících a 6092 bránících mechů. Získáno 9976 zkušeností.",
       "zabito_celkem": 10435,
-      "id": "2026-09-15 10:41:12|nocni|103|8306|1430|699||57|14291|6092|9976"
+      "id": "2026-09-15 10:41:12|nocni|103|8306|1430|699||57|14291|6092|9976",
+      "prestiz_utocnik": 1202000,
+      "prestiz_obrance": 1321000
     },
     {
       "cas": "2026-09-15 10:41:05",
@@ -687,7 +701,9 @@
       "xp": 12330,
       "raw": "15.9.2026 10:41:05\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 9028 nepřipravených vojáků, 1625 tanků a 795 stíhaček. S nimi bylo zničeno 60 vojenských základen. Zničeno bylo 14610 útočících a 6346 bránících mechů. Získáno 12330 zkušeností.",
       "zabito_celkem": 11448,
-      "id": "2026-09-15 10:41:05|nocni|103|9028|1625|795||60|14610|6346|12330"
+      "id": "2026-09-15 10:41:05|nocni|103|9028|1625|795||60|14610|6346|12330",
+      "prestiz_utocnik": 1205000,
+      "prestiz_obrance": 1358000
     },
     {
       "cas": "2026-09-15 10:40:57",
@@ -707,7 +723,9 @@
       "xp": 13033,
       "raw": "15.9.2026 10:40:57\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 9813 nepřipravených vojáků, 1847 tanků a 903 stíhaček. S nimi bylo zničeno 64 vojenských základen. Zničeno bylo 14920 útočících a 6610 bránících mechů. Získáno 13033 zkušeností.",
       "zabito_celkem": 12563,
-      "id": "2026-09-15 10:40:57|nocni|103|9813|1847|903||64|14920|6610|13033"
+      "id": "2026-09-15 10:40:57|nocni|103|9813|1847|903||64|14920|6610|13033",
+      "prestiz_utocnik": 1209000,
+      "prestiz_obrance": 1399000
     },
     {
       "cas": "2026-09-15 10:40:40",
@@ -727,7 +745,9 @@
       "xp": 13730,
       "raw": "15.9.2026 10:40:40\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 10666 nepřipravených vojáků, 2099 tanků a 1026 stíhaček. S nimi bylo zničeno 68 vojenských základen. Zničeno bylo 14868 útočících a 6886 bránících mechů. Získáno 13730 zkušeností.",
       "zabito_celkem": 13791,
-      "id": "2026-09-15 10:40:40|nocni|103|10666|2099|1026||68|14868|6886|13730"
+      "id": "2026-09-15 10:40:40|nocni|103|10666|2099|1026||68|14868|6886|13730",
+      "prestiz_utocnik": 1220000,
+      "prestiz_obrance": 1443000
     },
     {
       "cas": "2026-09-15 10:40:31",
@@ -747,7 +767,9 @@
       "xp": 14366,
       "raw": "15.9.2026 10:40:31\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 11594 nepřipravených vojáků, 2385 tanků a 1166 stíhaček. S nimi bylo zničeno 73 vojenských základen. Zničeno bylo 14818 útočících a 7172 bránících mechů. Získáno 14366 zkušeností.",
       "zabito_celkem": 15145,
-      "id": "2026-09-15 10:40:31|nocni|103|11594|2385|1166||73|14818|7172|14366"
+      "id": "2026-09-15 10:40:31|nocni|103|11594|2385|1166||73|14818|7172|14366",
+      "prestiz_utocnik": 1223000,
+      "prestiz_obrance": 1490000
     },
     {
       "cas": "2026-09-15 08:59:38",
@@ -767,7 +789,9 @@
       "xp": 11442,
       "raw": "15.9.2026 8:59:38\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 9856 nepřipravených vojáků, 1528 tanků a 217 stíhaček. S nimi bylo zničeno 46 vojenských základen. Zničeno bylo 14875 útočících a 5367 bránících mechů. Získáno 11442 zkušeností.",
       "zabito_celkem": 11601,
-      "id": "2026-09-15 08:59:38|nocni|103|9856|1528|217||46|14875|5367|11442"
+      "id": "2026-09-15 08:59:38|nocni|103|9856|1528|217||46|14875|5367|11442",
+      "prestiz_utocnik": 1225000,
+      "prestiz_obrance": 1244000
     },
     {
       "cas": "2026-09-15 08:59:30",
@@ -787,7 +811,9 @@
       "xp": 12443,
       "raw": "15.9.2026 8:59:30\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 10713 nepřipravených vojáků, 1736 tanků a 247 stíhaček. S nimi bylo zničeno 49 vojenských základen. Zničeno bylo 15147 útočících a 5591 bránících mechů. Získáno 12443 zkušeností.",
       "zabito_celkem": 12696,
-      "id": "2026-09-15 08:59:30|nocni|103|10713|1736|247||49|15147|5591|12443"
+      "id": "2026-09-15 08:59:30|nocni|103|10713|1736|247||49|15147|5591|12443",
+      "prestiz_utocnik": 1235000,
+      "prestiz_obrance": 1279000
     },
     {
       "cas": "2026-09-15 08:59:23",
@@ -807,7 +833,9 @@
       "xp": 13344,
       "raw": "15.9.2026 8:59:23\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 11644 nepřipravených vojáků, 1973 tanků a 280 stíhaček. S nimi bylo zničeno 53 vojenských základen. Zničeno bylo 15443 útočících a 5823 bránících mechů. Získáno 13344 zkušeností.",
       "zabito_celkem": 13897,
-      "id": "2026-09-15 08:59:23|nocni|103|11644|1973|280||53|15443|5823|13344"
+      "id": "2026-09-15 08:59:23|nocni|103|11644|1973|280||53|15443|5823|13344",
+      "prestiz_utocnik": 1246000,
+      "prestiz_obrance": 1318000
     },
     {
       "cas": "2026-09-15 08:59:15",
@@ -827,7 +855,9 @@
       "xp": 13832,
       "raw": "15.9.2026 8:59:15\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 12657 nepřipravených vojáků, 2242 tanků a 319 stíhaček. S nimi bylo zničeno 56 vojenských základen. Zničeno bylo 16147 útočících a 6066 bránících mechů. Získáno 13832 zkušeností.",
       "zabito_celkem": 15218,
-      "id": "2026-09-15 08:59:15|nocni|103|12657|2242|319||56|16147|6066|13832"
+      "id": "2026-09-15 08:59:15|nocni|103|12657|2242|319||56|16147|6066|13832",
+      "prestiz_utocnik": 1254000,
+      "prestiz_obrance": 1360000
     },
     {
       "cas": "2026-09-15 08:59:07",
@@ -847,7 +877,9 @@
       "xp": 14632,
       "raw": "15.9.2026 8:59:07\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 13758 nepřipravených vojáků, 2548 tanků a 362 stíhaček. S nimi bylo zničeno 60 vojenských základen. Zničeno bylo 16352 útočících a 6319 bránících mechů. Získáno 14632 zkušeností.",
       "zabito_celkem": 16668,
-      "id": "2026-09-15 08:59:07|nocni|103|13758|2548|362||60|16352|6319|14632"
+      "id": "2026-09-15 08:59:07|nocni|103|13758|2548|362||60|16352|6319|14632",
+      "prestiz_utocnik": 1268000,
+      "prestiz_obrance": 1405000
     },
     {
       "cas": "2026-09-15 08:58:58",
@@ -867,7 +899,9 @@
       "xp": 15382,
       "raw": "15.9.2026 8:58:58\tNašim mechům se podařilo během nočního tažení zemí Pošta Farmím pro Barunku(#103)[Yozzefy] - Kugis zlikvidovat 14954 nepřipravených vojáků, 2895 tanků a 411 stíhaček. S nimi bylo zničeno 63 vojenských základen. Zničeno bylo 16794 útočících a 6582 bránících mechů. Získáno 15382 zkušeností.",
       "zabito_celkem": 18260,
-      "id": "2026-09-15 08:58:58|nocni|103|14954|2895|411||63|16794|6582|15382"
+      "id": "2026-09-15 08:58:58|nocni|103|14954|2895|411||63|16794|6582|15382",
+      "prestiz_utocnik": 1277000,
+      "prestiz_obrance": 1454000
     },
     {
       "cas": "2026-09-15 08:47:06",
@@ -887,7 +921,9 @@
       "xp": 11310,
       "raw": "15.9.2026 8:47:06\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 7919 nepřipravených vojáků, 354 tanků a 44 stíhaček. S nimi bylo zničeno 77 vojenských základen. Zničeno bylo 10567 útočících a 7161 bránících mechů. Získáno 11310 zkušeností.",
       "zabito_celkem": 8317,
-      "id": "2026-09-15 08:47:06|nocni|61|7919|354|44||77|10567|7161|11310"
+      "id": "2026-09-15 08:47:06|nocni|61|7919|354|44||77|10567|7161|11310",
+      "prestiz_utocnik": 1267000,
+      "prestiz_obrance": 1885000
     },
     {
       "cas": "2026-09-15 08:46:46",
@@ -907,7 +943,9 @@
       "xp": 11818,
       "raw": "15.9.2026 8:46:46\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 8607 nepřipravených vojáků, 402 tanků a 50 stíhaček. S nimi bylo zničeno 81 vojenských základen. Zničeno bylo 10720 útočících a 7460 bránících mechů. Získáno 11818 zkušeností.",
       "zabito_celkem": 9059,
-      "id": "2026-09-15 08:46:46|nocni|61|8607|402|50||81|10720|7460|11818"
+      "id": "2026-09-15 08:46:46|nocni|61|8607|402|50||81|10720|7460|11818",
+      "prestiz_utocnik": 1261000,
+      "prestiz_obrance": 1916000
     },
     {
       "cas": "2026-09-15 08:46:27",
@@ -927,7 +965,9 @@
       "xp": 12767,
       "raw": "15.9.2026 8:46:27\tNašim mechům se podařilo během nočního tažení zemí Pošta kiLa Restů(#61)[.B.I.S.] - lugh zlikvidovat 9356 nepřipravených vojáků, 457 tanků a 57 stíhaček. S nimi bylo zničeno 87 vojenských základen. Zničeno bylo 10535 útočících a 7770 bránících mechů. Získáno 12767 zkušeností.",
       "zabito_celkem": 9870,
-      "id": "2026-09-15 08:46:27|nocni|61|9356|457|57||87|10535|7770|12767"
+      "id": "2026-09-15 08:46:27|nocni|61|9356|457|57||87|10535|7770|12767",
+      "prestiz_utocnik": 1258000,
+      "prestiz_obrance": 1949000
     },
     {
       "cas": "2026-09-16 22:40:05",
