@@ -2651,3 +2651,10 @@ table#spy-message-detail td.rdata {
 	white-space: nowrap;
 	cursor: pointer;
 }
+
+.plot-key.plot-fit {
+	display: block;
+	font-family: "Courier New", monospace;
+	font-size: 11px;
+	color: #ddd;
+}

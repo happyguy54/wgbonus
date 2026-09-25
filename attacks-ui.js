@@ -278,12 +278,15 @@
                 .sort((a, b) => a.x - b.x)
                 .map(p => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`)
                 .join(' ');
-            return `<polyline points="${d}" fill="none" stroke="${col}" stroke-width="1.6"
-                              stroke-dasharray="5 3" opacity="0.95"><title>${c.label || ''}</title></polyline>`;
+            const dash = c.solid ? '' : ' stroke-dasharray="5 3"';
+            return `<polyline points="${d}" fill="none" stroke="${col}" stroke-width="1.6"${dash}
+                              opacity="0.95"><title>${c.label || ''}</title></polyline>`;
         }).join('');
 
         const curveKeys = (curves || []).map(c =>
-            `<span class="plot-key"><span class="plot-dash" style="background:${c.color || '#fff'}"></span>${c.label}</span>`
+            `<span class="plot-key${c.solid ? ' plot-fit' : ''}">`
+            + `<span class="${c.solid ? 'plot-dot' : 'plot-dash'}" style="background:${c.color || '#fff'}"></span>`
+            + `${c.label}</span>`
         ).join('');
 
         const legend = series.map((s, i) => {
@@ -438,6 +441,34 @@
             }));
         }
 
+        // A least-squares line through each series, so the fit is visible for
+        // whatever X is typed rather than having to eyeball it.
+        const fits = [];
+        if (ui.plotFit && ui.plotFit.checked) {
+            series.forEach((se, i) => {
+                const pts = se.points;
+                if (pts.length < 3) return;
+                const n = pts.length;
+                const mx = pts.reduce((a, p) => a + p.x, 0) / n;
+                const my = pts.reduce((a, p) => a + p.y, 0) / n;
+                let sxy = 0, sxx = 0, syy = 0;
+                pts.forEach(p => { sxy += (p.x - mx) * (p.y - my); sxx += (p.x - mx) ** 2; syy += (p.y - my) ** 2; });
+                if (!sxx) return;
+                const k = sxy / sxx, c = my - k * mx;
+                const ss = pts.reduce((a, p) => a + (p.y - (k * p.x + c)) ** 2, 0);
+                const r2 = syy ? 1 - ss / syy : 1;
+                const mae = pts.reduce((a, p) => a + Math.abs(p.y - (k * p.x + c)), 0) / n;
+                const x0 = Math.min(...pts.map(p => p.x)), x1 = Math.max(...pts.map(p => p.x));
+                fits.push({
+                    color: COLORS[i % COLORS.length],
+                    points: [{ x: x0, y: k * x0 + c }, { x: x1, y: k * x1 + c }],
+                    label: `${se.label}: xp = ${k.toFixed(3)}·X ${c >= 0 ? '+' : '−'} ${Math.abs(c).toFixed(0)}`
+                         + `  R²=${r2.toFixed(4)}  ±${Math.round(mae)} xp`,
+                    solid: true,
+                });
+            });
+        }
+
         // Overlay each equation that applies to what is being shown, so you can
         // see the fit against the cloud rather than only its R².
         const curves = [];
@@ -460,7 +491,7 @@
             }
         });
 
-        ui.plot.innerHTML = scatter(series, expr, 'zkušenosti (xp)', curves);
+        ui.plot.innerHTML = scatter(series, expr, 'zkušenosti (xp)', fits.concat(curves));
     }
 
     function renderEquations() {
@@ -739,6 +770,7 @@
                 <label for="plotTarget">Cíl:</label>
                 <select id="plotTarget" class="formula-input"></select>
                 <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
+                <label class="plot-check"><input type="checkbox" id="plotFit" checked> Proložit přímku</label>
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input"
                        list="attackVars" value="zabito_vse" spellcheck="false"
@@ -841,6 +873,7 @@
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
             plotByTime: document.getElementById('plotByTime'),
+            plotFit: document.getElementById('plotFit'),
             plotError: document.getElementById('plotError'),
             eqSubmit: document.getElementById('eqSubmit'),
             eqCancel: document.getElementById('eqCancel'),
@@ -899,6 +932,7 @@
         ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderPlot(); });
         ui.plotTarget.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
+        ui.plotFit.addEventListener('change', renderPlot);
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';
             ui.eqSubmit.textContent = 'Přidat rovnici'; ui.eqCancel.style.display = 'none'; });
         ui.typeFilter.addEventListener('change', renderTable);
