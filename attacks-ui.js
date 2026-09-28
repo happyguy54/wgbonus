@@ -874,6 +874,8 @@
             plotTarget: document.getElementById('plotTarget'),
             plotByTime: document.getElementById('plotByTime'),
             plotFit: document.getElementById('plotFit'),
+            plotInsert: document.getElementById('plotInsert'),
+            plotPreset: document.getElementById('plotPreset'),
             plotError: document.getElementById('plotError'),
             eqSubmit: document.getElementById('eqSubmit'),
             eqCancel: document.getElementById('eqCancel'),
@@ -933,6 +935,41 @@
         ui.plotTarget.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
+
+        // insert a variable at the cursor rather than making you type it
+        ui.plotInsert.innerHTML = '<option value="">vložit proměnnou…</option>'
+            + VARIABLES.map(v => `<option value="${v[0]}">${v[0]} — ${v[1] || ''}</option>`).join('');
+        ui.plotInsert.addEventListener('change', () => {
+            const t = ui.plotInsert.value;
+            if (!t) return;
+            const el = ui.plotX, a = el.selectionStart, b = el.selectionEnd;
+            el.value = el.value.slice(0, a) + t + el.value.slice(b);
+            el.setSelectionRange(a + t.length, a + t.length);
+            ui.plotInsert.value = '';
+            el.focus();
+            renderPlot();
+        });
+
+        const HF = '(1 + clamp(sign(hodnost_obrance - hodnost_utocnik) * max(0, '
+                 + 'abs(hodnost_obrance - hodnost_utocnik) - 1) * 5, -20, 20) / 100)';
+        const PRESETS = [
+            ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
+            ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
+            ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],
+            ['+ hodnost + prestiž zemí (týl)',
+             '(0.2285 * (defense_prestiz + 0.266 * attack_prestiz) + 3244 * sqrt(prestiz_utocnik * prestiz_obrance) / 1000000) * ' + HF],
+            ['jen hodnostní faktor', HF],
+            ['všechny zabité jednotky', 'defense_all'],
+            ['zničené základny', 'defense_zakladny'],
+        ];
+        ui.plotPreset.innerHTML = '<option value="">hotové vzorce…</option>'
+            + PRESETS.map(([n, e]) => `<option value="${e.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+        ui.plotPreset.addEventListener('change', () => {
+            if (!ui.plotPreset.value) return;
+            ui.plotX.value = ui.plotPreset.value;
+            ui.plotPreset.value = '';
+            renderPlot();
+        });
         ui.eqCancel.addEventListener('click', () => { editingEq = null; ui.eqInput.value = '';
             ui.eqSubmit.textContent = 'Přidat rovnici'; ui.eqCancel.style.display = 'none'; });
         ui.typeFilter.addEventListener('change', renderTable);

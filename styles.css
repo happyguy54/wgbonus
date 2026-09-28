@@ -2658,3 +2658,14 @@ table#spy-message-detail td.rdata {
 	font-size: 11px;
 	color: #ddd;
 }
+
+input.plot-x {
+	flex: 1 1 100%;
+	min-width: 320px;
+	font-size: 12px;
+}
+
+.plot-controls select {
+	width: auto;
+	max-width: 230px;
+}
