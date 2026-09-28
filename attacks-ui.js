@@ -771,10 +771,14 @@
                 <select id="plotTarget" class="formula-input"></select>
                 <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
                 <label class="plot-check"><input type="checkbox" id="plotFit" checked> Proložit přímku</label>
+            </div>
+            <div class="plot-controls">
                 <label for="plotX">Osa X:</label>
-                <input type="text" id="plotX" class="formula-input formula-expr-input"
-                       list="attackVars" value="zabito_vse" spellcheck="false"
-                       placeholder="např. defense_lost + attack_lost * 0.32">
+                <input type="text" id="plotX" class="formula-input formula-expr-input plot-x"
+                       list="attackVars" value="defense_prestiz + 0.266 * attack_prestiz" spellcheck="false"
+                       placeholder="výraz nad hodnotami níže">
+                <select id="plotInsert" class="formula-input"></select>
+                <select id="plotPreset" class="formula-input"></select>
             </div>
             <div id="plotError" class="formula-error"></div>
             <div class="formula-hint">
