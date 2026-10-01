@@ -393,7 +393,7 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha, ctx) {
         (spokojenost !== undefined ? `
             <br><br><span id="Spokojenost">${spokojenost}%</span>
             <br><br><span id="Vláda">${vlada}</span>
-            <br><span id="Rozloha">${rozloha} km²</span>`
+            <br><span id="Rozloha">${czNum(rozloha)} km<sup>2</sup></span>`
             + (mrtva !== null
                 ? `<br><span id="MrtvaPrestiz" title="Prestiž, kterou rozvědka nevidí: agenti, rakety, peníze, jídlo, energie">${Math.round(mrtva).toLocaleString('cs-CZ')}</span>`
                 : '') : '');
@@ -429,7 +429,7 @@ function appendBonusAndAttackDefenseTables(container, technologie, budovy, spoko
 
     const finalBonus = calculateFinalBonus(silaZbraniEffect, zakladnyEffect, zkusenostiEffect, spokojenostEffect, pripravenost);
     // Create and append the tables
-    container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus));
+    container.appendChild(createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus, zkusenostiEffect));
     container.appendChild(createAttackDefenseTable(jednotky, finalBonus));
 }
 
@@ -503,30 +503,36 @@ function refreshBonuses() {
     };
 
     // Update the DOM with new values
-    document.getElementById('pripravenost').textContent = `Připravenost (${pripravenost}%)`;
-    document.getElementById('pripravenostEffect').textContent = `-${pripravenostEffect}%`;
-    document.getElementById('silaZbraniEffect').textContent = `+${silaZbraniEffect}%`;
-    document.getElementById('vojenskeZakladny').textContent = `Vojenské základny (${vojenskeZakladny})`;
-    document.getElementById('zakladnyEffect').textContent = `+${zakladnyEffect}%`;
-    document.getElementById('zkusenostiEffect').textContent = `+${zkusenostiEffect}%`;
-    document.getElementById('spokojenost').textContent = `Spokojenost (${spokojenost}%)`;
-    document.getElementById('spokojenostEffect').textContent = `${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%`;
+    const put = (id, value, text) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text === undefined ? czPct(value) : text;
+        if (text === undefined) el.className = czClass(value);
+    };
+    put('pripravenost', 0, `Připravenost (${czPct(pripravenost, 0).replace('+', '')})`);
+    put('pripravenostEffect', pripravenost - 100);
+    put('silaZbraniEffect', silaZbraniEffect);
+    put('vojenskeZakladny', 0, `Vojenské základny (${czNum(vojenskeZakladny)})`);
+    put('zakladnyEffect', zakladnyEffect);
+    put('zkusenostiEffect', zkusenostiEffect);
+    put('spokojenost', 0, `Spokojenost (${czPct(spokojenost, 1).replace('+', '')})`);
+    put('spokojenostEffect', spokojenostEffect);
 
     // Refill the vláda fields only while the user has not typed in them.
     if (!utokEl.dataset.userEdited) utokEl.value = Number(updatedBonuses.vladaUtok.toFixed(2));
     if (!obranaEl.dataset.userEdited) obranaEl.value = Number(updatedBonuses.vladaObrana.toFixed(2));
-    document.getElementById('finalBonus').textContent = `+${finalBonus}%`;
-    document.getElementById('normalAttackBonus').textContent = `+${updatedBonusesEffect.normalAttack}%`;
-    document.getElementById('tacticalAttackBonus').textContent = `+${updatedBonusesEffect.tacticalAttack}%`;
-    document.getElementById('normalDefenseBonus').textContent = `+${updatedBonusesEffect.normalDefense}%`;
-    document.getElementById('tacticalDefenseBonus').textContent = `+${updatedBonusesEffect.tacticalDefense}%`;
+    put('finalBonus', finalBonus);
+    put('normalAttackBonus', updatedBonusesEffect.normalAttack);
+    put('tacticalAttackBonus', updatedBonusesEffect.tacticalAttack);
+    put('normalDefenseBonus', updatedBonusesEffect.normalDefense);
+    put('tacticalDefenseBonus', updatedBonusesEffect.tacticalDefense);
 
     // Update attack and defense with bonuses
     const totalAttack = parseInt(document.getElementById('totalAttack').textContent.replace(/,/g, ''));
     const totalDefense = parseInt(document.getElementById('totalDefense').textContent.replace(/,/g, ''));
 
-    document.getElementById('attackWithBonuses').textContent = (totalAttack * updatedBonuses.normalAttack).toLocaleString();
-    document.getElementById('defenseWithBonuses').textContent = (totalDefense * updatedBonuses.normalDefense).toLocaleString();
+    document.getElementById('attackWithBonuses').textContent = czNum(Math.round(totalAttack * updatedBonuses.normalAttack));
+    document.getElementById('defenseWithBonuses').textContent = czNum(Math.round(totalDefense * updatedBonuses.normalDefense));
 
     // The needed-units table reads the tactical defence figure, so refresh it too.
     if (document.getElementById('typUtoku') && Array.isArray(window.__jednotky)) {
@@ -876,7 +882,23 @@ function calculateBonusForUnits(jednotky) {
     `;
 }
 
-function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus) {
+/** Czech formatting, as the game prints it: "7 309", "+17,5%", "-8,8%". */
+function czNum(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toLocaleString('cs-CZ') : '0';
+}
+function czPct(v, decimals) {
+    const n = Number(v) || 0;
+    const d = decimals === undefined ? (Math.abs(n % 1) > 1e-9 ? 1 : 0) : decimals;
+    return (n > 0 ? '+' : n < 0 ? '-' : '') + Math.abs(n).toFixed(d).replace('.', ',') + '%';
+}
+/** The game uses a neutral class for exactly zero, not "minus". */
+function czClass(v) {
+    const n = Number(v) || 0;
+    return n > 0 ? 'plus' : n < 0 ? 'minus' : 'neutr';
+}
+
+function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zakladnyEffect, spokojenost, spokojenostEffect, pripravenost, finalBonus, zkusenosti) {
     const table = document.createElement('table');
     table.id = 'war-bonuses';
     table.className = 'vis_tbl';
@@ -885,28 +907,28 @@ function createBonusTable(silaZbrani, silaZbraniEffect, vojenskeZakladny, zaklad
     tbody.innerHTML = `
         <tr><th colspan="2">Síla armády: Bonusy</th></tr>
         <tr>
-            <td class="rname l" id="pripravenost">Připravenost (${pripravenost}%)</td>
-            <td class="minus" id="pripravenostEffect">-${(100 - pripravenost).toFixed(0)}%</td>
+            <td class="rname l" style="width:70% !important" id="pripravenost">Připravenost (${czPct(pripravenost, 0).replace('+', '')})</td>
+            <td class="${czClass(pripravenost - 100)}" id="pripravenostEffect">${czPct(pripravenost - 100)}</td>
         </tr>
         <tr>
-            <td class="rname l">Technologie Síla zbraní (${silaZbrani})</td>
-            <td class="plus" id="silaZbraniEffect">+${silaZbraniEffect}%</td>
+            <td class="rname l">Technologie Síla zbraní (${czNum(silaZbrani)})</td>
+            <td class="${czClass(silaZbraniEffect)}" id="silaZbraniEffect">${czPct(silaZbraniEffect)}</td>
         </tr>
         <tr>
-            <td class="rname l" id="vojenskeZakladny">Vojenské základny (${vojenskeZakladny})</td>
-            <td class="plus" id="zakladnyEffect">+${zakladnyEffect}%</td>
+            <td class="rname l" id="vojenskeZakladny">Vojenské základny (${czNum(vojenskeZakladny)})</td>
+            <td class="${czClass(zakladnyEffect)}" id="zakladnyEffect">${czPct(zakladnyEffect)}</td>
         </tr>
         <tr>
             <td class="rname l">Zkušenosti</td>
-            <td class="plus" id="zkusenostiEffect">+25%</td>
+            <td class="${czClass(zkusenosti)}" id="zkusenostiEffect">${czPct(zkusenosti)}</td>
         </tr>
         <tr>
-            <td class="rname l" id="spokojenost">Spokojenost (${spokojenost}%)</td>
-            <td class="${spokojenostEffect >= 0 ? 'plus' : 'minus'}" id="spokojenostEffect">${spokojenostEffect >= 0 ? '+' : ''}${spokojenostEffect}%</td>
+            <td class="rname l" id="spokojenost">Spokojenost (${czPct(spokojenost, 1).replace('+', '')})</td>
+            <td class="${czClass(spokojenostEffect)}" id="spokojenostEffect">${czPct(spokojenostEffect)}</td>
         </tr>
         <tr>
             <td class="sum l">Celkový bonus</td>
-            <td class="plus" id="finalBonus">+${finalBonus}%</td>
+            <td class="${czClass(finalBonus)}" id="finalBonus">${czPct(finalBonus)}</td>
         </tr>
         <tr>
             <td class="sum l">Navíc vláda, gen. a ali. bonus (út/obr)</td>
@@ -950,34 +972,36 @@ function createAttackDefenseTable(jednotky, finalBonus) {
     tbody.innerHTML = `
         <tr><th colspan="2">Útok a obrana</th></tr>
         <tr>
-            <td class="rname l">Základní útok</td>
-            <td id="totalAttack">${totalAttack.toLocaleString()}</td>
+            <td class="rname l" style="width:70% !important">Základní útok</td>
+            <td width="30%" id="totalAttack">${czNum(totalAttack)}</td>
         </tr>
         <tr>
             <td class="rname l">Bonus % normální / taktický</td>
             <td>
-                <span class="plus" id="normalAttackBonus">+${finalBonus}%</span> /
-                <span class="plus" id="tacticalAttackBonus">+${finalBonus}%</span>
+                <span class="${czClass(finalBonus)}" id="normalAttackBonus">${czPct(finalBonus)}</span>
+                /
+                <span class="${czClass(finalBonus)}" id="tacticalAttackBonus">${czPct(finalBonus)}</span>
             </td>
         </tr>
         <tr>
             <td class="sum l">Útok s bonusy</td>
-            <td class="sum" id="attackWithBonuses">${totalAttack.toLocaleString()}</td>
+            <td class="sum" id="attackWithBonuses">${czNum(totalAttack)}</td>
         </tr>
         <tr>
             <td class="rname l">Základní obrana</td>
-            <td id="totalDefense">${totalDefense.toLocaleString()}</td>
+            <td id="totalDefense">${czNum(totalDefense)}</td>
         </tr>
         <tr>
             <td class="rname l">Bonus % normální / taktický</td>
             <td>
-                <span class="plus" id="normalDefenseBonus">+${finalBonus}%</span> /
-                <span class="plus" id="tacticalDefenseBonus">+${finalBonus}%</span>
+                <span class="${czClass(finalBonus)}" id="normalDefenseBonus">${czPct(finalBonus)}</span>
+                /
+                <span class="${czClass(finalBonus)}" id="tacticalDefenseBonus">${czPct(finalBonus)}</span>
             </td>
         </tr>
         <tr>
-            <td class="sum l">Obrana s bonusy</td>
-            <td class="sum" id="defenseWithBonuses">${totalDefense.toLocaleString()}</td>
+            <td class="sum l">Obrana s bonusy (vč. lidí)</td>
+            <td class="sum" id="defenseWithBonuses">${czNum(totalDefense)}</td>
         </tr>
     `;
     table.appendChild(tbody);
