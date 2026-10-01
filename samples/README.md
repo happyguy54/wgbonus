@@ -7,6 +7,7 @@ předloha pro vzhled. Nejsou to kompletní stránky — jen ta část, na které
 |---|---|---|
 | `konflikty.html` | `index.php?p=konflikty&hours_6=72&spec=6&land_6=47` | prestiž obou stran v okamžiku útoku, typ útoku, zisk |
 | `archiv.html` | `index.php?p=archiv&tag=1&id=47` (`&typ=1` jen útoky) | zprávy o útocích i obraně se zkušenostmi |
+| `archiv-utoky-55.txt` | záložka Útoky, Lord Azeroth (#55), 1.10. — zkopírovaný text | obrany, partyzánské útoky na nás a dobyvačné útoky; 81 302 hodnostních XP po posledním řádku |
 | `najitzem.html` | `index.php?p=najit&s=najitzem&hid=47` | **hodnost**, prestiž, rozloha, zřízení, sesvačenost |
 
 Pozor na věci, které se objevily až tady:

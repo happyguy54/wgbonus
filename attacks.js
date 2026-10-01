@@ -61,7 +61,7 @@
     }
 
     /** Messages where we defended rather than attacked; see parseLine. */
-    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n/i;
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)/i;
 
     const typeLabel = id => (TYPES.find(t => t.id === id) || {}).label || id;
 
@@ -80,14 +80,20 @@
         const xp = grab(text, /Z[íi]sk[áa]no\s+([\d\s .]+)\s*zku[šs]enost/i);
         if (xp === null) return null;
 
-        // Defending also earns experience, in two messages that are not our
-        // attacks: "Armáda X(#87) prolomila naši obranu …" (they hit us) and
-        // "Byli jsme povoláni zemí Y(#118) na pomoc v obraně …" (we helped an
-        // ally defend). Read as attacks they would store the enemy, or our own
-        // ally, as the target. Skipped until defence gets its own parser.
+        // Defending also earns experience, in messages that are not our
+        // attacks: "Armáda X(#87) prolomila naši obranu …" and "Země X(#87) na
+        // nás podnikla partyzánský útok …" (they hit us), "Byli jsme povoláni
+        // zemí Y(#118) na pomoc v obraně …" (we helped an ally defend). Read as
+        // attacks they would store the enemy, or our own ally, as the target.
+        // Skipped until defence gets its own parser.
         if (DEFENCE.test(text)) return null;
 
         const type = detectType(text);
+        // A wording we cannot tell the type of is one whose numbers we cannot
+        // read either: a conquest ("Úplné vítězství! Obsadili jsme 430 km2 …")
+        // came out with our own losses as kills. Leave it out rather than
+        // store wrong values; it counts as an unrecognised row.
+        if (!type) return null;
 
         // "10.9.2026 12:12:14" - date and time may be split across the row.
         const dm = first(text, /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);

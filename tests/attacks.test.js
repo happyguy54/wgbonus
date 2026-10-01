@@ -460,4 +460,16 @@ section('country profile: the only source of hodnost and sesvačenost');
     eq('hodnost name', z.hodnost_nazev, 'Farmář');
 }
 
+section('Lord Azeroth (#55), 1.10.: defences and conquests are not stored as attacks');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const text = fs.readFileSync(path.join(__dirname, '..', 'samples', 'archiv-utoky-55.txt'), 'utf8');
+    const { records, skipped } = A.parsePaste(text);
+    eq('nothing stored from 10 defences and 2 unparseable conquests', records.length, 0);
+    eq('all 12 rows counted as unrecognised', skipped, 12);
+    ok('enemy partisan attack on us is a defence', A.DEFENCE.test('Země Pošta Horší, než zlo.(#87)[HOLY] - White Dead na nás podnikla partyzánský útok.'));
+    ok('our own partisan attack is not', !A.DEFENCE.test('Naši partyzáni podnikli útok na zemi X(#5) a zabili 10 vojáků.'));
+}
+
 process.exit(done() ? 1 : 0);

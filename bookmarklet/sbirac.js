@@ -199,11 +199,12 @@
                 // Same layout as a row copied from the game: date, time, message.
                 line: datum.replace(/\s+/, '\t') + '\t' + text,
                 xp: /Z[íi]sk[áa]no\s+[\d\s]+\s*zku[šs]enost/i.test(text),
-                // Defending earns experience too: "… prolomila naši obranu …"
-                // (they hit us) and "Byli jsme povoláni … na pomoc v obraně"
-                // (we helped an ally). Not our attacks; the page skips them
-                // with the same pattern (DEFENCE in attacks.js).
-                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n/i.test(text),
+                // Defending earns experience too: "… prolomila naši obranu …",
+                // "… na nás podnikla partyzánský útok" (they hit us) and "Byli
+                // jsme povoláni … na pomoc v obraně" (we helped an ally). Not our
+                // attacks; the page skips them with the same pattern (DEFENCE
+                // in attacks.js).
+                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)/i.test(text),
                 cil: cil ? Number(cil[1]) : null,
             });
         }
