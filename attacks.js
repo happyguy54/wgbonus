@@ -185,7 +185,29 @@
      * Parse a whole paste. Rows may be split across several physical lines, so
      * lines are joined until a line ends with the experience sentence.
      */
-    function parsePaste(text) {
+    /**
+     * Accept raw HTML as well as copied text. Pasting straight from the page
+     * source is far less fiddly than selecting the rendered table, so turn the
+     * markup into the same line-per-row shape the text parser expects.
+     */
+    function htmlToText(input) {
+        let t = String(input || '');
+        if (!/<\/?(table|tr|td|div|br|p|strong|span|a)\b/i.test(t)) return t;   // already text
+        t = t.replace(/<\s*(script|style)[\s\S]*?<\s*\/\s*\1\s*>/gi, ' ');
+        t = t.replace(/<\s*sup\s*>\s*2\s*<\s*\/\s*sup\s*>/gi, '2');             // km<sup>2</sup>
+        t = t.replace(/<\s*br\s*\/?\s*>/gi, '\n');
+        t = t.replace(/<\s*\/\s*(tr|p|div|li|h\d)\s*>/gi, '\n');
+        t = t.replace(/<\s*\/\s*td\s*>/gi, '\t');
+        t = t.replace(/<[^>]*>/g, ' ');
+        t = t.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&')
+             .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+             .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'");
+        t = t.replace(/[ \t ]+/g, ' ').replace(/\n\s*\n+/g, '\n');
+        return t;
+    }
+
+    function parsePaste(rawText) {
+        const text = htmlToText(rawText);
         const lines = String(text).replace(/\r/g, '').split('\n');
         const records = [];
         let buffer = '';
@@ -365,8 +387,8 @@
         };
     }
 
-    function parseKonflikty(text, year) {
-        const src = String(text || '');
+    function parseKonflikty(rawText, year) {
+        const src = htmlToText(rawText);
         const Y = year || new Date().getFullYear();
 
         // Row boundaries: every "DD.MM." starts a new entry.
@@ -467,6 +489,42 @@
         partyzansky: 'vojaci',
         bunkry: 'vojaci',
     };
+
+    /**
+     * Parse a country profile (index.php?p=najit&s=najitzem&hid=NN).
+     *
+     * This is the only page that states the HODNOST outright, and the only one
+     * carrying SESVAČENOST - the falling return on repeatedly hitting the same
+     * target, which is a strong candidate for the drift seen within a round.
+     */
+    function parseZeme(html) {
+        const t = htmlToText(html);
+        const out = {};
+
+        const head = t.match(/([^\n(]{1,60}?)\s*\(#(\d+)\)\s*\[([^\]]*)\]\s*-\s*(\S+)/);
+        if (head) {
+            out.zeme = head[1].trim();
+            out.id = Number(head[2]);
+            out.aliance = head[3].trim();
+            out.hrac = head[4].trim();
+        }
+
+        const field = re => { const m = t.match(re); return m ? m[1].trim() : null; };
+
+        out.vlada = field(/St[áa]tn[íi]\s+z[řr][íi]zen[íi]\s*\t*\s*([A-Za-zÁ-Žá-ž]+)/i);
+        out.prestiz = num(field(/Prestiž\s*\t*\s*([\d\s]+)/i));
+        out.rozloha = num(field(/Rozloha\s*\t*\s*([\d\s]+)\s*km/i));
+
+        // "o 51% nižší zisky"
+        const ses = t.match(/Sesva[čc]enost[\s\S]{0,40}?o\s*([\d.,]+)\s*%/i);
+        out.sesvacenost = ses ? parseFloat(ses[1].replace(',', '.')) : null;
+
+        // "Hodnost získaná ve válkách WG:  Farmář (1)"
+        const h = t.match(/Hodnost[^\n]{0,40}?:\s*([^\n(]{1,40}?)\s*\((\d+)\)/i);
+        if (h) { out.hodnost_nazev = h[1].trim(); out.hodnost = Number(h[2]); }
+
+        return out;
+    }
 
     function scopeFor(rec, settings) {
         const s = settings || {};
@@ -574,6 +632,8 @@
         typeLabel,
         parseLine,
         parsePaste,
+        htmlToText,
+        parseZeme,
         signature,
         AttackStore,
         scopeFor,

@@ -417,4 +417,47 @@ section('the defender is counted once, not twice');
     eq('defense_mech alias', tyl.defense_mech, tyl.defense_lost);
 }
 
+section('raw HTML is accepted, not just copied text');
+{
+    const A = require('../attacks.js');
+    const fs = require('fs');
+    const path = require('path');
+    const read = f => fs.readFileSync(path.join(__dirname, '..', 'samples', f), 'utf8');
+
+    const k = A.parseKonflikty(read('konflikty.html'), 2026);
+    eq('two konflikty rows from markup', k.length, 2);
+    eq('attacker prestiž', k[0].prestiz_utocnik, 135000);
+    eq('defender prestiž', k[0].prestiz_obrance, 117000);
+    eq('type', k[0].typ, 'dobyvacny');
+    eq('km2 past the <sup>', k[0].rozloha, 195);
+    eq('buildings', k[0].budovy, 99);
+    eq('time', k[0].cas, '2026-09-30 20:25');
+
+    // Text still works - the HTML path must not break the old one.
+    const txt = A.parseKonflikty('15.09.\n08:59\tIzril(#115)[EJZ] - mazereon 94 1254k pr.\n'
+        + '---> Farmím pro Barunku(#103)[Yozzefy] - Kugis 79 1360k pr.\tNoční tažení\n'
+        + '56 voj.z. + 15218 jedn.', 2026);
+    eq('plain text still parses', txt.length, 1);
+    eq('...with its prestiž', txt[0].prestiz_obrance, 1360000);
+}
+
+section('country profile: the only source of hodnost and sesvačenost');
+{
+    const A = require('../attacks.js');
+    const fs = require('fs');
+    const path = require('path');
+    const z = A.parseZeme(fs.readFileSync(path.join(__dirname, '..', 'samples', 'najitzem.html'), 'utf8'));
+
+    eq('country', z.zeme, 'XP Piňáta');
+    eq('id', z.id, 47);
+    eq('alliance', z.aliance, 'EJZ');
+    eq('player', z.hrac, 'mazereon');
+    eq('government', z.vlada, 'Technokracie');
+    eq('prestiž', z.prestiz, 112553);
+    eq('area past the <sup>', z.rozloha, 3492);
+    eq('sesvačenost %', z.sesvacenost, 51);
+    eq('hodnost number', z.hodnost, 1);
+    eq('hodnost name', z.hodnost_nazev, 'Farmář');
+}
+
 process.exit(done() ? 1 : 0);
