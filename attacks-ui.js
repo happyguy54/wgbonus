@@ -20,6 +20,12 @@
     const PROFILE_KEY = 'wgbonus.profile';
     const store = new A.AttackStore();
 
+    // Country, player and alliance names are chosen by other players and reach
+    // the page through pastes and the shared store. They go into markup, on a
+    // page that keeps the worker password, so they are escaped on the way in.
+    const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const esc = v => String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, c => ESC[c]);
+
     let profile = 'default';
     const dataFile = () => `attacks.${profile}.json`;
     const localKey = () => `wgbonus.attacks.${profile}.v1`;
@@ -276,7 +282,7 @@
             return ordered.map((p, j) => {
                 const col = s.shaded === false ? c : shade(c, 0.4 + 0.6 * (j / n));
                 return `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="4"
-                         fill="${col}" fill-opacity="0.9" stroke="${col}"><title>${p.title || ''}</title></circle>`;
+                         fill="${col}" fill-opacity="0.9" stroke="${col}"><title>${esc(p.title)}</title></circle>`;
             }).join('');
         }).join('');
 
@@ -290,20 +296,20 @@
                 .join(' ');
             const dash = c.solid ? '' : ' stroke-dasharray="5 3"';
             return `<polyline points="${d}" fill="none" stroke="${col}" stroke-width="1.6"${dash}
-                              opacity="0.95"><title>${c.label || ''}</title></polyline>`;
+                              opacity="0.95"><title>${esc(c.label)}</title></polyline>`;
         }).join('');
 
         const curveKeys = (curves || []).map(c =>
             `<span class="plot-key${c.solid ? ' plot-fit' : ''}">`
             + `<span class="${c.solid ? 'plot-dot' : 'plot-dash'}" style="background:${c.color || '#fff'}"></span>`
-            + `${c.label}</span>`
+            + `${esc(c.label)}</span>`
         ).join('');
 
         const legend = series.map((s, i) => {
             const c = COLORS[i % COLORS.length];
             const grad = s.shaded === false ? c
                 : `linear-gradient(90deg, ${shade(c, 0.4)}, ${c})`;
-            return `<span class="plot-key"><span class="plot-dot" style="background:${grad}"></span>${s.label} (${s.points.length})</span>`;
+            return `<span class="plot-key"><span class="plot-dot" style="background:${grad}"></span>${esc(s.label)} (${s.points.length})</span>`;
         }).join('') + curveKeys;
 
         return `
@@ -347,9 +353,9 @@
 
         ui.tableBody.innerHTML = rows.slice().reverse().map(r => `
             <tr>
-                <td class="rdata l">${r.cas || '—'}</td>
-                <td class="rdata l">${r.typLabel || '—'}</td>
-                <td class="rdata l">${r.cil_zeme || '—'}${r.cil_aliance ? ` <span class="formula-note">[${r.cil_aliance}]</span>` : ''}</td>
+                <td class="rdata l">${esc(r.cas || '—')}</td>
+                <td class="rdata l">${esc(r.typLabel || '—')}</td>
+                <td class="rdata l">${esc(r.cil_zeme || '—')}${r.cil_aliance ? ` <span class="formula-note">[${esc(r.cil_aliance)}]</span>` : ''}</td>
                 <td class="rdata r">${fmtNum(r.zabito_vojaci)}</td>
                 <td class="rdata r">${fmtNum(r.zabito_tanky)}</td>
                 <td class="rdata r">${fmtNum(r.zabito_stihacky)}</td>
@@ -357,7 +363,7 @@
                 <td class="rdata r">${fmtNum(defenderMechs(r))}</td>
                 <td class="rdata r" title="${ourUnit(r)}">${fmtNum(r.ztraty_utocnik)}</td>
                 <td class="sum r needed-value">${fmtNum(r.xp)}</td>
-                <td class="rdata c"><input type="checkbox" data-del="${r.id}" title="Označit ke smazání"></td>
+                <td class="rdata c"><input type="checkbox" data-del="${esc(r.id)}" title="Označit ke smazání"></td>
             </tr>`).join('');
     }
 
@@ -365,18 +371,18 @@
         const types = store.types();
         const keep = ui.typeFilter.value;
         ui.typeFilter.innerHTML = '<option value="*">Všechny typy</option>'
-            + types.map(t => `<option value="${t.typ}">${t.label} (${t.count})</option>`).join('');
+            + types.map(t => `<option value="${esc(t.typ)}">${esc(t.label)} (${t.count})</option>`).join('');
         if ([...ui.typeFilter.options].some(o => o.value === keep)) ui.typeFilter.value = keep;
 
         const keepEq = ui.eqType.value;
         ui.eqType.innerHTML = '<option value="*">Všechny typy</option>'
-            + types.map(t => `<option value="${t.typ}">${t.label}</option>`).join('');
+            + types.map(t => `<option value="${esc(t.typ)}">${esc(t.label)}</option>`).join('');
         if ([...ui.eqType.options].some(o => o.value === keepEq)) ui.eqType.value = keepEq;
 
         if (ui.plotType) {
             const keepPlot = ui.plotType.value;
             ui.plotType.innerHTML = '<option value="*">Všechny typy</option>'
-                + types.map(t => `<option value="${t.typ}">${t.label} (${t.count})</option>`).join('');
+                + types.map(t => `<option value="${esc(t.typ)}">${esc(t.label)} (${t.count})</option>`).join('');
             if ([...ui.plotType.options].some(o => o.value === keepPlot)) ui.plotType.value = keepPlot;
         }
     }
@@ -394,8 +400,31 @@
         });
         const keep = ui.plotTarget.value;
         ui.plotTarget.innerHTML = '<option value="*">Všechny cíle</option>'
-            + [...seen.entries()].map(([k, v]) => `<option value="${k}">${v.label} (#${k}, ${v.n})</option>`).join('');
+            + [...seen.entries()].map(([k, v]) => `<option value="${esc(k)}">${esc(v.label)} (#${esc(k)}, ${v.n})</option>`).join('');
         if ([...ui.plotTarget.options].some(o => o.value === keep)) ui.plotTarget.value = keep;
+    }
+
+    /** Allies present in the data, so one ally's attacks can be looked at alone. */
+    function renderAttackerOptions() {
+        if (!ui.plotAttacker) return;
+        const typ = ui.plotType.value;
+        const seen = new Map();
+        store.records.forEach(r => {
+            if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
+            const key = r.utocnik_id ? String(r.utocnik_id) : '?';
+            if (!seen.has(key)) seen.set(key, { name: null, n: 0 });
+            const v = seen.get(key);
+            v.name = v.name || r.utocnik_zeme || null;
+            v.n++;
+        });
+        const keep = ui.plotAttacker.value;
+        ui.plotAttacker.innerHTML = '<option value="*">Všichni útočníci</option>'
+            + [...seen.entries()].map(([k, v]) => {
+                const label = k === '?' ? `neznámý (${v.n})`
+                    : v.name ? `${v.name} (#${k}, ${v.n})` : `#${k} (${v.n})`;
+                return `<option value="${esc(k)}">${esc(label)}</option>`;
+            }).join('');
+        if ([...ui.plotAttacker.options].some(o => o.value === keep)) ui.plotAttacker.value = keep;
     }
 
     function renderPlot() {
@@ -409,8 +438,10 @@
         catch (err) { ui.plotError.textContent = 'Osa X: ' + err.message; ui.plot.innerHTML = ''; return; }
 
         const onlyTarget = ui.plotTarget ? ui.plotTarget.value : '*';
+        const onlyAttacker = ui.plotAttacker ? ui.plotAttacker.value : '*';
         const wanted = rec => (onlyType === '*' || (rec.typ || 'neznámý') === onlyType)
-                           && (onlyTarget === '*' || String(rec.cil_id || '?') === onlyTarget);
+                           && (onlyTarget === '*' || String(rec.cil_id || '?') === onlyTarget)
+                           && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker);
 
         const grouped = new Map();
         store.records.forEach(rec => {
@@ -549,6 +580,7 @@
 
     function renderAll() {
         renderTargetOptions();
+        renderAttackerOptions();
         renderTypeOptions();
         renderTable();
         renderPlot();
@@ -581,7 +613,17 @@
                 if (!seen.has(k.id)) { konfliktRows.push(k); seen.add(k.id); }
             });
             const res = A.applyKonflikty(store.records, konf);
-            bits.push(`${konf.length} řádků konfliktů, prestiž doplněna k ${res.matched} útokům`);
+            bits.push(`${konf.length} řádků konfliktů, prestiž doplněna k ${res.matched} útokům`
+                + (res.ambiguous ? ` (${res.ambiguous} nejasných — víc spojenců na stejný cíl ve stejné minutě)` : ''));
+        }
+
+        // Profiles from the collector carry hodnost. Only empty fields are
+        // filled, and only on attacks from the last 72 h - a profile shows the
+        // rank as it is now.
+        const prof = A.parseProfily(text);
+        if (Object.keys(prof).length) {
+            const res = A.applyProfily(store.records, prof, { hodin: 72 });
+            bits.push(`hodnost z ${res.profiles} profilů doplněna k ${res.touched} útokům`);
         }
 
         if (!bits.length) {
@@ -615,7 +657,8 @@
         const res = A.applyKonflikty(store.records, rows);
         ui.konfliktInfo.textContent =
             `Načteno ${res.rows} řádků, prestiž doplněna k ${res.matched} útokům`
-            + (res.unmatched ? `, ${res.unmatched} útoků bez shody (čas nebo cíl nesedí)` : '') + '.';
+            + (res.unmatched ? `, ${res.unmatched} útoků bez shody (čas nebo cíl nesedí)` : '')
+            + (res.ambiguous ? `, z toho ${res.ambiguous} nejasných (víc spojenců na stejný cíl ve stejné minutě)` : '') + '.';
         if (res.matched) ui.konfliktPaste.value = '';
         writeLocal();
         renderAll();
@@ -715,6 +758,43 @@
         }
     }
 
+    /* ------------------------------------------------ collector bookmarklet */
+
+    // bookmarklet/bookmarklet.txt, as built by bookmarklet/build.js. The link
+    // on the page is that, with this browser's worker address baked in, so the
+    // collector can skip attacks the shared store already has.
+    let sbiracSource = null;
+    const SBIRAC_EMPTY = "WORKER%20%3D%20''";
+
+    function sbiracUrl() {
+        if (!sbiracSource) return null;
+        const url = syncBase().replace(/['"\\\s]/g, '');
+        return url && sbiracSource.includes(SBIRAC_EMPTY)
+            ? sbiracSource.replace(SBIRAC_EMPTY, "WORKER%20%3D%20'" + encodeURIComponent(url) + "'")
+            : sbiracSource;
+    }
+
+    function renderSbirac() {
+        if (!ui.sbiracLink) return;
+        const href = sbiracUrl();
+        if (!href) {
+            ui.sbiracInfo.textContent = ' Záložku se nepodařilo načíst (stránka otevřená ze souboru?).';
+            return;
+        }
+        ui.sbiracLink.href = href;
+        ui.sbiracInfo.textContent = syncBase()
+            ? ' Adresa workeru je v ní, takže útoky už uložené přeskočí.'
+            : ' Zatím bez adresy workeru — vyplňte ji dole v „Sdílené úložiště“ a záložku si vezměte znovu, pak bude přeskakovat už uložené útoky.';
+    }
+
+    async function loadSbirac() {
+        try {
+            const res = await fetch('bookmarklet/bookmarklet.txt', { cache: 'no-store' });
+            if (res.ok) sbiracSource = (await res.text()).trim();
+        } catch (e) { /* offline, or opened from file:// */ }
+        renderSbirac();
+    }
+
     function readSettings() {
         settings = {
             prestizUtocnik: parseFloat(ui.prestizU.value) || 0,
@@ -771,6 +851,16 @@
             <div class="formula-cols">
                 <div class="formula-col formula-col-wide">
                     <h3>Vložit z herního logu</h3>
+                    <div class="formula-hint sbirac">
+                        <strong>Sběrač ze hry:</strong> přetáhněte
+                        <a id="sbiracLink" href="#" class="sbirac-link">wg sběrač</a>
+                        na lištu záložek. Pak na kterékoli stránce
+                        <code>gold.webgame.cz</code> klikněte na záložku — projde alianční archiv
+                        všech spojenců za 72 h, konflikty i profily a výsledek dá do schránky.
+                        Sem pak stačí vložit (Ctrl+V) a „Načíst útoky“.
+                        <button type="button" class="submit" id="sbiracCopy">Zkopírovat adresu záložky</button>
+                        <span id="sbiracInfo"></span>
+                    </div>
                     <textarea id="attackPaste" class="formula-input attack-paste" rows="6"
                         placeholder="Vložte cokoli ze hry — výpis útoků, Konflikty, nebo obojí najednou. Funguje i vložený HTML zdroj."></textarea>
                     <button type="button" class="submit" id="attackAdd">Načíst útoky</button>
@@ -805,6 +895,8 @@
             <div class="plot-controls">
                 <label for="plotType">Typ útoku:</label>
                 <select id="plotType" class="formula-input"></select>
+                <label for="plotAttacker">Útočník:</label>
+                <select id="plotAttacker" class="formula-input"></select>
                 <label for="plotTarget">Cíl:</label>
                 <select id="plotTarget" class="formula-input"></select>
                 <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
@@ -915,6 +1007,10 @@
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
+            plotAttacker: document.getElementById('plotAttacker'),
+            sbiracLink: document.getElementById('sbiracLink'),
+            sbiracCopy: document.getElementById('sbiracCopy'),
+            sbiracInfo: document.getElementById('sbiracInfo'),
             plotByTime: document.getElementById('plotByTime'),
             plotFit: document.getElementById('plotFit'),
             plotInsert: document.getElementById('plotInsert'),
@@ -988,7 +1084,10 @@
         });
         document.getElementById('syncPull').addEventListener('click', pullShared);
         document.getElementById('syncPush').addEventListener('click', pushShared);
-        const saveSync = () => writeSync({ url: ui.syncUrl.value.trim(), secret: ui.syncSecret.value });
+        const saveSync = () => {
+            writeSync({ url: ui.syncUrl.value.trim(), secret: ui.syncSecret.value });
+            renderSbirac();
+        };
         ui.syncUrl.addEventListener('change', saveSync);
         ui.syncSecret.addEventListener('change', saveSync);
         {
@@ -996,9 +1095,28 @@
             ui.syncUrl.value = cfg.url || '';
             ui.syncSecret.value = cfg.secret || '';
         }
+
+        // It runs on the game's pages, not here - clicking it here would only
+        // show its "run this on gold.webgame.cz" warning.
+        ui.sbiracLink.addEventListener('click', ev => {
+            ev.preventDefault();
+            ui.sbiracInfo.textContent = ' Tady se neklikne — přetáhněte ho myší na lištu záložek.';
+        });
+        ui.sbiracCopy.addEventListener('click', async () => {
+            const href = sbiracUrl();
+            if (!href) return;
+            try {
+                await navigator.clipboard.writeText(href);
+                ui.sbiracInfo.textContent = ' Zkopírováno. Novou záložku (Ctrl+D → Upravit), adresu nahraďte tímto.';
+            } catch (e) {
+                ui.sbiracInfo.textContent = ' Schránka nedostupná — klikněte pravým na odkaz a „Kopírovat adresu odkazu“.';
+            }
+        });
+        loadSbirac();
         ui.plotX.addEventListener('input', renderPlot);
-        ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderPlot(); });
+        ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderAttackerOptions(); renderPlot(); });
         ui.plotTarget.addEventListener('change', renderPlot);
+        ui.plotAttacker.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
 

@@ -230,5 +230,56 @@ const atk = (id, extra = {}) => Object.assign({
         eq('GET carries CORS', (await call(env, 'GET', 'attacks')).headers.get('Access-Control-Allow-Origin'), '*');
     }
 
+    section('a database created before columns were added');
+    {
+        // Each worker instance migrates once, so take a fresh one - just as a
+        // newly deployed worker would be.
+        const fresh = vm.createContext({ console, Response, Request, URL, JSON, Date, Number, String, Array, Boolean });
+        vm.runInContext(src, fresh);
+        const w2 = fresh.__worker;
+
+        // The schema as it was at the first deploy: none of the later columns.
+        const LATER = /^\s*(pripravenost_pokles|spokojenost_pokles|utocnik_id|utocnik_zeme|utocnik_hrac|rozloha|budovy)\s.*$\n/gm;
+        const env = makeEnv('pw', { withSchema: false });
+        env._db.exec(SCHEMA.replace(LATER, ''));
+        // konflikty.utocnik_id was there from day one; the strip above took it too.
+        env._db.exec('ALTER TABLE konflikty ADD COLUMN utocnik_id INTEGER');
+        const before = env._db.prepare('PRAGMA table_info(attacks)').all().map(r => r.name);
+        ok('old table really lacks the new columns', !before.includes('utocnik_id') && !before.includes('pripravenost_pokles'));
+
+        const call2 = (method, p, body, secret) => w2.fetch(new Request(`https://w.dev/${p}`, {
+            method, headers: Object.assign({ 'Content-Type': 'application/json' }, secret ? { 'X-WG-Secret': secret } : {}),
+            body: body === undefined ? undefined : JSON.stringify(body),
+        }), env);
+
+        const h0 = await (await call2('GET', 'health')).json();
+        ok('health lists what is missing', Array.isArray(h0.chybi_sloupce) && h0.chybi_sloupce.includes('attacks.utocnik_id'),
+            JSON.stringify(h0.chybi_sloupce));
+
+        const res = await call2('POST', 'attacks', { records: [atk('old-1', {
+            utocnik_id: 47, utocnik_zeme: 'XP Piňáta', utocnik_hrac: 'mazereon', pripravenost_pokles: 3,
+        })] }, 'pw');
+        const body = await res.json();
+        eq('upload into the old database succeeds', res.status, 200);
+        eq('row stored', body.added, 1);
+        ok('reply says which columns were added', (body.pridane_sloupce || []).includes('attacks.utocnik_id'),
+            JSON.stringify(body.pridane_sloupce));
+
+        const got = (await (await call2('GET', 'attacks')).json()).records[0];
+        eq('attacker id kept', got.utocnik_id, 47);
+        eq('attacker name kept', got.utocnik_zeme, 'XP Piňáta');
+        eq('připravenost kept', got.pripravenost_pokles, 3);
+
+        const h1 = await (await call2('GET', 'health')).json();
+        ok('nothing missing afterwards', !h1.chybi_sloupce, JSON.stringify(h1.chybi_sloupce));
+
+        const k = await call2('POST', 'konflikty', { records: [{ id: 'k1', cas: '2026-09-30 20:25',
+            utocnik_id: 47, obrance_id: 53, rozloha: 195, budovy: 99 }] }, 'pw');
+        eq('konflikty with the later columns upload too', k.status, 200);
+
+        const again = await (await call2('POST', 'attacks', { records: [atk('old-2')] }, 'pw')).json();
+        ok('second upload does not migrate again', !again.pridane_sloupce);
+    }
+
     process.exit(done() ? 1 : 0);
 })();

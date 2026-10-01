@@ -60,6 +60,9 @@
         return null;
     }
 
+    /** Messages where we defended rather than attacked; see parseLine. */
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n/i;
+
     const typeLabel = id => (TYPES.find(t => t.id === id) || {}).label || id;
 
     /* ------------------------------------------------------------- parsing */
@@ -76,6 +79,13 @@
         // not a row we can learn anything from.
         const xp = grab(text, /Z[íi]sk[áa]no\s+([\d\s .]+)\s*zku[šs]enost/i);
         if (xp === null) return null;
+
+        // Defending also earns experience, in two messages that are not our
+        // attacks: "Armáda X(#87) prolomila naši obranu …" (they hit us) and
+        // "Byli jsme povoláni zemí Y(#118) na pomoc v obraně …" (we helped an
+        // ally defend). Read as attacks they would store the enemy, or our own
+        // ally, as the target. Skipped until defence gets its own parser.
+        if (DEFENCE.test(text)) return null;
 
         const type = detectType(text);
 
@@ -212,15 +222,54 @@
         const records = [];
         let buffer = '';
         let skipped = 0;
+        // Whose archive the rows come from, when the paste says so. The message
+        // itself is written from the attacker's side ("Našim mechům…") and
+        // never names them, so once several allies' attacks share a database
+        // this is the only thing telling them apart.
+        let attacker = null;
+        // Inside the collector's KONFLIKTY / PROFIL blocks there are no attack
+        // rows; reading them as such would only glue them onto the next row.
+        let inArchive = true;
 
         const flush = () => {
             if (!buffer.trim()) { buffer = ''; return; }
             const rec = parseLine(buffer);
-            if (rec) records.push(rec); else skipped++;
+            if (rec) {
+                // Not part of the signature, so tagging cannot turn a record
+                // already stored into a "new" one.
+                if (attacker) Object.assign(rec, attacker);
+                records.push(rec);
+            } else skipped++;
             buffer = '';
         };
 
         lines.forEach(line => {
+            // "### ARCHIV #47 XP Piňáta - mazereon", written by the collector
+            // (bookmarklet/sbirac.js), or the archive page's own heading
+            // "Alianční archiv (#47)" in a hand-copied page.
+            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL)\b\s*(?:#(\d+))?\s*(.*)$/i);
+            const h1 = !sec && line.match(/Alian[čc]n[íi]\s+archiv\s*\(#(\d+)\)/i);
+            if (sec || h1) {
+                flush();
+                if (h1) {
+                    attacker = { utocnik_id: Number(h1[1]) };
+                    inArchive = true;
+                } else if (sec[1].toUpperCase() === 'ARCHIV') {
+                    attacker = sec[2] ? { utocnik_id: Number(sec[2]) } : null;
+                    const name = (sec[3] || '').trim();
+                    const dash = name.lastIndexOf(' - ');
+                    if (attacker && name) {
+                        attacker.utocnik_zeme = (dash > 0 ? name.slice(0, dash) : name).trim() || null;
+                        attacker.utocnik_hrac = dash > 0 ? name.slice(dash + 3).trim() || null : null;
+                    }
+                    inArchive = true;
+                } else {
+                    inArchive = false;
+                }
+                return;
+            }
+            if (!inArchive) return;
+
             buffer += (buffer ? ' ' : '') + line.trim();
             // A row is complete once the experience sentence has been seen.
             if (/Z[íi]sk[áa]no\s+[\d\s .]+\s*zku[šs]enost/i.test(buffer)) flush();
@@ -452,20 +501,96 @@
      * defender and the minute the attack happened. Returns what it managed to do.
      */
     function applyKonflikty(records, rows) {
-        const key = (id, cas) => `${id}|${String(cas || '').slice(0, 16)}`;
-        const byKey = new Map();
-        rows.forEach(r => { if (r.obrance_id) byKey.set(key(r.obrance_id, r.cas), r); });
+        const minute = cas => String(cas || '').slice(0, 16);
 
-        let matched = 0, unmatched = 0;
+        // In a coordinated round several allies hit the same target within the
+        // same minute, so defender + minute alone can hand one ally's prestiž
+        // to another. When the record knows its attacker, the attacker is part
+        // of the key. When it does not (older records), a match is taken only
+        // if a single attacker hit that target in that minute.
+        const full = new Map();
+        const byDefender = new Map();
+        rows.forEach(r => {
+            if (!r.obrance_id) return;
+            full.set(`${r.utocnik_id}|${r.obrance_id}|${minute(r.cas)}`, r);
+            const k = `${r.obrance_id}|${minute(r.cas)}`;
+            if (!byDefender.has(k)) byDefender.set(k, []);
+            byDefender.get(k).push(r);
+        });
+
+        let matched = 0, unmatched = 0, ambiguous = 0;
         records.forEach(rec => {
             if (!rec.cil_id || !rec.cas) { unmatched++; return; }
-            const hit = byKey.get(key(rec.cil_id, rec.cas));
+            let hit = null;
+            if (rec.utocnik_id) {
+                hit = full.get(`${rec.utocnik_id}|${rec.cil_id}|${minute(rec.cas)}`) || null;
+            } else {
+                const list = byDefender.get(`${rec.cil_id}|${minute(rec.cas)}`) || [];
+                const who = new Set(list.map(r => r.utocnik_id));
+                if (who.size === 1) hit = list[list.length - 1];
+                else if (who.size > 1) ambiguous++;
+            }
             if (!hit) { unmatched++; return; }
             if (hit.prestiz_utocnik) rec.prestiz_utocnik = hit.prestiz_utocnik;
             if (hit.prestiz_obrance) rec.prestiz_obrance = hit.prestiz_obrance;
             matched++;
         });
-        return { matched, unmatched, rows: rows.length };
+        return { matched, unmatched, ambiguous, rows: rows.length };
+    }
+
+    /** "2026-09-30 20:25:26" -> Date in local time, as the game shows it. */
+    function casDate(cas) {
+        const m = String(cas || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+        return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null;
+    }
+
+    /**
+     * The collector's "### PROFIL #id" blocks -> { id: parseZeme(block) }.
+     * Only blocks that yielded a hodnost or prestiž are kept.
+     */
+    function parseProfily(rawText) {
+        const text = htmlToText(rawText);
+        const parts = String(text).replace(/\r/g, '')
+            .split(/^[ \t]*###[ \t]*PROFIL[ \t]*#(\d+)[^\n]*$/m);
+        const out = {};
+        for (let i = 1; i < parts.length; i += 2) {
+            const body = String(parts[i + 1] || '').split(/\n[ \t]*###/)[0];
+            const z = parseZeme(body);
+            if (z.hodnost != null || z.prestiz != null) out[parts[i]] = Object.assign(z, { id: Number(parts[i]) });
+        }
+        return out;
+    }
+
+    /**
+     * Fill hodnost from country profiles into attacks that lack it: the
+     * defender's from the target's profile, the attacker's from the ally's.
+     *
+     * A profile shows the rank as it is NOW, so only attacks from the last
+     * `hodin` hours (default 72) get it - further back the rank may already
+     * have moved. A value already on a record is never overwritten.
+     */
+    function applyProfily(records, profiles, opts) {
+        const o = opts || {};
+        const now = o.now instanceof Date ? o.now : new Date();
+        const from = now.getTime() - (o.hodin || 72) * 3600 * 1000;
+        const empty = v => v === null || v === undefined || v === '';
+
+        let filled = 0, touched = 0;
+        (records || []).forEach(rec => {
+            const t = casDate(rec.cas);
+            if (!t || t.getTime() < from) return;
+            let hit = false;
+            const def = rec.cil_id != null ? profiles[rec.cil_id] : null;
+            if (def && def.hodnost != null && empty(rec.hodnost_obrance)) {
+                rec.hodnost_obrance = def.hodnost; filled++; hit = true;
+            }
+            const atk = rec.utocnik_id != null ? profiles[rec.utocnik_id] : null;
+            if (atk && atk.hodnost != null && empty(rec.hodnost_utocnik)) {
+                rec.hodnost_utocnik = atk.hodnost; filled++; hit = true;
+            }
+            if (hit) touched++;
+        });
+        return { filled, touched, profiles: Object.keys(profiles || {}).length };
     }
 
     /** "1.6" / "1,6" -> 1.6 ; grab() would read the dot as a separator. */
@@ -643,6 +768,10 @@
         PRESTIGE_TABLE,
         parseKonflikty,
         applyKonflikty,
+        parseProfily,
+        applyProfily,
+        DEFENCE,
+        casDate,
         prestigeNum,
         visiblePrestige,
         deadPrestige,

@@ -2669,3 +2669,21 @@ input.plot-x {
 	width: auto;
 	max-width: 230px;
 }
+
+/* Collector bookmarklet: a link meant to be dragged onto the bookmarks bar. */
+.sbirac {
+	margin: 4px 0 8px;
+	line-height: 1.7;
+}
+.sbirac-link {
+	display: inline-block;
+	padding: 1px 10px;
+	border: 1px dashed #FF8000;
+	border-radius: 3px;
+	color: #FF8000;
+	font-weight: bold;
+	text-decoration: none;
+	cursor: grab;
+}
+.sbirac-link:hover { background: rgba(255, 128, 0, 0.12); }
+.sbirac .submit { margin-left: 4px; }

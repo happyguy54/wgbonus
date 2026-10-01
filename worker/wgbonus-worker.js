@@ -18,6 +18,9 @@
  * delete anyone else's data, and because each batch runs as one transaction
  * two people uploading at the same moment cannot lose each other's rows.
  *
+ * Columns added to the schema later are created by the worker itself on the
+ * first upload (see ADDED), so an existing database never needs ALTER TABLE.
+ *
  * Setup: see worker/README.md. Needs a D1 binding called DB and a secret
  * called WG_SECRET.
  */
@@ -30,6 +33,7 @@ const DEFAULT_LIMIT = 20000;
 const COLUMNS = {
     attacks: [
         'id', 'cas', 'typ', 'cil_id', 'cil_zeme', 'cil_aliance', 'cil_hrac',
+        'utocnik_id', 'utocnik_zeme', 'utocnik_hrac',
         'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
         'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
@@ -41,6 +45,54 @@ const COLUMNS = {
         'rozloha', 'budovy', 'vlozeno',
     ],
 };
+
+/**
+ * Columns added after the first deploy. A database created from an older
+ * schema.sql lacks them, and an INSERT naming a missing column fails the whole
+ * upload - so the first write that finds one missing adds it. Nobody has to
+ * run ALTER TABLE by hand.
+ */
+const ADDED = {
+    attacks: {
+        pripravenost_pokles: 'REAL',
+        spokojenost_pokles: 'REAL',
+        utocnik_id: 'INTEGER',
+        utocnik_zeme: 'TEXT',
+        utocnik_hrac: 'TEXT',
+    },
+    konflikty: {
+        rozloha: 'INTEGER',
+        budovy: 'INTEGER',
+    },
+};
+
+/** Columns from ADDED that `table` does not have yet. */
+async function missingColumns(db, table) {
+    const { results } = await db.prepare(`PRAGMA table_info(${table})`).all();
+    const have = new Set((results || []).map(r => r.name));
+    if (!have.size) return [];           // no table at all - reported elsewhere
+    return Object.keys(ADDED[table] || {}).filter(c => !have.has(c));
+}
+
+let migrated = false;                    // once per worker instance
+
+async function migrate(db) {
+    if (migrated) return [];
+    const added = [];
+    for (const table of Object.keys(ADDED)) {
+        for (const col of await missingColumns(db, table)) {
+            try {
+                await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ADDED[table][col]}`).run();
+                added.push(`${table}.${col}`);
+            } catch (e) {
+                // Two uploads at the same moment: the other one added it first.
+                if (!/duplicate column/i.test(String((e && e.message) || e))) throw e;
+            }
+        }
+    }
+    migrated = true;
+    return added;
+}
 
 const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -89,10 +141,14 @@ export default {
         try {
             if (table === 'health' || table === '') {
                 const out = { ok: true };
+                const missing = [];
                 for (const t of Object.keys(COLUMNS)) {
                     const r = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t}`).first();
                     out[t] = (r && r.n) || 0;
+                    (await missingColumns(env.DB, t)).forEach(c => missing.push(`${t}.${c}`));
                 }
+                // Filled in by the first upload; listed so a stale database shows.
+                if (missing.length) out.chybi_sloupce = missing;
                 return json(out);
             }
 
@@ -143,6 +199,8 @@ export default {
                 return json({ error: 'Neplatné heslo pro zápis.' }, 403);
             }
 
+            const migrated = await migrate(env.DB);
+
             const incoming = Array.isArray(body.records) ? body.records : [];
             if (!incoming.length) {
                 const t = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first();
@@ -171,12 +229,14 @@ export default {
             }
 
             const t = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first();
-            return json({
+            const reply = {
                 added,
                 duplicates: statements.length - added,
                 skipped,
                 total: (t && t.n) || 0,
-            });
+            };
+            if (migrated.length) reply.pridane_sloupce = migrated;
+            return json(reply);
         } catch (err) {
             const msg = String((err && err.message) || err);
             if (/no such table/i.test(msg)) {

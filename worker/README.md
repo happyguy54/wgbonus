@@ -65,6 +65,14 @@ Pak:
 Čtení je otevřené, zápis vyžaduje heslo. Filtrovat jde i přes adresu, např.
 `…/attacks?typ=nocni&since=2026-09-15&limit=500`.
 
+## Nová verze workeru
+
+Když se změní [`wgbonus-worker.js`](wgbonus-worker.js), stačí u workeru
+**Edit code**, vše nahradit novým obsahem a **Deploy**. Databáze se ručně
+nemění: sloupce, které v ní ještě nejsou, si worker přidá sám při prvním
+nahrání. Do té doby je `…/health` vypíše pod `chybi_sloupce`; odpověď na první
+nahrání je vypíše pod `pridane_sloupce`.
+
 ## Jak se data slučují
 
 Záznamy se spojují podle `id` (podpis nad hodnotami útoku). Co už nahoře je,

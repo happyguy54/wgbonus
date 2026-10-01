@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS attacks (
   cil_zeme         TEXT,
   cil_aliance      TEXT,
   cil_hrac         TEXT,
+  utocnik_id       INTEGER,
+  utocnik_zeme     TEXT,
+  utocnik_hrac     TEXT,
   zabito_vojaci    INTEGER,
   zabito_tanky     INTEGER,
   zabito_stihacky  INTEGER,
@@ -52,9 +55,7 @@ CREATE TABLE IF NOT EXISTS konflikty (
 CREATE INDEX IF NOT EXISTS konflikty_cas ON konflikty (cas);
 CREATE INDEX IF NOT EXISTS konflikty_obr ON konflikty (obrance_id);
 
--- Added after the first deploy; safe to re-run, SQLite ignores duplicates only
--- via the error, so run these individually if the table already exists:
---   ALTER TABLE attacks ADD COLUMN pripravenost_pokles REAL;
---   ALTER TABLE attacks ADD COLUMN spokojenost_pokles REAL;
---   ALTER TABLE konflikty ADD COLUMN rozloha INTEGER;
---   ALTER TABLE konflikty ADD COLUMN budovy INTEGER;
+-- Columns added after the first deploy (pripravenost_pokles,
+-- spokojenost_pokles, utocnik_*, rozloha, budovy) do NOT need ALTER TABLE by
+-- hand: the worker adds whatever is missing on the first upload. GET /health
+-- lists them under "chybi_sloupce" until then.
