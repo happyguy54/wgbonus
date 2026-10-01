@@ -33,11 +33,12 @@ const COLUMNS = {
         'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
         'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
-        'raw', 'vlozeno',
+        'pripravenost_pokles', 'spokojenost_pokles', 'raw', 'vlozeno',
     ],
     konflikty: [
         'id', 'cas', 'typ', 'utocnik_id', 'obrance_id', 'obrance_aliance',
-        'prestiz_utocnik', 'prestiz_obrance', 'zakladny', 'jednotky', 'vlozeno',
+        'prestiz_utocnik', 'prestiz_obrance', 'zakladny', 'jednotky',
+        'rozloha', 'budovy', 'vlozeno',
     ],
 };
 

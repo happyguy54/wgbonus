@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS attacks (
   prestiz_obrance  INTEGER,
   hodnost_utocnik  INTEGER,
   hodnost_obrance  INTEGER,
+  pripravenost_pokles REAL,
+  spokojenost_pokles  REAL,
   raw              TEXT,
   vlozeno          TEXT
 );
@@ -41,9 +43,18 @@ CREATE TABLE IF NOT EXISTS konflikty (
   prestiz_obrance  INTEGER,
   zakladny         INTEGER,
   jednotky         INTEGER,
+  rozloha          INTEGER,
+  budovy           INTEGER,
   vlozeno          TEXT
 );
 
 -- The join onto attacks happens on defender + minute, so index both.
 CREATE INDEX IF NOT EXISTS konflikty_cas ON konflikty (cas);
 CREATE INDEX IF NOT EXISTS konflikty_obr ON konflikty (obrance_id);
+
+-- Added after the first deploy; safe to re-run, SQLite ignores duplicates only
+-- via the error, so run these individually if the table already exists:
+--   ALTER TABLE attacks ADD COLUMN pripravenost_pokles REAL;
+--   ALTER TABLE attacks ADD COLUMN spokojenost_pokles REAL;
+--   ALTER TABLE konflikty ADD COLUMN rozloha INTEGER;
+--   ALTER TABLE konflikty ADD COLUMN budovy INTEGER;

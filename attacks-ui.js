@@ -35,6 +35,11 @@
     /** User equations, one per attack type (or '*' for all). */
     let equations = [];
 
+    /** Parsed Konflikty rows. Stored with the records rather than only in
+     *  memory, so a reload does not lose them and "Nahrát moje" still sends
+     *  them. Each gets an id so merging stays idempotent. */
+    let konfliktRows = [];
+
     let ui = {};
     let fileHandle = null;
 
@@ -42,6 +47,7 @@
 
     const serialise = () => JSON.stringify({
         version: 1, profile, settings, equations, records: store.records,
+        konflikty: konfliktRows,
     }, null, 2);
 
     function writeLocal() {
@@ -75,6 +81,10 @@
         });
         if (data.settings) settings = Object.assign(settings, data.settings);
         if (Array.isArray(data.equations)) equations = data.equations;
+        if (Array.isArray(data.konflikty)) {
+            const seen = new Set(konfliktRows.map(k => k.id));
+            data.konflikty.forEach(k => { if (k && k.id && !seen.has(k.id)) { konfliktRows.push(k); seen.add(k.id); } });
+        }
         return res.added;
     }
 
@@ -564,8 +574,6 @@
         writeLocal();
         renderAll();
     }
-
-    let konfliktRows = [];      // last parsed konflikty, kept so they can be shared
 
     function onKonflikty() {
         const text = ui.konfliktPaste.value;
