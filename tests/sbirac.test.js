@@ -65,10 +65,12 @@ function konfliktRow(k) {
  * hodnost: { countryId: rank } for the profile pages
  * stored:  `cas` + target of attacks the worker already holds, or null = no worker
  */
-function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = false }) {
+function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = false, onFetch = null }) {
     const calls = [];
     const clip = { text: null };
     const extra = [];
+    // Every wait the collector asks for, in ms. The fake clock runs them at once.
+    const delays = [];
 
     const rowsFor = id => (attacks[id] || []).map(a => Object.assign({ t: ago(a.h) }, a));
 
@@ -86,7 +88,10 @@ function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = 
             const more = all.length > limit + 30
                 ? `<div class="c"><a href="index.php?p=archiv&amp;typ=1&amp;limit=${limit + 30}&amp;tag=1&amp;id=${param('id')}"> předchozí (30) &gt;&gt;</a></div>`
                 : '';
-            return MENU.replace(/<table class="vis_tbl"[\s\S]*<\/table>/,
+            // The sample's own "předchozí" links go; one is added below only
+            // when older rows really exist, as on the game's pages.
+            return MENU.replace(/<div class="c"><a href="[^"]*limit=[^"]*">[^<]*<\/a><\/div>/g, '')
+                .replace(/<table class="vis_tbl"[\s\S]*<\/table>/,
                 '<table class="vis_tbl"><tbody><tr><th>Čas</th><th>Zpráva</th></tr>'
                 + pageRows.map(archiveRow).join('') + '</tbody></table>' + more);
         }
@@ -105,7 +110,11 @@ function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = 
         return '<html></html>';
     };
 
-    const el = () => ({ style: {}, select() {}, set textContent(v) { this._t = v; }, get textContent() { return this._t; } });
+    const el = () => ({
+        style: {}, children: [], select() {},
+        appendChild(c) { this.children.push(c); return c; },
+        set textContent(v) { this._t = v; }, get textContent() { return this._t; },
+    });
     const sandbox = {
         console: { log() {}, warn() {}, error() {} },
         location: { hostname: 'gold.webgame.cz', origin: 'https://gold.webgame.cz', pathname: '/wg/index.php' },
@@ -118,18 +127,24 @@ function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = 
             createElement: tag => { const e = el(); e.tag = tag; extra.push(e); return e; },
             body: { appendChild() {} },
             execCommand: () => true,
+            title: 'Webgame',
         },
         TextDecoder: global.TextDecoder,
-        setTimeout: (fn) => setImmediate(fn),
+        setTimeout: (fn, ms) => { delays.push(ms); return setImmediate(fn); },
+        clearTimeout: t => clearImmediate(t),
         async fetch(url) {
             calls.push(url);
+            if (onFetch) onFetch(url, calls.length, extra);
             const body = serve(url);
             if (/\/attacks\?/.test(url)) return { ok: true, json: async () => JSON.parse(body) };
             return { ok: true, arrayBuffer: async () => Buffer.from(body, 'utf8') };
         },
     };
-    return { sandbox, calls, clip, extra };
+    return { sandbox, calls, clip, extra, delays };
 }
+
+/** The collector's own buttons, found by their caption. */
+const button = (game, re) => game.extra.find(e => e.tag === 'button' && re.test(e.textContent || ''));
 
 /** Run one version of the collector against a game; resolves when it finishes. */
 async function run(code, game, { worker } = {}) {
@@ -274,14 +289,73 @@ section(`${label}: nothing new`);
     ok('no konflikty or profiles fetched', !game.calls.some(u => /konflikty|najitzem/.test(u)));
 }
 
+section(`${label}: pages at a reader's pace`);
+{
+    const game = await run(code, makeGame({
+        attacks: { 47: [{ h: 1, xp: 1, cil: 53 }, { h: 2, xp: 2, cil: 54 }] },
+    }));
+    const pages = game.calls.filter(u => /index\.php\?/.test(u)).length;
+    eq('one wait before every page but the first', game.delays.length, pages - 1);
+    ok('every wait between 5 and 10 s', game.delays.every(ms => ms >= 5000 && ms <= 10000), game.delays.join(', '));
+    ok('the waits vary', new Set(game.delays).size > 1, game.delays.join(', '));
+    eq('tab title says it is done', game.sandbox.document.title, '✓ wg sběrač — hotovo');
+}
+
+section(`${label}: Zastavit hands over what is collected so far`);
+{
+    // Stop while the third page (#47's archive) is being read: #44 had no
+    // attacks, #47's page still arrives, nothing after it is fetched.
+    const game = await run(code, makeGame({
+        attacks: { 47: [{ h: 1, xp: 4701, cil: 53 }], 118: [{ h: 1, xp: 11801, cil: 91 }] },
+        onFetch: (url, n, extra) => {
+            if (n === 3) {
+                const b = extra.find(e => e.tag === 'button' && /Zastavit/.test(e.textContent || ''));
+                if (b) b.onclick();
+            }
+        },
+    }));
+    const r = paste(game.clip.text || '');
+    eq('the attack read before stopping is handed over', r.records.map(x => x.xp).join(','), '4701');
+    ok('nothing fetched after the stop', !game.calls.some(u => /id=118|konflikty|najitzem/.test(u)),
+        game.calls.slice(3).join(' '));
+    eq('no wait left running after the stop', game.calls.filter(u => /index\.php\?/.test(u)).length, 3);
+
+    // Stopped while #47 still has a second page to go: the 30 attacks from
+    // its first page must not be lost with it.
+    const many = [];
+    for (let i = 0; i < 35; i++) many.push({ h: 1 + i, xp: 6000 + i, cil: 53 });
+    const g2 = await run(code, makeGame({
+        attacks: { 47: many },
+        onFetch: (url, n, extra) => {
+            if (n === 3) extra.find(e => e.tag === 'button' && /Zastavit/.test(e.textContent || '')).onclick();
+        },
+    }));
+    eq('first page of an ally kept when stopped before its second', paste(g2.clip.text || '').records.length, 30);
+    ok('the second page was not fetched', !g2.calls.some(u => /limit=30/.test(u)));
+}
+
+section(`${label}: konflikty only where there is something new`);
+{
+    const fixed = Date.now(), real = Date.now;
+    Date.now = () => fixed;
+    try {
+        const game = await run(code, makeGame({
+            attacks: { 47: [{ h: 1, xp: 1, cil: 53 }], 55: [{ h: 2, xp: 2, cil: 77 }] },
+            stored: [[new Date(fixed - 2 * 3600 * 1000), 77]],
+        }), { worker: 'https://w.example' });
+        ok('konflikty for the ally with a new attack', game.calls.some(u => /konflikty.*land_6=47/.test(u)));
+        ok('none for the ally whose attacks are all stored', !game.calls.some(u => /konflikty.*land_6=55/.test(u)));
+    } finally { Date.now = real; }
+}
+
 section(`${label}: clipboard refused after the long wait`);
 {
     const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, clipboardFails: true });
     vm.createContext(game.sandbox);
     vm.runInContext(code, game.sandbox);
-    for (let i = 0; i < 4000 && !game.extra.some(e => e.tag === 'button'); i++) await new Promise(r => setImmediate(r));
+    for (let i = 0; i < 4000 && !game.extra.some(e => e.tag === 'textarea'); i++) await new Promise(r => setImmediate(r));
     const ta = game.extra.find(e => e.tag === 'textarea');
-    const btn = game.extra.find(e => e.tag === 'button');
+    const btn = button(game, /Zkopírovat/);
     ok('the text is shown instead', ta && /### ARCHIV #47/.test(ta.value || ''));
     ok('with a copy button', !!btn && typeof btn.onclick === 'function');
     if (btn) { btn.onclick(); eq('the button copies', btn.textContent, 'Zkopírováno ✓'); }

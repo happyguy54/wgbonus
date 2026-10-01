@@ -39,11 +39,14 @@
     // the alliance archive.
     const ZEME = [];
 
-    // Archive pages per ally (30 messages each), profiles per run, and the
-    // pause between requests so the game is not hammered.
+    // Seconds to wait before each page, picked at random in this range: the
+    // pace of someone reading the pages, not of a script. The first page is
+    // the click itself and goes at once. A run takes minutes because of it.
+    const PAUZA_S = [5, 10];
+
+    // Archive pages per ally (30 messages each) and profiles per run.
     const MAX_STRAN = 20;
-    const MAX_PROFILU = 60;
-    const PAUZA_MS = 100;
+    const MAX_PROFILU = 30;
 
     if (!location.hostname.endsWith(HOST)) {
         alert('Spusťte to na stránce ' + HOST + ' (kdekoliv, stačí být přihlášen).');
@@ -57,17 +60,61 @@
         + 'color:#ddd;border:2px solid #FF8000;padding:10px 12px;font:12px verdana,sans-serif;'
         + 'max-width:420px;max-height:80vh;overflow:auto;white-space:pre-wrap;'
         + 'box-shadow:0 4px 16px rgba(0,0,0,.6)';
+    const logEl = document.createElement('div');
+    const statusEl = document.createElement('div');
+    statusEl.style.cssText = 'margin-top:6px;color:#FF8000';
+    const stopBtn = document.createElement('button');
+    stopBtn.textContent = 'Zastavit a vzít, co už je';
+    stopBtn.style.cssText = 'margin-top:8px;padding:3px 10px;font:11px verdana,sans-serif;cursor:pointer';
+    box.appendChild(logEl);
+    box.appendChild(statusEl);
+    box.appendChild(stopBtn);
     document.body.appendChild(box);
     const log = [];
-    const say = m => { log.push(m); box.textContent = log.join('\n'); };
+    const say = m => { log.push(m); logEl.textContent = log.join('\n'); };
+    const status = m => { statusEl.textContent = m; };
+    const TITLE = document.title;
+
+    // Stopping ends the current wait at once; what is collected so far is
+    // still handed over.
+    const STOP = 'zastaveno';
+    let stopped = false;
+    let wake = null;
+    stopBtn.onclick = () => {
+        stopped = true;
+        stopBtn.disabled = true;
+        status('Zastavuji…');
+        if (wake) wake();
+    };
 
     /* ------------------------------------------------------------ fetch --- */
 
     const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const started = Date.now();
+    let pages = 0;
+    const mmss = ms => {
+        const sec = Math.round(ms / 1000);
+        return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+    };
+    const avgPause = (PAUZA_S[0] + PAUZA_S[1]) / 2 * 1000;
+
+    /** A reader's pause before the next page. */
+    function pause() {
+        const ms = Math.round((PAUZA_S[0] + Math.random() * (PAUZA_S[1] - PAUZA_S[0])) * 1000);
+        status('Další stránka za ' + Math.round(ms / 1000) + ' s · načteno ' + pages
+            + ' · běží ' + mmss(Date.now() - started));
+        return new Promise(r => {
+            const t = setTimeout(r, ms);
+            wake = () => { clearTimeout(t); r(); };
+        });
+    }
 
     async function page(query) {
-        await sleep(PAUZA_MS);
+        if (pages) await pause();
+        if (stopped) throw new Error(STOP);
+        pages++;
+        document.title = '(' + pages + ') wg sběrač';
+        status('Načítám stránku ' + pages + '…');
         const res = await fetch(BASE + 'index.php?' + query, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' na ?' + query);
         const buf = await res.arrayBuffer();
@@ -176,17 +223,21 @@
 
     /* ------------------------------------------------------------- main --- */
 
+    const archivy = [];
+    const konflikty = [];
+    const profily = [];
+    let nove = 0, zname = 0, konec = '';
+
     try {
         say('Načítám alianční archiv…');
         const first = await page('p=archiv&tag=1');
         let spojenci = allies(first);
-        if (!spojenci.length) {
-            say('V archivu nevidím seznam spojenců. Jste přihlášen a v alianci?');
-            return;
-        }
+        if (!spojenci.length) throw new Error('V archivu nevidím seznam spojenců. Jste přihlášen a v alianci?');
         if (ZEME.length) spojenci = spojenci.filter(s => ZEME.indexOf(s.id) >= 0);
         say(spojenci.length + ' spojenců: '
             + spojenci.map(s => s.zeme + ' (#' + s.id + ')' + (s.ja ? ' = vy' : '')).join(', '));
+        say('Stránku za ' + PAUZA_S[0] + '–' + PAUZA_S[1] + ' s, takže to potrvá pár minut. '
+            + 'Nechte tenhle panel otevřený, hrát můžete v jiném.');
 
         const cutoff = new Date(Date.now() - HODIN * 3600 * 1000);
         say('Okno ' + HODIN + ' h, od ' + cutoff.toLocaleString('cs-CZ') + '.');
@@ -209,96 +260,111 @@
             }
         }
 
-        const archivy = [];
-        const konflikty = [];
         const utocnici = [];
         const cile = new Set();
-        let nove = 0, zname = 0;
 
         for (const s of spojenci) {
             const rows = [];
             let vOkne = 0, limit = 0;
-            for (let n = 0; n < MAX_STRAN; n++) {
-                const html = await page('p=archiv&typ=1&tag=1&id=' + s.id + (limit ? '&limit=' + limit : ''));
-                const msgs = messages(html);
-                let older = false;
-                for (const m of msgs) {
-                    if (m.t < cutoff) { older = true; continue; }
-                    if (!m.xp || m.obrana) continue;
-                    vOkne++;
-                    if (known.has(casKey(m.t) + '|' + (m.cil == null ? '' : m.cil))) { zname++; continue; }
-                    rows.push(m.line);
-                    if (m.cil) cile.add(m.cil);
+            try {
+                for (let n = 0; n < MAX_STRAN; n++) {
+                    const html = await page('p=archiv&typ=1&tag=1&id=' + s.id + (limit ? '&limit=' + limit : ''));
+                    const msgs = messages(html);
+                    let older = false;
+                    for (const m of msgs) {
+                        if (m.t < cutoff) { older = true; continue; }
+                        if (!m.xp || m.obrana) continue;
+                        vOkne++;
+                        if (known.has(casKey(m.t) + '|' + (m.cil == null ? '' : m.cil))) { zname++; continue; }
+                        rows.push(m.line);
+                        if (m.cil) cile.add(m.cil);
+                    }
+                    // Newest first: once a page reaches past the window, nothing
+                    // further back can be inside it.
+                    if (older || !msgs.length) break;
+                    let next = nextLimit(html, limit);
+                    if (next === null && msgs.length >= 30) next = limit + 30;
+                    if (next === null) break;
+                    limit = next;
                 }
-                // Newest first: once a page reaches past the window, nothing
-                // further back can be inside it.
-                if (older || !msgs.length) break;
-                let next = nextLimit(html, limit);
-                if (next === null && msgs.length >= 30) next = limit + 30;
-                if (next === null) break;
-                limit = next;
+            } finally {
+                // Keep what this ally's pages gave so far, even when stopped
+                // half-way through them.
+                say(s.zeme + ' (#' + s.id + '): ' + rows.length + ' nových'
+                    + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
+                if (rows.length) {
+                    archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
+                    utocnici.push(s.id);
+                    nove += rows.length;
+                }
             }
-
-            say(s.zeme + ' (#' + s.id + '): ' + rows.length + ' nových'
-                + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
-
+            // Konflikty only for allies with something new: at a reader's pace
+            // every page costs seconds, and older attacks got theirs last run.
             if (rows.length) {
-                archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
-                utocnici.push(s.id);
-                nove += rows.length;
-            }
-            // Konflikty also complete attacks stored earlier without prestiž,
-            // so fetch them whenever the ally attacked inside the window at all.
-            if (vOkne) {
                 const k = flatten(await page('p=konflikty&spec=6&land_6=' + s.id + '&hours_6=' + HODIN));
                 konflikty.push('### KONFLIKTY #' + s.id + '\n' + k);
             }
         }
 
-        if (!nove && !konflikty.length) {
-            say('\nZa posledních ' + HODIN + ' h nic nového' + (zname ? ' (' + zname + ' útoků už v databázi)' : '') + '.');
-            return;
-        }
-
         // Attackers first - their rank applies to every attack they made.
-        const ids = utocnici.concat([...cile].filter(id => utocnici.indexOf(id) < 0)).slice(0, MAX_PROFILU);
-        const profily = [];
-        if (ids.length) say('Načítám ' + ids.length + ' profilů (hodnost)…');
-        for (const id of ids) {
-            try {
-                profily.push('### PROFIL #' + id + '\n' + flatten(await page('p=najit&s=najitzem&hid=' + id)));
-            } catch (e) { /* a hidden or deleted country; skip it */ }
+        const all = utocnici.concat([...cile].filter(id => utocnici.indexOf(id) < 0));
+        const ids = all.slice(0, MAX_PROFILU);
+        if (ids.length) {
+            say('Ještě ' + ids.length + ' profilů (hodnost)'
+                + (all.length > ids.length ? ' z ' + all.length + ', víc se nebere' : '')
+                + ', zhruba ' + mmss(ids.length * avgPause) + ' min.');
         }
-
-        /* ---- hand it over ------------------------------------------------- */
-        const out = archivy.concat(konflikty, profily).join('\n\n');
-        say('\n' + nove + ' nových útoků' + (zname ? ', ' + zname + ' už v databázi' : '')
-            + ', ' + konflikty.length + '× konflikty, ' + profily.length + ' profilů.');
-        try {
-            await navigator.clipboard.writeText(out);
-            say('HOTOVO — ' + Math.round(out.length / 1024) + ' kB ve schránce.'
-                + '\nVložte do pole „Vložit z herního logu“ na stránce wgbonus.');
-        } catch (e) {
-            // Clipboard access lapses after the long wait, and plain http has
-            // none at all. A click is a fresh user action, which always works.
-            const ta = document.createElement('textarea');
-            ta.value = out;
-            ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
-            const btn = document.createElement('button');
-            btn.textContent = 'Zkopírovat do schránky';
-            btn.style.cssText = 'position:fixed;left:2%;top:calc(70% + 8px);z-index:99998;'
-                + 'padding:8px 16px;font:bold 14px verdana,sans-serif';
-            btn.onclick = () => {
-                ta.select();
-                let done = false;
-                try { done = document.execCommand('copy'); } catch (e2) { done = false; }
-                btn.textContent = done ? 'Zkopírováno ✓' : 'Nejde — označeno, stiskněte Ctrl+C';
-            };
-            document.body.appendChild(ta);
-            document.body.appendChild(btn);
-            say('Klikněte na „Zkopírovat do schránky“ dole.');
+        for (const id of ids) {
+            let html;
+            try { html = await page('p=najit&s=najitzem&hid=' + id); }
+            catch (e) {
+                if (e.message === STOP) throw e;
+                // A hidden or deleted country; skip it.
+                continue;
+            }
+            profily.push('### PROFIL #' + id + '\n' + flatten(html));
         }
     } catch (err) {
-        say('\nCHYBA: ' + err.message);
+        konec = err.message === STOP ? 'Zastaveno — beru, co už je.' : 'CHYBA: ' + err.message;
+        say('\n' + konec);
+    }
+
+    /* ---- hand it over ----------------------------------------------------- */
+    stopBtn.style.display = 'none';
+    status('');
+    const out = archivy.concat(konflikty, profily).join('\n\n');
+    if (!archivy.length && !konflikty.length) {
+        say('\n' + (konec ? 'Nic nesebráno.' : 'Za posledních ' + HODIN + ' h nic nového'
+            + (zname ? ' (' + zname + ' útoků už v databázi)' : '') + '.'));
+        document.title = TITLE;
+        return;
+    }
+    say('\n' + nove + ' nových útoků' + (zname ? ', ' + zname + ' už v databázi' : '')
+        + ', ' + konflikty.length + '× konflikty, ' + profily.length + ' profilů'
+        + ' · ' + pages + ' stránek za ' + mmss(Date.now() - started) + '.');
+    document.title = '✓ wg sběrač — hotovo';
+    try {
+        await navigator.clipboard.writeText(out);
+        say('HOTOVO — ' + Math.round(out.length / 1024) + ' kB ve schránce.'
+            + '\nVložte do pole „Vložit z herního logu“ na stránce wgbonus.');
+    } catch (e) {
+        // Clipboard access lapses after the long wait, and plain http has
+        // none at all. A click is a fresh user action, which always works.
+        const ta = document.createElement('textarea');
+        ta.value = out;
+        ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
+        const btn = document.createElement('button');
+        btn.textContent = 'Zkopírovat do schránky';
+        btn.style.cssText = 'position:fixed;left:2%;top:calc(70% + 8px);z-index:99998;'
+            + 'padding:8px 16px;font:bold 14px verdana,sans-serif';
+        btn.onclick = () => {
+            ta.select();
+            let done = false;
+            try { done = document.execCommand('copy'); } catch (e2) { done = false; }
+            btn.textContent = done ? 'Zkopírováno ✓' : 'Nejde — označeno, stiskněte Ctrl+C';
+        };
+        document.body.appendChild(ta);
+        document.body.appendChild(btn);
+        say('Klikněte na „Zkopírovat do schránky“ dole.');
     }
 })();

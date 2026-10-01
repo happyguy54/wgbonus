@@ -857,7 +857,8 @@
                         na lištu záložek. Pak na kterékoli stránce
                         <code>gold.webgame.cz</code> klikněte na záložku — projde alianční archiv
                         všech spojenců za 72 h, konflikty i profily a výsledek dá do schránky.
-                        Sem pak stačí vložit (Ctrl+V) a „Načíst útoky“.
+                        Stránky načítá tempem čtenáře (5–10 s každá), takže to trvá pár minut;
+                        ten panel nechte otevřený. Sem pak stačí vložit (Ctrl+V) a „Načíst útoky“.
                         <button type="button" class="submit" id="sbiracCopy">Zkopírovat adresu záložky</button>
                         <span id="sbiracInfo"></span>
                     </div>

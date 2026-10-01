@@ -22,13 +22,20 @@ záložku znovu stejným způsobem.
 
 ## Použití
 
-1. Buďte přihlášen na `gold.webgame.cz` — **na kterékoli stránce**
+1. Otevřete `gold.webgame.cz` **v samostatném panelu** (kterákoli stránka)
 2. Klikněte na záložku **wg sběrač**
 3. Vpravo nahoře běží výpis: spojenci, kolik nových útoků u koho, konflikty,
-   profily. Na konci napíše, kolik kB je ve schránce
-4. Na stránce wgbonus vložte do pole **„Vložit z herního logu“** (Ctrl+V)
+   profily, a kdy přijde další stránka. **Trvá to pár minut** (viz níž) —
+   ten panel nechte být, hrát můžete v jiném. Až bude hotovo, v názvu panelu
+   se objeví **✓ wg sběrač — hotovo**
+4. Pokud se schránka nedá použít (byl jste v jiném panelu), objeví se tlačítko
+   **Zkopírovat do schránky** — klikněte
+5. Na stránce wgbonus vložte do pole **„Vložit z herního logu“** (Ctrl+V)
    a **Načíst útoky**
-5. **Nahrát moje**, ať to vidí ostatní
+6. **Nahrát moje**, ať to vidí ostatní
+
+**Zastavit a vzít, co už je** běh kdykoli ukončí — co se do té doby načetlo,
+se předá stejně.
 
 ## Co sebere
 
@@ -58,6 +65,7 @@ Hodnost z profilu je ta **dnešní**, proto se doplní jen k útokům z posledn�
 Na začátku [`sbirac.js`](sbirac.js):
 
 - `HODIN` — okno, výchozí 72
+- `PAUZA_S` — pauza před každou stránkou, náhodně v rozmezí, výchozí `[5, 10]` s
 - `WORKER` — adresa workeru; odkaz na stránce ji doplní sám. **Heslo sem
   nepatří**, čtení z workeru je veřejné
 - `ZEME` — jen vybraní spojenci, např. `[47, 118]`; prázdné = všichni
@@ -78,8 +86,20 @@ Testy (`node tests/run.js`) hlídají, že je aktuální.
 - **Rozsypaná diakritika** — hra na některých stránkách posílá windows-1250,
   sběrač to pozná a překóduje; pokud ne, dejte vědět
 
-## Zátěž hry
+## Tempo a zátěž hry
 
-Sbírá jen to, co si sami můžete zobrazit, s pauzou 0,1 s mezi dotazy. Sedm
-spojenců je zhruba 7–15 stránek archivu, pár konfliktů a profily nových cílů
-(nejvýš 60) — při opakovaném běhu jen to, co přibylo.
+Sbírá jen to, co si sami můžete zobrazit, a **tempem čtenáře**: před každou
+stránkou počká náhodně 5–10 s (první stránka jde hned, to je vaše kliknutí).
+Přesně tolik, kolik by trvalo stránky proklikat ručně.
+
+Kolik to trvá (průměr 7,5 s na stránku):
+
+- **první běh** — 7 spojenců, za 72 h třeba 15 stránek archivu, konflikty
+  u těch, kdo útočili, a profily nových cílů (nejvýš 30): kolem 50 stránek,
+  **asi 6 minut**
+- **další běhy** — u každého spojence aspoň jedna stránka archivu, konflikty
+  a profily jen k novým útokům: kolem 15–20 stránek, **2–3 minuty**
+
+Konflikty se berou jen u spojenců, kteří mají něco nového — útoky z minula
+už je dostaly. Kdyby někomu chyběla prestiž u starších útoků, vložte jeho
+Konflikty ručně.
