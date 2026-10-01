@@ -201,53 +201,86 @@ function parseInput(inputText) {
 }
 
 // Extract summary data (e.g., "Země", "Prestiž", etc.)
+//
+// Copied from the game, the head of a spy report reads
+//
+//   Země / Prestiž / Typ zprávy / Datum / Od      (the labels, one per line)
+//   Od<TAB>Pošta Konflikty Útok Rozvědka Rakety ( . ) ( . )(#134)[VzP] - Votrock (předseda) Vítěz 60.věku60
+//   1578875
+//   infiltrovat vládu
+//   21.03.22:33
+//   Pošta +_+sun+_+(#118)[EG] - happyguy (předseda)
+//
+// The two country lines are found by their "(#id)" rather than by counting
+// lines, and each is split on that anchor rather than on spaces: a country
+// name may contain spaces and brackets of its own.
 function extractSummaryData(lines) {
-    const startIndex = lines.findIndex(line => line.includes('Země'));
-    if (startIndex === -1 || startIndex + 5 >= lines.length) {
+    let start = lines.findIndex(line => line === 'Země');
+    if (start === -1) start = lines.findIndex(line => line.includes('Země'));
+    const hasId = line => /\(#\d+\)/.test(line);
+    let at = start === -1 ? -1 : start + 1;
+    while (at !== -1 && at < lines.length && at < start + 12 && !hasId(lines[at])) at++;
+    if (start === -1 || at >= lines.length || !hasId(lines[at] || '')) {
         console.error('Invalid input format');
         return {};
     }
 
-    const names = ['Země', 'Prestiž', 'Typ zprávy', 'Datum', 'Od'];
-    const shift = names.length - 1;
-    const values = lines.slice(startIndex + shift, startIndex + shift + names.length);
+    const [prestiz, typ, datum] = lines.slice(at + 1, at + 4);
+    let od = at + 4;
+    while (od < lines.length && od < at + 7 && !hasId(lines[od])) od++;
 
-    const data = {};
-    names.forEach((name, index) => {
-        data[name] = values[index];
-    });
+    const zeme = parseCountryLine(lines[at]);
+    const sender = parseCountryLine(hasId(lines[od] || '') ? lines[od] : '');
 
-    // Extract dynamic values from "Země" and "Od"
-    const zemeParts = data['Země'].split(' ');
-    console.log('zemeParts:', zemeParts); // Log zemeParts to see its content
-
-    const zemeName = zemeParts[10]?.split('(')[0]?.trim() || '';
-    const zemeNumber = zemeParts[10]?.match(/\(#(\d+)\)/)?.[1] || '';
-    const zemeAli = zemeParts[10]?.match(/\[(.*?)\]/)?.[1] || '';
-    const zemePerson = zemeParts[12]?.trim() || '';
-    const zemeRole = zemeParts[13]?.replace('(', '').replace(')', '') || '';
-
-    const odParts = data['Od'].split(' ');
-    const odName = odParts[1]?.split('(')[0]?.trim() || '';
-    console.log('odParts:', odParts); // Log odParts to see its content
-    const odNumber = odParts[1]?.match(/\(#(\d+)\)/)?.[1] || '';
-    const odAli = odParts[1]?.match(/\[(.*?)\]/)?.[1] || '';
-    const odPerson = odParts[3]?.trim() || '';
-    const odRole = odParts[4]?.replace('(', '').replace(')', '') || '';
+    const data = {
+        'Země': zeme.text,
+        'Prestiž': prestiz || '',
+        'Typ zprávy': typ || '',
+        'Datum': datum || '',
+        'Od': sender.text,
+    };
 
     return {
         data,
-        zemeName,
-        zemeNumber,
-        zemeAli,
-        zemePerson,
-        zemeRole,
-        odName,
-        odNumber,
-        odAli,
-        odPerson,
-        odRole,
+        zemeName: zeme.name, zemeNumber: zeme.id, zemeAli: zeme.ali,
+        zemePerson: zeme.person, zemeRole: zeme.role, zemeStars: zeme.stars,
+        odName: sender.name, odNumber: sender.id, odAli: sender.ali,
+        odPerson: sender.person, odRole: sender.role, odStars: sender.stars,
     };
+}
+
+/**
+ * One country as copied from the game:
+ *   "Pošta Konflikty Útok Rozvědka Rakety Wörthersee(#61)[HOLY] - 7lord7 (zástupce)"
+ *   "Pošta Pyro Is Not A Crime(#83)[EJZ] - farkalindas (předseda) Vítěz 99.věku99"
+ * The leading words are the icons' captions, the trailing ones the winner
+ * badges ("Vítěz N.věku", "Předseda vítězné aliance N.věku") with their number.
+ */
+function parseCountryLine(line) {
+    const text = String(line || '')
+        .replace(/^Od\s+/, '')
+        .replace(/^(?:(?:Pošta|Konflikty|Útok|Rozvědka|Rakety)\s+)+/, '')
+        .trim();
+    const out = { text, name: text, id: '', ali: '', person: '', role: '', stars: [] };
+    const m = text.match(/^(.*?)\s*\(#(\d+)\)\s*(?:\[([^\]]*)\])?\s*(?:-\s*)?(.*)$/);
+    if (!m) return out;
+
+    const stars = [];
+    const rest = m[4]
+        .replace(/\s*(Vítěz|Předseda vítězné aliance)\s+(\d+)\s*\.\s*věku\s*\d*/g, (_, kind, n) => {
+            stars.push({ kind, n: Number(n) });
+            return '';
+        })
+        .trim();
+    const role = rest.match(/\(([^()]*)\)\s*$/);
+
+    out.name = m[1].trim();
+    out.id = m[2];
+    out.ali = m[3] || '';
+    out.person = (role ? rest.slice(0, role.index) : rest).trim();
+    out.role = role ? role[1].trim() : '';
+    out.stars = stars;
+    return out;
 }
 
 // Extract details for jednotky, budovy, technologie, and other fields
@@ -295,9 +328,26 @@ function createOutputContainer(number = 1) {
     return container;
 }
 
-// Append the summary table
+// Append the summary table, in the game's own markup (index.php?p=rozvedka&s=viewspye)
 function appendSummaryTable(container, summaryData, baseUrl) {
-    const { data, zemeName, zemeNumber, zemeAli, zemePerson, zemeRole, odName, odNumber, odAli, odPerson, odRole } = summaryData;
+    const { data, zemeName, zemeNumber, zemeAli, zemePerson, zemeRole, zemeStars,
+            odName, odNumber, odAli, odPerson, odRole, odStars } = summaryData;
+    // The game's icons, loaded from the game - wgbonus has no copies, and a
+    // missing image shows its caption instead ("Pošta Konflikty Útok …").
+    const IMG = baseUrl.replace(/[^/]*$/, '') + 'img/';
+    const icon = (href, file, alt) =>
+        `<a href="${baseUrl}?${href}" target="_blank"><img src="${IMG}${file}" alt="${alt}" title="${alt}"></a>&nbsp;`;
+    const stars = list => (list || []).map(st => {
+        const file = st.kind === 'Vítěz' ? 'hvezda.gif' : 'hvezdice.gif';
+        const alt = escHtml(`${st.kind} ${st.n}.věku`);
+        return ` <img style="vertical-align: text-bottom;" src="${IMG}${file}" width="16" height="16" alt="${alt}" title="${alt}">`
+            + `<span class="ocas" style="color:#FFEB00">${st.n}</span>`;
+    }).join('');
+    const country = (id, name, ali, person, role) =>
+        `<a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${id}" target="_blank">${escHtml(name)}(#${id})</a>`
+        + (ali ? `<a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${encodeURIComponent(ali)}" target="_blank">[${escHtml(ali)}]</a>` : '')
+        + (person ? `<a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hpname=${encodeURIComponent(person)}" class="pname" target="_blank"> - ${escHtml(person)}</a>` : '')
+        + (role ? ` <span class="ocas" style="color:silver">(${escHtml(role)})</span>` : '');
 
     const summaryTable = document.createElement('table');
     summaryTable.id = 'spy-message-summary';
@@ -308,34 +358,36 @@ function appendSummaryTable(container, summaryData, baseUrl) {
 
     const summaryNamesCell = document.createElement('td');
     summaryNamesCell.className = 'rname l';
-    summaryNamesCell.innerHTML = Object.keys(data).join('<br>');
+    summaryNamesCell.innerHTML = 'Země<br>Prestiž<br>Typ zprávy<br>Datum<br><br>Od';
     summaryRow.appendChild(summaryNamesCell);
 
     const summaryValuesCell = document.createElement('td');
     summaryValuesCell.className = 'rdata r';
-    summaryValuesCell.innerHTML = `
-        <a href="${baseUrl}?p=mail&amp;to_id=${zemeNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="${baseUrl}?p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}" target="_blank"><img src="img/konflikty.gif" alt="Konflikty" title="Konflikty"></a>&nbsp;
-        <a href="${baseUrl}?p=valka&amp;s=utok&amp;to_id=${zemeNumber}" target="_blank"><img src="img/attack.gif" alt="Útok" title="Útok"></a>&nbsp;
-        <a href="${baseUrl}?p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}" target="_blank"><img src="img/agent.gif" alt="Rozvědka" title="Rozvědka"></a>&nbsp;
-        <a href="${baseUrl}?p=valka&amp;s=rakety&amp;target=${zemeNumber}" target="_blank"><img src="img/rocket.gif" alt="Rakety" title="Rakety"></a>&nbsp;
-        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${zemeNumber}" target="_blank">${zemeName}</a>
-        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${zemeAli}" target="_blank">[${zemeAli}]</a>
-        <a href="${baseUrl}?p=najitzem&amp;hpid=${zemeNumber}" class="pname" target="_blank"> - ${zemePerson}</a> 
-        <span class="ocas" style="color:silver">${zemeRole ? `(${zemeRole})` : ''}</span><br>
-        ${data['Prestiž']}<br>${data['Typ zprávy']}<br>${data['Datum']}<br>
-        <a href="${baseUrl}?p=mail&amp;to_id=${odNumber}" target="_blank"><img src="img/mail.gif" alt="Pošta" title="Pošta"></a>&nbsp;
-        <a href="${baseUrl}?p=najit&amp;s=najitzem&amp;hid=${odNumber}" target="_blank">${odName}</a>
-        <a href="${baseUrl}?p=najit&amp;s=najittag&amp;tag=${odAli}" target="_blank">[${odAli}]</a>
-        <a href="${baseUrl}?p=najitzem&amp;hpid=${odNumber}" class="pname" target="_blank"> - ${odPerson}</a> 
-        <span class="ocas" style="color:silver">${odRole ? `(${odRole})` : ''}</span>
-    `;
+    summaryValuesCell.innerHTML =
+        icon(`p=mail&amp;to_id=${zemeNumber}`, 'mail.gif', 'Pošta')
+        + icon(`p=konflikty&amp;hours_6=48&amp;spec=6&amp;land_6=${zemeNumber}`, 'konflikty.gif', 'Konflikty')
+        + icon(`p=valka&amp;s=utok&amp;to_id=${zemeNumber}`, 'attack.gif', 'Útok')
+        + icon(`p=rozvedka&amp;s=rozvedka&amp;target=${zemeNumber}`, 'agent.gif', 'Rozvědka')
+        + icon(`p=valka&amp;s=rakety&amp;target=${zemeNumber}`, 'rocket.gif', 'Rakety')
+        + country(zemeNumber, zemeName, zemeAli, zemePerson, zemeRole) + stars(zemeStars)
+        + `<br>${escHtml(data['Prestiž'])}<br>${escHtml(data['Typ zprávy'])}<br>${escHtml(data['Datum'])}<br>`
+        + (odNumber
+            ? icon(`p=mail&amp;to_id=${odNumber}`, 'mail.gif', 'Pošta')
+              + country(odNumber, odName, odAli, odPerson, odRole) + stars(odStars)
+            : escHtml(data['Od']));
     summaryRow.appendChild(summaryValuesCell);
 
     summaryTableBody.appendChild(summaryRow);
     summaryTableBody.appendChild(document.createElement('tr')).innerHTML = '<td colspan="2"></td>';
     summaryTable.appendChild(summaryTableBody);
     container.appendChild(summaryTable);
+}
+
+/** Names in a report are chosen by players; never let one become markup. */
+function escHtml(v) {
+    return String(v === null || v === undefined ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Append the detail table
@@ -393,7 +445,7 @@ function appendDetailSection(row, section, spokojenost, vlada, rozloha, ctx) {
         (spokojenost !== undefined ? `
             <br><br><span id="Spokojenost">${spokojenost}%</span>
             <br><br><span id="Vláda">${vlada}</span>
-            <br><span id="Rozloha">${czNum(rozloha)} km<sup>2</sup></span>`
+            <br><span id="Rozloha">${rozloha} km<sup>2</sup></span>`
             + (mrtva !== null
                 ? `<br><span id="MrtvaPrestiz" title="Prestiž, kterou rozvědka nevidí: agenti, rakety, peníze, jídlo, energie">${Math.round(mrtva).toLocaleString('cs-CZ')}</span>`
                 : '') : '');
@@ -454,7 +506,7 @@ function refreshBonuses() {
     const zkusenostiEffect = parseFloat(document.getElementById('input-zkusenostiEffect').value) || 25;
     const spokojenost = parseFloat(document.getElementById('input-spokojenost').value) || 100;
 
-    const rozloha = parseFloat(document.getElementById('Rozloha')?.textContent) || 0;
+    const rozloha = czParse(document.getElementById('Rozloha')?.textContent) || 0;
     const vlada = document.getElementById('Vláda')?.textContent || '';
 
     // null means "untouched" - the field is then refilled from the computation.
@@ -528,8 +580,8 @@ function refreshBonuses() {
     put('tacticalDefenseBonus', updatedBonusesEffect.tacticalDefense);
 
     // Update attack and defense with bonuses
-    const totalAttack = parseInt(document.getElementById('totalAttack').textContent.replace(/,/g, ''));
-    const totalDefense = parseInt(document.getElementById('totalDefense').textContent.replace(/,/g, ''));
+    const totalAttack = czParse(document.getElementById('totalAttack').textContent) || 0;
+    const totalDefense = czParse(document.getElementById('totalDefense').textContent) || 0;
 
     document.getElementById('attackWithBonuses').textContent = czNum(Math.round(totalAttack * updatedBonuses.normalAttack));
     document.getElementById('defenseWithBonuses').textContent = czNum(Math.round(totalDefense * updatedBonuses.normalDefense));
@@ -783,7 +835,7 @@ function calculateBonusForUnits(jednotky) {
     // Defender's overall tactical defence bonus, as shown in the table above.
     const defEl = document.getElementById('tacticalDefenseBonus');
     const defenderPct = defEl
-        ? (parseFloat(String(defEl.textContent).replace('+', '').replace('%', '')) || 0)
+        ? (czParse(defEl.textContent) || 0)
         : 0;
 
     // What the defender has and which advances/bonuses are ticked.
@@ -892,6 +944,21 @@ function czPct(v, decimals) {
     const d = decimals === undefined ? (Math.abs(n % 1) > 1e-9 ? 1 : 0) : decimals;
     return (n > 0 ? '+' : n < 0 ? '-' : '') + Math.abs(n).toFixed(d).replace('.', ',') + '%';
 }
+/**
+ * Back from text the page shows to a number: "1 338 866" -> 1338866,
+ * "+17,5%" -> 17.5, "5082 km2" -> 5082. cs-CZ separates thousands with a
+ * no-break space, which parseInt/parseFloat stop at - read straight off the
+ * page, "787 568" used to come back as 787.
+ */
+function czParse(text) {
+    let t = String(text === null || text === undefined ? '' : text).replace(/[\s\u00a0\u202f]/g, '');
+    // A comma is the decimal point, unless the text also has a dot (then it
+    // is an old-style "787,568.5" thousands separator).
+    t = t.includes('.') ? t.replace(/,/g, '') : t.replace(',', '.');
+    const m = t.match(/^[+-]?\d+(?:\.\d+)?/);
+    return m ? Number(m[0]) : NaN;
+}
+
 /** The game uses a neutral class for exactly zero, not "minus". */
 function czClass(v) {
     const n = Number(v) || 0;

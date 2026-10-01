@@ -85,10 +85,15 @@
         : ['Demokracie', 'Fundamentalismus', 'Republika', 'Feudalismus',
            'Anarchie', 'Utopie', 'Technokracie', 'Komunismus', 'Diktatura', 'Robokracie'];
 
+    // The page prints numbers the Czech way: "1 338 866", "+70,0%". Dropping
+    // the comma used to turn +70,0% into 700, so read the comma as the
+    // decimal point unless a dot is also present.
     function numFromText(text) {
         if (text == null) return NaN;
-        const cleaned = String(text).replace(/ /g, ' ').replace(/[^0-9.,\-]/g, '').replace(/,/g, '');
-        return parseFloat(cleaned);
+        let t = String(text).replace(/[\s\u00a0\u202f]/g, '');
+        t = t.includes('.') ? t.replace(/,/g, '') : t.replace(',', '.');
+        const m = t.match(/[+-]?\d+(?:\.\d+)?/);
+        return m ? Number(m[0]) : NaN;
     }
 
     function publishFromData(d) {
