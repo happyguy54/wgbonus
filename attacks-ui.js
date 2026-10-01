@@ -617,11 +617,20 @@
             opts.headers['X-WG-Secret'] = readSync().secret || '';
             opts.body = JSON.stringify({ records });
         }
-        const res = await fetch(`${base}/${collection}`, opts);
+        const target = `${base}/${collection}`;
+        const res = await fetch(target, opts);
         let data;
         try { data = await res.json(); }
-        catch (e) { throw new Error(`Úložiště odpovědělo nečekaně (HTTP ${res.status}).`); }
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        catch (e) {
+            // A static host (Cloudflare Pages, GitHub Pages) answers GET but
+            // refuses POST with 405 and returns HTML, not JSON. That is the
+            // usual cause, so say which URL and method were refused.
+            throw new Error(`HTTP ${res.status} na ${method} ${target}`
+                + (res.status === 405
+                    ? ' — tahle adresa nepřijímá zápis. Je to opravdu Worker (…​.workers.dev), ne Pages?'
+                    : ' — odpověď nebyla JSON.'));
+        }
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status} na ${target}`);
         return data;
     }
 
@@ -841,6 +850,7 @@
                     <input type="password" id="syncSecret" class="formula-input"
                            placeholder="sdílené heslo pro zápis">
                 </div>
+                <button type="button" class="submit" id="syncTest">Otestovat spojení</button>
                 <button type="button" class="submit" id="syncPull">Stáhnout sdílené</button>
                 <button type="button" class="submit" id="syncPush">Nahrát moje</button>
                 <div id="syncInfo" class="formula-hint"></div>
@@ -924,6 +934,29 @@
         ['prestizU', 'prestizO', 'hodnostU', 'hodnostO']
             .forEach(k => ui[k].addEventListener('input', readSettings));
         document.getElementById('konfliktAdd').addEventListener('click', onKonflikty);
+        document.getElementById('syncTest').addEventListener('click', async () => {
+            const base = syncBase();
+            if (!base) { ui.syncInfo.textContent = 'Vyplňte adresu.'; return; }
+            ui.syncInfo.textContent = 'Testuji…';
+            try {
+                const res = await fetch(`${base}/health`);
+                const txt = await res.text();
+                let j = null; try { j = JSON.parse(txt); } catch (e) { /* not json */ }
+                if (j && j.ok) {
+                    ui.syncInfo.textContent = `Worker odpovídá: útoků ${j.attacks}, konfliktů ${j.konflikty}.`
+                        + (readSync().secret ? '' : ' Heslo zatím nevyplněno — zápis nepůjde.');
+                } else if (j && j.error) {
+                    ui.syncInfo.textContent = `Worker běží, ale hlásí: ${j.error}`;
+                } else {
+                    ui.syncInfo.textContent = `HTTP ${res.status}, odpověď není JSON `
+                        + `(prvních 80 znaků: ${txt.slice(0, 80).replace(/\s+/g, ' ')}) `
+                        + '— adresa patrně nevede na Worker.';
+                }
+            } catch (err) {
+                ui.syncInfo.textContent = 'Spojení selhalo: ' + err.message
+                    + ' — zkontrolujte adresu, nebo blokuje CORS.';
+            }
+        });
         document.getElementById('syncPull').addEventListener('click', pullShared);
         document.getElementById('syncPush').addEventListener('click', pushShared);
         const saveSync = () => writeSync({ url: ui.syncUrl.value.trim(), secret: ui.syncSecret.value });

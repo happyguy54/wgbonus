@@ -42,12 +42,14 @@
      * specific phrases come first.
      */
     const TYPES = [
-        { id: 'nocni', label: 'Noční tažení', re: /no[čc]n[ií]ho? ta[žz]en[ií]/i },
+        // "ho?" required the h, so this matched "nočního tažení" in an attack
+        // message but not "Noční tažení" as the Konflikty list writes it.
+        { id: 'nocni', label: 'Noční tažení', re: /no[čc]n[ií](?:ho)?\s+ta[žz]en[ií]/i },
         { id: 'nalet', label: 'Taktický nálet', re: /taktick\S*\s+n[áa]let/i },
         { id: 'bombardovani', label: 'Bombardování', re: /bombardov[áa]n/i },
         { id: 'partyzansky', label: 'Partyzánský útok', re: /partyz[áa]n/i },
         { id: 'tyl', label: 'Útok na týl', re: /(napadnout\s+t[ýy]l|t[ýy]l\s+nep[řr][áa]telsk|na\s+t[ýy]l|tankov[ée]\s+brig[áa]d)/i },
-        { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /(vniknut|vnikl).{0,20}bunkr/i },
+        { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /(vniknout|vniknut|vnikl).{0,20}bunkr/i },
         { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n/i },
         { id: 'loupezivy', label: 'Loupeživý útok', re: /loupe[žz]iv/i },
         { id: 'vyhlazovaci', label: 'Vyhlazovací útok', re: /vyhlazovac/i },
@@ -334,28 +336,28 @@
      *                 ---> Farmím pro Barunku(#103)[Yozzefy] - Kugis 79 1360k pr.
      *                 Noční tažení   56 voj.z. + 15218 jedn.
      */
-    const KONFLIKT_RE = new RegExp(
-        '(\\d{1,2})\\.\\s*(\\d{1,2})\\.' +      // 15.09.
-        '[\\s\\S]{0,40}?(\\d{1,2}):(\\d{2})' +  // 08:59
-        '([\\s\\S]{0,300}?)-+>' +               // attacker side, then --->
-        '([\\s\\S]{0,300}?)' +                  // defender side
-        '(\\d[\\d\\s]*)\\s*voj\\.?\\s*z\\.' +   // 56 voj.z.
-        '[\\s\\S]{0,20}?(\\d[\\d\\s]*)\\s*jedn', 'g');
+    /**
+     * A Konflikty row runs from one "DD.MM." to the next, so split on that
+     * rather than trying to match a whole row in one pattern. The tail differs
+     * per attack type - "56 voj.z. + 15218 jedn." for a noční tažení, just
+     * "Pokles připravenosti" for a týl - so those counts are optional.
+     */
+    const KONF_DATE = /(\d{1,2})\s*\.\s*(\d{1,2})\s*\./g;
 
-    /** "1254k pr." -> 1254000 ; "1 174 618" -> 1174618 */
+    /** "1254k pr." -> 1254000 ; "1 174 618 pr." -> 1174618
+     *  Only the number immediately before "k pr." counts, so a rank or věk
+     *  number in front of it ("89.věku89 121k pr.") is not swallowed. */
     function prestigeNum(text) {
         if (!text) return null;
-        // Only the number immediately before "k pr." - a preceding rank number
-        // like "94 1254k pr." must not be swallowed into it.
-        const k = text.match(/(\d+(?:[.,]\d+)?)\s*k\s*pr/i);
+        const k = String(text).match(/(\d+(?:[.,]\d+)?)\s*k\s*pr/i);
         if (k) return Math.round(parseFloat(k[1].replace(',', '.')) * 1000);
-        const plain = text.match(/([\d\s]{4,})\s*pr/i);
+        const plain = String(text).match(/([\d\s]{4,})\s*pr/i);
         return plain ? num(plain[1]) : null;
     }
 
     function sideInfo(chunk) {
-        const id = chunk.match(/\(#?(\d+)\)/);
-        const ali = chunk.match(/\[([^\]]*)\]/);
+        const id = String(chunk).match(/\(#?(\d+)\)/);
+        const ali = String(chunk).match(/\[([^\]]*)\]/);
         return {
             id: id ? Number(id[1]) : null,
             aliance: ali ? ali[1] : null,
@@ -364,30 +366,62 @@
     }
 
     function parseKonflikty(text, year) {
-        const rows = [];
         const src = String(text || '');
         const Y = year || new Date().getFullYear();
+
+        // Row boundaries: every "DD.MM." starts a new entry.
+        const starts = [];
         let m;
-        KONFLIKT_RE.lastIndex = 0;
-        while ((m = KONFLIKT_RE.exec(src)) !== null) {
-            const [, dd, mm, hh, mi, atkChunk, defChunk, zakl, jedn] = m;
+        KONF_DATE.lastIndex = 0;
+        while ((m = KONF_DATE.exec(src)) !== null) {
+            starts.push({ at: m.index, dd: m[1], mm: m[2], after: KONF_DATE.lastIndex });
+        }
+
+        const rows = [];
+        starts.forEach((st, i) => {
+            const chunk = src.slice(st.after, i + 1 < starts.length ? starts[i + 1].at : src.length);
+
+            const arrow = chunk.search(/-{2,}>/);
+            if (arrow < 0) return;                       // no defender half, not a row
+            const atkChunk = chunk.slice(0, arrow);
+            const defChunk = chunk.slice(arrow);
+
+            const tm = atkChunk.match(/(\d{1,2}):(\d{2})/);
             const utocnik = sideInfo(atkChunk);
             const obrance = sideInfo(defChunk);
-            if (!obrance.id && !utocnik.id) continue;
-            const typ = detectType(defChunk) || detectType(atkChunk) || null;
+            if (!obrance.id && !utocnik.id) return;
+
+            // The tail differs per attack type and is sometimes absent entirely:
+            //   noční tažení / nálet : "56 voj.z. + 15218 jedn."
+            //   dobyvačný            : "691 km2 + 346 bud."
+            //   týl                  : "Pokles připravenosti"
+            //   partyzánský          : "Pokles připr., agentů"
+            const zak = defChunk.match(/(\d[\d\s]*)\s*voj\.?\s*z\./i);
+            const jed = defChunk.match(/(\d[\d\s]*)\s*jedn/i);
+            const km = defChunk.match(/(\d[\d\s]*)\s*km2/i);
+            const bud = defChunk.match(/(\d[\d\s]*)\s*bud\./i);
+
+            // detectType returns the type object; the record stores its id.
+            const t = detectType(defChunk) || detectType(atkChunk);
+
             rows.push({
-                cas: `${Y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')} `
-                   + `${String(hh).padStart(2, '0')}:${mi}`,
-                typ,
+                cas: tm
+                    ? `${Y}-${String(st.mm).padStart(2, '0')}-${String(st.dd).padStart(2, '0')} `
+                      + `${String(tm[1]).padStart(2, '0')}:${tm[2]}`
+                    : null,
+                typ: t ? t.id : null,
+                typLabel: t ? t.label : null,
                 utocnik_id: utocnik.id,
                 obrance_id: obrance.id,
                 obrance_aliance: obrance.aliance,
                 prestiz_utocnik: utocnik.prestiz,
                 prestiz_obrance: obrance.prestiz,
-                zakladny: num(zakl),
-                jednotky: num(jedn),
+                zakladny: zak ? num(zak[1]) : null,
+                jednotky: jed ? num(jed[1]) : null,
+                rozloha: km ? num(km[1]) : null,
+                budovy: bud ? num(bud[1]) : null,
             });
-        }
+        });
         return rows;
     }
 
