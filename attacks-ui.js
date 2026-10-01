@@ -561,13 +561,34 @@
         const text = ui.paste.value;
         if (!text.trim()) { ui.pasteInfo.textContent = 'Vložte řádky z herního logu útoků.'; return; }
 
+        // One box for everything: an attack log, a Konflikty list, or both at
+        // once. Navigating to the right page is the tedious part, so whatever
+        // comes back should just work without being sorted into two boxes.
         const { records, skipped } = A.parsePaste(text);
         const { added, duplicates } = store.addMany(records);
 
-        const bits = [`Přidáno ${added} útoků`];
-        if (duplicates) bits.push(`${duplicates} už bylo v databázi (nepřidáno znovu)`);
-        if (skipped) bits.push(`${skipped} řádků nerozpoznáno`);
-        if (!records.length) bits.push('— zkontrolujte, že řádky obsahují „Získáno … zkušeností“');
+        const bits = [];
+        if (records.length) {
+            bits.push(`přidáno ${added} útoků`);
+            if (duplicates) bits.push(`${duplicates} už bylo v databázi`);
+        }
+
+        const konf = A.parseKonflikty(text);
+        if (konf.length) {
+            const seen = new Set(konfliktRows.map(k => k.id));
+            konf.forEach(k => {
+                k.id = k.id || `${k.cas}|${k.obrance_id}|${k.prestiz_obrance}|${k.prestiz_utocnik}`;
+                if (!seen.has(k.id)) { konfliktRows.push(k); seen.add(k.id); }
+            });
+            const res = A.applyKonflikty(store.records, konf);
+            bits.push(`${konf.length} řádků konfliktů, prestiž doplněna k ${res.matched} útokům`);
+        }
+
+        if (!bits.length) {
+            bits.push('nic rozpoznáno — čekám řádky s „Získáno … zkušeností“ nebo výpis Konfliktů');
+        } else if (skipped && records.length) {
+            bits.push(`${skipped} řádků nerozpoznáno`);
+        }
         ui.pasteInfo.textContent = bits.join(', ') + '.';
 
         if (added) ui.paste.value = '';
@@ -751,7 +772,7 @@
                 <div class="formula-col formula-col-wide">
                     <h3>Vložit z herního logu</h3>
                     <textarea id="attackPaste" class="formula-input attack-paste" rows="6"
-                        placeholder="Zkopírujte řádky útoků ze hry (Ctrl+C / Ctrl+V) a vložte sem…"></textarea>
+                        placeholder="Vložte cokoli ze hry — výpis útoků, Konflikty, nebo obojí najednou. Funguje i vložený HTML zdroj."></textarea>
                     <button type="button" class="submit" id="attackAdd">Načíst útoky</button>
                     <div id="attackPasteInfo" class="formula-hint"></div>
 
