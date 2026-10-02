@@ -102,7 +102,13 @@ Testy (`node tests/run.js`) hlídají, že je aktuální.
 ## Když něco nevyjde
 
 - **„Spusťte to na stránce gold.webgame.cz“** — jste jinde (třeba na wgbonus)
-- **„V archivu nevidím seznam spojenců“** — nejste přihlášen, nebo nejste v alianci
+- **„V archivu nevidím seznam spojenců. Hra vrátila …“** — spusťte to přímo
+  z Aliančního archivu (seznam spojenců se pak vezme z otevřené stránky);
+  výpis říká, jakou stránku hra místo archivu poslala
+- **„Hra … odpověděla ‚Nejsi přihlášen‘“** — hra požadavek sběrače nevzala
+  jako váš, i když přihlášen jste. Sběrač hned skončí a nic dalšího nezkouší
+- **Opakování:** žádný požadavek se nezkouší znovu. Co selže, buď ukončí běh,
+  nebo se přeskočí (třeba hledání jednoho cíle v žebříčku)
 - **„Workeru se nedovolám“** — špatná adresa (musí být včetně `https://`) nebo
   je worker dole; sběrač jede dál, jen bez přeskakování známých útoků
 - **„Za posledních 72 h nic nového“** — vše už je v databázi

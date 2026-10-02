@@ -66,7 +66,8 @@ function konfliktRow(k) {
  * stored:  `cas` + target of attacks the worker already holds, or null = no worker
  */
 const ALLIES = [44, 47, 52, 55, 68, 83, 118];
-function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = false, onFetch = null }) {
+function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = false, onFetch = null,
+                    loggedOut = false, openPage = null, menu = MENU }) {
     const calls = [];
     const clip = { text: null };
     const extra = [];
@@ -113,7 +114,7 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
                 '<table class="vis_tbl"><tbody><tr><th>Čas</th><th>Zpráva</th></tr>'
                 + pageRows.map(archiveRow).join('') + '</tbody></table>' + more);
         }
-        if (param('p') === 'archiv') return MENU;
+        if (param('p') === 'archiv') return menu;
         if (param('p') === 'konflikty') {
             const id = Number(param('land_6'));
             const rows = rowsFor(id).filter(a => !a.obrana && a.h <= 72)
@@ -142,6 +143,7 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
             clip.text = t; return Promise.resolve();
         } } },
         document: {
+            documentElement: openPage === null ? undefined : { outerHTML: openPage },
             createElement: tag => { const e = el(); e.tag = tag; extra.push(e); return e; },
             body: { appendChild() {} },
             execCommand: () => true,
@@ -154,9 +156,14 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
             const form = opts && opts.body;
             calls.push(form ? url + ' ' + form : url);
             if (onFetch) onFetch(url, calls.length, extra);
+            if (loggedOut && /index\.php/.test(url)) {
+                // What the game sends a request it does not take as logged in.
+                return { ok: true, url: 'https://gold.webgame.cz/wg/logout.php?t=12',
+                    arrayBuffer: async () => Buffer.from('<html><head><title>WEBGAME » Nejsi přihlášen.</title></head></html>') };
+            }
             const body = serve(url, form);
             if (/\/attacks\?/.test(url)) return { ok: true, json: async () => JSON.parse(body) };
-            return { ok: true, arrayBuffer: async () => Buffer.from(body, 'utf8') };
+            return { ok: true, url, arrayBuffer: async () => Buffer.from(body, 'utf8') };
         },
     };
     return { sandbox, calls, clip, extra, delays };
@@ -272,6 +279,56 @@ section(`${label}: every ally in the alliance archive`);
     ok('no country profiles fetched any more', !game.calls.some(u => /najitzem/.test(u)));
     ok('XP of the defence messages is passed on too', /### XP #118\n(?:.*\n)*.*\t2002/.test(game.clip.text));
     ok('the menu and page furniture did not leak into the paste', !/Black Hole Generator|Čas provádění/.test(game.clip.text));
+}
+
+section(`${label}: the ally list from the page already open`);
+{
+    const game = await run(code, makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, openPage: MENU }), { pick: 47 });
+    ok('no request for the menu', !game.calls.some(u => /p=archiv&tag=1(?:$|\s)/.test(u)), game.calls[0]);
+    eq('and the run went on', paste(game.clip.text || '').records.length, 1);
+}
+
+section(`${label}: menu page without the list, but linking to an ally`);
+{
+    const bare = '<html><body><a href="index.php?p=archiv&amp;tag=1&amp;id=118">Alianční archiv</a></body></html>';
+    const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, menu: bare });
+    // Only the page with an id carries the list.
+    const serveMenu = game.sandbox.fetch;
+    game.sandbox.fetch = async (url, opts) => /p=archiv&tag=1&id=118$/.test(url)
+        ? (game.calls.push(url), { ok: true, url, arrayBuffer: async () => Buffer.from(MENU, 'utf8') })
+        : serveMenu(url, opts);
+    await run(code, game, { pick: 47 });
+    ok('followed the link to an ally\'s archive', game.calls.some(u => /p=archiv&tag=1&id=118$/.test(u)));
+    eq('and found the allies there', paste(game.clip.text || '').records.length, 1);
+}
+
+section(`${label}: the game says "Nejsi přihlášen"`);
+{
+    const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, loggedOut: true, openPage: MENU });
+    vm.createContext(game.sandbox);
+    vm.runInContext(code, game.sandbox);
+    await answer(game, 47);
+    for (let i = 0; i < 400; i++) await new Promise(r => setImmediate(r));
+    const logText = game.extra.map(e => String(e.textContent || '')).join('\n');
+    ok('says the game took the request as logged out', /Nejsi přihlášen/.test(logText) && /logout\.php\?t=12/.test(logText),
+        logText.split('\n').filter(l => /CHYBA/.test(l)).join(' '));
+    eq('stops after that first request', game.calls.length, 1);
+    eq('nothing handed over', game.clip.text, null);
+}
+
+section(`${label}: a failing request is never repeated`);
+{
+    const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }, { h: 2, xp: 2, cil: 54 }] } });
+    const serveAll = game.sandbox.fetch;
+    game.sandbox.fetch = async (url, opts) => /p=zebricek/.test(url)
+        ? (game.calls.push(url + ' ' + ((opts && opts.body) || '')), { ok: false, status: 500, url })
+        : serveAll(url, opts);
+    await run(code, game);
+    const seen = new Map();
+    game.calls.forEach(u => seen.set(u, (seen.get(u) || 0) + 1));
+    const twice = [...seen].filter(([, n]) => n > 1).map(([u]) => u);
+    ok('no address asked for twice', !twice.length, twice.join(' | '));
+    eq('the attacks still arrive, without hodnost', paste(game.clip.text || '').records.length, 2);
 }
 
 section(`${label}: just one ally, to try it out`);

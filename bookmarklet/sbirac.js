@@ -92,7 +92,10 @@
 
     /* ------------------------------------------------------------ fetch --- */
 
-    const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+    // The game lives under /wg/; started from the front page, fall back to it.
+    const dir = location.pathname.replace(/[^/]*$/, '');
+    const BASE = location.origin + (dir === '/' ? '/wg/' : dir);
+    let lastUrl = '';
     const started = Date.now();
     let pages = 0;
     const mmss = ms => {
@@ -123,6 +126,7 @@
             ? { method: 'POST', credentials: 'same-origin', body: form,
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
             : { credentials: 'same-origin' });
+        lastUrl = res.url || '';
         if (!res.ok) throw new Error('HTTP ' + res.status + ' na ?' + query);
         const buf = await res.arrayBuffer();
         // The game serves windows-1250 on some pages; try utf-8 first and fall
@@ -130,6 +134,17 @@
         let text = new TextDecoder('utf-8').decode(buf);
         if ((text.match(/�/g) || []).length > 20) {
             text = new TextDecoder('windows-1250').decode(buf);
+        }
+        // The game answers a request it does not take as logged in with its
+        // "Nejsi přihlášen" page. Read as data, that would look like an empty
+        // archive, so stop and say so instead.
+        if (/logout\.php/i.test(lastUrl) || /<title>[^<]*Nejsi p[řr]ihl[áa][šs]en/i.test(text)) {
+            const err = new Error('Hra na požadavek ?' + query + ' odpověděla „Nejsi přihlášen“'
+                + (lastUrl ? ' (' + lastUrl.replace(location.origin, '') + ')' : '')
+                + ', ačkoli ve hře přihlášen jste. Požadavek ze skriptu tedy nebere jako váš.');
+            // Nothing after this would work either; the fallbacks must not swallow it.
+            err.fatal = true;
+            throw err;
         }
         return text;
     }
@@ -153,13 +168,18 @@
 
     /* ----------------------------------------------------- page readers --- */
 
-    /** Allies listed in the alliance archive menu; `ja` marks the signed-in one. */
+    /**
+     * Allies listed in the alliance archive menu; `ja` marks the signed-in one.
+     * Any link to an ally's archive whose text carries "(#id)" counts, so the
+     * exact markup around it does not matter:
+     *   <li class="light40 l"><a href="index.php?p=archiv&amp;tag=1&amp;id=118">+_+sun+_+(#118)</a> - happyguy</li>
+     */
     function allies(html) {
         const out = [];
         const seen = new Set();
-        const re = /<li\b([^>]*)>\s*<a\s+href="index\.php\?p=archiv&(?:amp;)?tag=1&(?:amp;)?id=(\d+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)<\/li>/gi;
+        const re = /(<li\b[^>]*>)?\s*<a\b[^>]*href="[^"]*p=archiv&(?:amp;)?tag=1&(?:amp;)?id=(\d+)"[^>]*>([^<]*\(#\d+\)[^<]*)<\/a>([^<]*)/gi;
         let m;
-        while ((m = re.exec(html)) !== null) {
+        while ((m = re.exec(String(html))) !== null) {
             const id = Number(m[2]);
             if (seen.has(id)) continue;
             seen.add(id);
@@ -167,10 +187,42 @@
                 id,
                 zeme: oneLine(m[3]).replace(/\s*\(#\d+\)\s*$/, ''),
                 hrac: oneLine(m[4]).replace(/^-\s*/, ''),
-                ja: /light40/.test(m[1]),
+                ja: /light40/.test(m[1] || ''),
             });
         }
         return out;
+    }
+
+    /**
+     * The ally list: from the page already open when it is the alliance
+     * archive (no request at all), else from the archive page, else from the
+     * first ally's archive it links to. When none of it works, say what the
+     * game sent back instead.
+     */
+    async function findAllies() {
+        const here = document.documentElement ? document.documentElement.outerHTML : '';
+        let list = allies(here);
+        if (list.length) { say('Seznam spojenců beru z otevřené stránky.'); return list; }
+
+        const first = await page('p=archiv&tag=1');
+        list = allies(first);
+        if (list.length) return list;
+
+        const link = first.match(/p=archiv&(?:amp;)?tag=1&(?:amp;)?id=(\d+)/);
+        let last = first;
+        if (link) {
+            last = await page('p=archiv&tag=1&id=' + link[1]);
+            list = allies(last);
+            if (list.length) return list;
+        }
+
+        const title = ((last.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || '').replace(/\s+/g, ' ').trim();
+        const login = /Nejsi p[řr]ihl[áa][šs]en|logout\.php/i.test(title + ' ' + lastUrl);
+        throw new Error('V archivu nevidím seznam spojenců. Hra vrátila „' + (title || 'stránku bez názvu') + '“'
+            + (lastUrl ? ' (' + lastUrl.replace(location.origin, '') + ')' : '') + '.'
+            + (login
+                ? ' Hra tvrdí, že nejste přihlášen — přihlaste se znovu a spusťte to ze stránky hry.'
+                : ' Otevřete Alianční archiv a spusťte to odtamtud; když ani to nepomůže, pošlete tenhle výpis.'));
     }
 
     /** "30.9.2026 20:25:26" -> Date, read as local time like the game shows it. */
@@ -291,10 +343,8 @@
     let nove = 0, zname = 0, konec = '';
 
     try {
-        say('Načítám alianční archiv…');
-        const first = await page('p=archiv&tag=1');
-        let spojenci = allies(first);
-        if (!spojenci.length) throw new Error('V archivu nevidím seznam spojenců. Jste přihlášen a v alianci?');
+        say('Hledám seznam spojenců…');
+        let spojenci = await findAllies();
         if (ZEME.length) {
             spojenci = spojenci.filter(s => ZEME.indexOf(s.id) >= 0);
         } else {
@@ -336,7 +386,7 @@
             // up to that moment is on the archive pages read next. Without it
             // the run goes on; only that ally's hodnost stays empty.
             try { await zebricekFor(s.id); }
-            catch (e) { if (e.message === STOP) throw e; }
+            catch (e) { if (e.message === STOP || e.fatal) throw e; }
             const rows = [];
             const xpRows = [];
             let vOkne = 0, limit = 0;
@@ -395,7 +445,7 @@
         for (const id of ids) {
             try { await zebricekFor(id); }
             catch (e) {
-                if (e.message === STOP) throw e;
+                if (e.message === STOP || e.fatal) throw e;
                 // A hidden or deleted country; skip it.
             }
         }
