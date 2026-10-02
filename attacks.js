@@ -63,6 +63,16 @@
     /** Messages where we defended rather than attacked; see parseLine. */
     const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)/i;
 
+    /** "10.9.2026 12:12:14" anywhere in a row -> "2026-09-10 12:12:14". */
+    function casOf(text) {
+        // Date and time may be split across the row.
+        const dm = first(text, /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+        const tm = first(text, /(\d{1,2}):(\d{2}):(\d{2})/);
+        if (!dm || !tm) return null;
+        const pad = x => String(x).padStart(2, '0');
+        return `${dm[3]}-${pad(dm[2])}-${pad(dm[1])} ${pad(tm[1])}:${tm[2]}:${tm[3]}`;
+    }
+
     const typeLabel = id => (TYPES.find(t => t.id === id) || {}).label || id;
 
     /* ------------------------------------------------------------- parsing */
@@ -95,14 +105,7 @@
         // store wrong values; it counts as an unrecognised row.
         if (!type) return null;
 
-        // "10.9.2026 12:12:14" - date and time may be split across the row.
-        const dm = first(text, /(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
-        const tm = first(text, /(\d{1,2}):(\d{2}):(\d{2})/);
-        let cas = null;
-        if (dm && tm) {
-            const pad = x => String(x).padStart(2, '0');
-            cas = `${dm[3]}-${pad(dm[2])}-${pad(dm[1])} ${pad(tm[1])}:${tm[2]}:${tm[3]}`;
-        }
+        const cas = casOf(text);
 
         // "zemí Ankh-Morpork(#53)[HOLY] - mikrobbb"
         // Anchored on "zem/zemí" so the timestamp column cannot be swallowed;
@@ -122,7 +125,9 @@
             typ: type ? type.id : null,
             typLabel: type ? type.label : null,
 
-            cil_zeme: cil ? cil[1].trim() : null,
+            // Copied from the rendered page, the mail icon's caption comes
+            // along: "zemí Pošta Ankh-Morpork(#53)".
+            cil_zeme: cil ? cil[1].replace(/^(?:(?:Pošta|Útok|Rakety|Rozvědka|Konflikty)\s+)+/, '').trim() : null,
             cil_id: cil ? num(cil[2]) : null,
             cil_aliance: (cil && cil[3]) ? cil[3].trim() : null,
             cil_hrac: cil ? cil[4].trim() : null,
@@ -233,19 +238,33 @@
         // never names them, so once several allies' attacks share a database
         // this is the only thing telling them apart.
         let attacker = null;
-        // Inside the collector's KONFLIKTY / PROFIL blocks there are no attack
-        // rows; reading them as such would only glue them onto the next row.
+        // Inside the collector's other blocks there are no attack rows;
+        // reading them as such would only glue them onto the next row.
         let inArchive = true;
+        let inXp = false;
+        // Every experience gain in the archive, attacks and defences alike:
+        // hodnost counts both, so working an ally's rank back from today needs
+        // all of them (see applyHodnost).
+        const xpEvents = [];
+        const addXp = (utocnik_id, cas, xp) => {
+            if (utocnik_id && cas && Number.isFinite(xp)) xpEvents.push({ utocnik_id, cas, xp });
+        };
 
         const flush = () => {
             if (!buffer.trim()) { buffer = ''; return; }
+            addXp(attacker && attacker.utocnik_id, casOf(buffer),
+                grab(buffer, /Z[íi]sk[áa]no\s+([\d\s .]+)\s*zku[šs]enost/i));
             const rec = parseLine(buffer);
             if (rec) {
                 // Not part of the signature, so tagging cannot turn a record
                 // already stored into a "new" one.
                 if (attacker) Object.assign(rec, attacker);
                 records.push(rec);
-            } else skipped++;
+            } else if (/Z[íi]sk[áa]no\s+[\d\s .]+\s*zku[šs]enost/i.test(buffer)) {
+                // Only a message with experience that we could not read is
+                // "unrecognised"; headings, menus or žebříček rows are not.
+                skipped++;
+            }
             buffer = '';
         };
 
@@ -253,13 +272,19 @@
             // "### ARCHIV #47 XP Piňáta - mazereon", written by the collector
             // (bookmarklet/sbirac.js), or the archive page's own heading
             // "Alianční archiv (#47)" in a hand-copied page.
-            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL)\b\s*(?:#(\d+))?\s*(.*)$/i);
+            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL|XP|ZEBRICEK)\b\s*(?:#(\d+))?\s*(.*)$/i);
             const h1 = !sec && line.match(/Alian[čc]n[íi]\s+archiv\s*\(#(\d+)\)/i);
             if (sec || h1) {
                 flush();
+                inXp = false;
                 if (h1) {
                     attacker = { utocnik_id: Number(h1[1]) };
                     inArchive = true;
+                } else if (sec[1].toUpperCase() === 'XP') {
+                    // "### XP #47", then "2026-10-01 08:21:36<TAB>1088" lines.
+                    attacker = sec[2] ? { utocnik_id: Number(sec[2]) } : null;
+                    inArchive = false;
+                    inXp = true;
                 } else if (sec[1].toUpperCase() === 'ARCHIV') {
                     attacker = sec[2] ? { utocnik_id: Number(sec[2]) } : null;
                     const name = (sec[3] || '').trim();
@@ -274,6 +299,11 @@
                 }
                 return;
             }
+            if (inXp) {
+                const m = line.match(/^\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\d+)\s*$/);
+                if (m) addXp(attacker && attacker.utocnik_id, m[1], Number(m[2]));
+                return;
+            }
             if (!inArchive) return;
 
             buffer += (buffer ? ' ' : '') + line.trim();
@@ -282,7 +312,16 @@
         });
         flush();
 
-        return { records, skipped };
+        // The collector lists an ally's XP rows separately and may also send
+        // the same attack as a row; count each gain once.
+        const seen = new Set();
+        const unique = xpEvents.filter(e => {
+            const k = `${e.utocnik_id}|${e.cas}|${e.xp}`;
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+        });
+        return { records, skipped, xpEvents: unique };
     }
 
     /* --------------------------------------------------------------- store */
@@ -551,52 +590,136 @@
     }
 
     /**
-     * The collector's "### PROFIL #id" blocks -> { id: parseZeme(block) }.
-     * Only blocks that yielded a hodnost or prestiž are kept.
+     * Hodnost by rank experience, manual 12.4.1: the number is the rank, `min`
+     * the experience it starts at. Defence counts as well as attack.
      */
-    function parseProfily(rawText) {
-        const text = htmlToText(rawText);
-        const parts = String(text).replace(/\r/g, '')
-            .split(/^[ \t]*###[ \t]*PROFIL[ \t]*#(\d+)[^\n]*$/m);
-        const out = {};
-        for (let i = 1; i < parts.length; i += 2) {
-            const body = String(parts[i + 1] || '').split(/\n[ \t]*###/)[0];
-            const z = parseZeme(body);
-            if (z.hodnost != null || z.prestiz != null) out[parts[i]] = Object.assign(z, { id: Number(parts[i]) });
+    const RANKS = [
+        [1, 'Farmář', 0], [2, 'Rekrut', 10000], [3, 'Velitel bunkrů', 20000],
+        [4, 'Průzkumník', 40000], [5, 'Velitel tanků', 80000], [6, 'Velitel mechů', 150000],
+        [7, 'Poručík letectva', 250000], [8, 'Kapitán gardy', 400000], [9, 'Major', 600000],
+        [10, 'Plukovník', 850000], [11, 'Generál', 1100000], [12, 'Armádní generál', 1500000],
+        [13, 'Kápo', 2200000], [14, 'Nepřítel populace', 3000000], [15, 'Ničitel populace', 3400000],
+        [16, 'Nepřítel národů', 3900000], [17, 'Ničitel národů', 4500000], [18, 'Nepřítel světa', 5200000],
+        [19, 'Ničitel světa', 6000000], [20, 'Nepřítel WG', 7000000],
+    ].map(([n, nazev, min]) => ({ n, nazev, min }));
+
+    /** The rank a given amount of rank experience means. */
+    function rankFor(xp) {
+        let r = RANKS[0];
+        for (const x of RANKS) if (xp >= x.min) r = x;
+        return r;
+    }
+    const rankMin = n => (RANKS.find(r => r.n === n) || RANKS[0]).min;
+
+    /** "46k" -> range 45 500 - 46 999 (rounded or cut, either way); "81302" -> exact. */
+    function xpRange(num, unit) {
+        const v = parseFloat(String(num).replace(/[\s ]/g, '').replace(',', '.'));
+        if (!Number.isFinite(v)) return null;
+        if (/^k$/i.test(unit || '')) return { xp: v * 1e3, lo: v * 1e3 - 500, hi: v * 1e3 + 999 };
+        if (/^M$/i.test(unit || '')) {
+            const step = /[.,]/.test(String(num)) ? 1e5 : 1e6;
+            return { xp: v * 1e6, lo: v * 1e6 - step / 2, hi: v * 1e6 + step - 1 };
         }
+        return { xp: v, lo: v, hi: v };
+    }
+
+    /**
+     * Countries with their rank experience, from the žebříček
+     * (index.php?p=zebricek) or the alliance member list, copied or as the
+     * collector's "### ZEBRICEK <cas>" block:
+     *
+     *   on 85 Pošta Útok … XP Piňáta(#47)[EJZ] - mazereon (#436276) (zástupce) …  4 407km2  46k  167k  (4)  EJZ  Tech
+     *   Lord Azeroth(#55) - StRRiPes  4642km2  81302  170771  (5)  Fund
+     *
+     * After the area come rank experience, prestiž and "(hodnost)". The block's
+     * time says when the numbers were read; a plain paste counts as read now.
+     * Returns { id: { xp, lo, hi, prestiz, hodnost, at } }.
+     */
+    function parseZebricek(rawText, now) {
+        const text = htmlToText(rawText);
+        const out = {};
+        let at = null;
+        const nowCas = (() => {
+            const d = now instanceof Date ? now : new Date();
+            const p = x => String(x).padStart(2, '0');
+            return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        })();
+        const ROW = /\(#(\d+)\)[\s\S]*?(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+([\d.,]+)\s*([kM])?\s+([\d.,]+)\s*([kM])?\s+\((\d+)\)/;
+        String(text).replace(/\r/g, '').split('\n').forEach(line => {
+            const head = line.match(/^\s*###\s*(\S+)\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})?/);
+            if (head) { at = head[1].toUpperCase() === 'ZEBRICEK' ? (head[2] || null) : null; return; }
+            const m = line.match(ROW);
+            if (!m) return;
+            const xp = xpRange(m[2], m[3]);
+            const pr = xpRange(m[4], m[5]);
+            if (!xp) return;
+            out[m[1]] = Object.assign(xp, {
+                id: Number(m[1]), prestiz: pr ? pr.xp : null, hodnost: Number(m[6]), at: at || nowCas,
+            });
+        });
         return out;
     }
 
     /**
-     * Fill hodnost from country profiles into attacks that lack it: the
-     * defender's from the target's profile, the attacker's from the ally's.
+     * Hodnost of both sides at the moment of each attack.
      *
-     * A profile shows the rank as it is NOW, so only attacks from the last
-     * `hodin` hours (default 72) get it - further back the rank may already
-     * have moved. A value already on a record is never overwritten.
+     * Attacker (an ally): today's rank experience minus every gain in that
+     * ally's archive from the attack on - its own XP included, since the rank
+     * during an attack is the one before its XP is added. Only gains up to the
+     * moment the experience was read count. `neviditelne` allows for gains the
+     * Útoky tab does not show (spy operations, rockets); with a rounded figure
+     * ("46k") the range widens further. If the range spans a rank threshold
+     * the rank is left empty rather than guessed.
+     *
+     * Defender (an enemy): their archive is not ours to see, so only today's
+     * rank is known. It is written only when they are at least `rezerva` above
+     * that rank's threshold - well past it, so not crossed just now.
+     *
+     * Only attacks within `okno` hours of the reading are touched, and a value
+     * already on a record is never overwritten.
      */
-    function applyProfily(records, profiles, opts) {
-        const o = opts || {};
-        const now = o.now instanceof Date ? o.now : new Date();
-        const from = now.getTime() - (o.hodin || 72) * 3600 * 1000;
+    function applyHodnost(records, xpEvents, zebricek, opts) {
+        const o = Object.assign({ okno: 72, rezerva: 5000, neviditelne: 1000 }, opts || {});
         const empty = v => v === null || v === undefined || v === '';
-
-        let filled = 0, touched = 0;
-        (records || []).forEach(rec => {
-            const t = casDate(rec.cas);
-            if (!t || t.getTime() < from) return;
-            let hit = false;
-            const def = rec.cil_id != null ? profiles[rec.cil_id] : null;
-            if (def && def.hodnost != null && empty(rec.hodnost_obrance)) {
-                rec.hodnost_obrance = def.hodnost; filled++; hit = true;
-            }
-            const atk = rec.utocnik_id != null ? profiles[rec.utocnik_id] : null;
-            if (atk && atk.hodnost != null && empty(rec.hodnost_utocnik)) {
-                rec.hodnost_utocnik = atk.hodnost; filled++; hit = true;
-            }
-            if (hit) touched++;
+        const byAlly = new Map();
+        (xpEvents || []).forEach(e => {
+            if (!byAlly.has(e.utocnik_id)) byAlly.set(e.utocnik_id, []);
+            byAlly.get(e.utocnik_id).push(e);
         });
-        return { filled, touched, profiles: Object.keys(profiles || {}).length };
+
+        const res = { utocnik: 0, obrance: 0, nejiste: 0 };
+        (records || []).forEach(rec => {
+            if (!rec.cas) return;
+            const atk = rec.utocnik_id ? zebricek[rec.utocnik_id] : null;
+            const def = rec.cil_id ? zebricek[rec.cil_id] : null;
+
+            if (atk && empty(rec.hodnost_utocnik) && inWindow(rec.cas, atk.at, o.okno)) {
+                const events = byAlly.get(rec.utocnik_id) || [];
+                // The attack's own row must be among the gains, or the list
+                // does not reach back far enough to start from.
+                const own = events.some(e => e.cas === rec.cas && e.xp === rec.xp);
+                const after = events.filter(e => e.cas >= rec.cas && e.cas <= atk.at);
+                const sum = after.reduce((a, e) => a + e.xp, 0);
+                const lo = rankFor(atk.lo - sum - o.neviditelne);
+                const hi = rankFor(atk.hi - sum);
+                if (own && lo.n === hi.n) { rec.hodnost_utocnik = lo.n; res.utocnik++; }
+                else res.nejiste++;
+            }
+
+            if (def && empty(rec.hodnost_obrance) && inWindow(rec.cas, def.at, o.okno)) {
+                const now = def.hodnost || rankFor(def.lo).n;
+                if (def.lo - rankMin(now) >= o.rezerva) { rec.hodnost_obrance = now; res.obrance++; }
+                else res.nejiste++;
+            }
+        });
+        return res;
+    }
+
+    /** True when `cas` lies within `hours` before `at` (both "YYYY-MM-DD HH:MM:SS"). */
+    function inWindow(cas, at, hours) {
+        const a = casDate(cas), b = casDate(at);
+        if (!a || !b) return false;
+        return a <= b && b - a <= hours * 3600 * 1000;
     }
 
     /** "1.6" / "1,6" -> 1.6 ; grab() would read the dot as a separator. */
@@ -774,8 +897,10 @@
         PRESTIGE_TABLE,
         parseKonflikty,
         applyKonflikty,
-        parseProfily,
-        applyProfily,
+        parseZebricek,
+        applyHodnost,
+        rankFor,
+        RANKS,
         DEFENCE,
         casDate,
         prestigeNum,

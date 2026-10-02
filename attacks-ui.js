@@ -46,6 +46,12 @@
      *  them. Each gets an id so merging stays idempotent. */
     let konfliktRows = [];
 
+    /** XP gains read from archives, and rank experience from the žebříček,
+     *  for working out hodnost (A.applyHodnost). Kept for the session only:
+     *  the žebříček is a snapshot that goes stale. */
+    const xpLog = [];
+    const zebLog = {};
+
     let ui = {};
     let fileHandle = null;
 
@@ -596,7 +602,7 @@
         // One box for everything: an attack log, a Konflikty list, or both at
         // once. Navigating to the right page is the tedious part, so whatever
         // comes back should just work without being sorted into two boxes.
-        const { records, skipped } = A.parsePaste(text);
+        const { records, skipped, xpEvents } = A.parsePaste(text);
         const { added, duplicates } = store.addMany(records);
 
         const bits = [];
@@ -617,13 +623,23 @@
                 + (res.ambiguous ? ` (${res.ambiguous} nejasných — víc spojenců na stejný cíl ve stejné minutě)` : ''));
         }
 
-        // Profiles from the collector carry hodnost. Only empty fields are
-        // filled, and only on attacks from the last 72 h - a profile shows the
-        // rank as it is now.
-        const prof = A.parseProfily(text);
-        if (Object.keys(prof).length) {
-            const res = A.applyProfily(store.records, prof, { hodin: 72 });
-            bits.push(`hodnost z ${res.profiles} profilů doplněna k ${res.touched} útokům`);
+        // Hodnost needs the archive's XP gains and the žebříček's experience.
+        // Either may come in a paste of its own, so both are kept for the
+        // session and applied together.
+        const keys = new Set(xpLog.map(e => `${e.utocnik_id}|${e.cas}|${e.xp}`));
+        (xpEvents || []).forEach(e => {
+            const k = `${e.utocnik_id}|${e.cas}|${e.xp}`;
+            if (!keys.has(k)) { xpLog.push(e); keys.add(k); }
+        });
+        const zeb = A.parseZebricek(text);
+        Object.assign(zebLog, zeb);
+        if (Object.keys(zebLog).length) {
+            const res = A.applyHodnost(store.records, xpLog, zebLog);
+            if (Object.keys(zeb).length || res.utocnik || res.obrance) {
+                bits.push(`žebříček: ${Object.keys(zebLog).length} zemí, hodnost útočníka doplněna k ${res.utocnik}`
+                    + `, obránce k ${res.obrance}`
+                    + (res.nejiste ? `, ${res.nejiste}× nejisté (blízko hranice hodnosti) — nechávám prázdné` : ''));
+            }
         }
 
         if (!bits.length) {
@@ -856,7 +872,7 @@
                         <a id="sbiracLink" href="#" class="sbirac-link">wg sběrač</a>
                         na lištu záložek. Pak na kterékoli stránce
                         <code>gold.webgame.cz</code> klikněte na záložku — projde alianční archiv
-                        všech spojenců za 72 h, konflikty i profily a výsledek dá do schránky.
+                        všech spojenců za 72 h, konflikty a žebříček (kvůli hodnosti) a výsledek dá do schránky.
                         Stránky načítá tempem čtenáře (5–10 s každá), takže to trvá pár minut;
                         ten panel nechte otevřený. Sem pak stačí vložit (Ctrl+V) a „Načíst útoky“.
                         <button type="button" class="submit" id="sbiracCopy">Zkopírovat adresu záložky</button>

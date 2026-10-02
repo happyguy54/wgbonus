@@ -8,13 +8,15 @@
  *      the last HODIN hours        index.php?p=archiv&typ=1&tag=1&id=<ally>
  *   2. konflikty of each ally that attacked in that window - prestiž of both
  *      sides                       index.php?p=konflikty&spec=6&land_6=<ally>&hours_6=<HODIN>
- *   3. the profile of every attacker and every target hit - hodnost
- *                                  index.php?p=najit&s=najitzem&hid=<id>
+ *   3. the žebříček around every ally and every target hit - rank experience
+ *      and hodnost, as the "Najít" button there asks for it
+ *                                  POST index.php?p=zebricek  type=1&search_id=<id>
  *
  * It all goes onto the clipboard as one text, to be pasted once into
  * "Vložit z herního logu" on the wgbonus page. Each block starts with a
- * "### ARCHIV #47 …" / "### KONFLIKTY #47" / "### PROFIL #53" line, which is
- * how the page knows whose attack each row is.
+ * "### ARCHIV #47 …" / "### XP #47" / "### KONFLIKTY #47" / "### ZEBRICEK <time>"
+ * line, which is how the page knows whose attack each row is and works out
+ * the hodnost at the time of every attack.
  *
  * No password or cookie leaves the browser.
  *
@@ -44,9 +46,10 @@
     // the click itself and goes at once. A run takes minutes because of it.
     const PAUZA_S = [5, 10];
 
-    // Archive pages per ally (30 messages each) and profiles per run.
+    // Archive pages per ally (30 messages each) and žebříček searches for
+    // targets per run.
     const MAX_STRAN = 20;
-    const MAX_PROFILU = 30;
+    const MAX_ZEBRICEK = 30;
 
     if (!location.hostname.endsWith(HOST)) {
         alert('Spusťte to na stránce ' + HOST + ' (kdekoliv, stačí být přihlášen).');
@@ -109,13 +112,17 @@
         });
     }
 
-    async function page(query) {
+    /** One game page; with `form`, sent the way a form's button sends it. */
+    async function page(query, form) {
         if (pages) await pause();
         if (stopped) throw new Error(STOP);
         pages++;
         document.title = '(' + pages + ') wg sběrač';
         status('Načítám stránku ' + pages + '…');
-        const res = await fetch(BASE + 'index.php?' + query, { credentials: 'same-origin' });
+        const res = await fetch(BASE + 'index.php?' + query, form
+            ? { method: 'POST', credentials: 'same-origin', body: form,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+            : { credentials: 'same-origin' });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' na ?' + query);
         const buf = await res.arrayBuffer();
         // The game serves windows-1250 on some pages; try utf-8 first and fall
@@ -194,11 +201,13 @@
             if (!t) continue;
             const text = oneLine(m[2]);
             const cil = text.match(/\(#(\d+)\)/);
+            const xp = text.match(/Z[íi]sk[áa]no\s+([\d\s]+?)\s*zku[šs]enost/i);
             out.push({
                 t,
                 // Same layout as a row copied from the game: date, time, message.
                 line: datum.replace(/\s+/, '\t') + '\t' + text,
-                xp: /Z[íi]sk[áa]no\s+[\d\s]+\s*zku[šs]enost/i.test(text),
+                xp: !!xp,
+                xpVal: xp ? Number(xp[1].replace(/\s+/g, '')) : null,
                 // Defending earns experience too: "… prolomila naši obranu …",
                 // "… na nás podnikla partyzánský útok" (they hit us) and "Byli
                 // jsme povoláni … na pomoc v obraně" (we helped an ally). Not our
@@ -222,11 +231,36 @@
         return best;
     }
 
+    /* -------------------------------------------------------- žebříček --- */
+
+    // Rank experience and hodnost by country. A search shows the country among
+    // its neighbours, so one already seen on an earlier page is not looked up
+    // again. Each block carries the time it was read: the page counts an
+    // ally's XP gains only up to that moment.
+    const zebricek = [];
+    const naZebricku = new Set();
+
+    async function zebricekFor(id) {
+        if (naZebricku.has(id)) return;
+        naZebricku.add(id);
+        const html = await page('p=zebricek', 'type=1&search_id=' + id + '&action=' + encodeURIComponent('Najít'));
+        const at = casKey(new Date());
+        const rows = [];
+        (html.match(/<tr\b[\s\S]*?<\/tr>/gi) || []).forEach(tr => {
+            const line = oneLine(tr);
+            const m = line.match(/\(#(\d+)\)/);
+            if (!m || !/km2?\s/.test(line) || !/\(\d+\)/.test(line)) return;
+            rows.push(line);
+            naZebricku.add(Number(m[1]));
+        });
+        if (rows.length) zebricek.push('### ZEBRICEK ' + at + '\n' + rows.join('\n'));
+    }
+
     /* ------------------------------------------------------------- main --- */
 
     const archivy = [];
+    const xpBloky = [];
     const konflikty = [];
-    const profily = [];
     let nove = 0, zname = 0, konec = '';
 
     try {
@@ -265,7 +299,13 @@
         const cile = new Set();
 
         for (const s of spojenci) {
+            // The ally's experience is read BEFORE its archive, so every gain
+            // up to that moment is on the archive pages read next. Without it
+            // the run goes on; only that ally's hodnost stays empty.
+            try { await zebricekFor(s.id); }
+            catch (e) { if (e.message === STOP) throw e; }
             const rows = [];
+            const xpRows = [];
             let vOkne = 0, limit = 0;
             try {
                 for (let n = 0; n < MAX_STRAN; n++) {
@@ -274,6 +314,8 @@
                     let older = false;
                     for (const m of msgs) {
                         if (m.t < cutoff) { older = true; continue; }
+                        // Every gain counts towards hodnost, defences included.
+                        if (m.xp) xpRows.push(casKey(m.t) + '\t' + m.xpVal);
                         if (!m.xp || m.obrana) continue;
                         vOkne++;
                         if (known.has(casKey(m.t) + '|' + (m.cil == null ? '' : m.cil))) { zname++; continue; }
@@ -295,6 +337,7 @@
                     + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
                 if (rows.length) {
                     archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
+                    xpBloky.push('### XP #' + s.id + '\n' + xpRows.join('\n'));
                     utocnici.push(s.id);
                     nove += rows.length;
                 }
@@ -307,23 +350,21 @@
             }
         }
 
-        // Attackers first - their rank applies to every attack they made.
-        const all = utocnici.concat([...cile].filter(id => utocnici.indexOf(id) < 0));
-        const ids = all.slice(0, MAX_PROFILU);
+        // Targets' hodnost, from the žebříček too; many turn up on pages
+        // already read.
+        const all = [...cile].filter(id => !naZebricku.has(id));
+        const ids = all.slice(0, MAX_ZEBRICEK);
         if (ids.length) {
-            say('Ještě ' + ids.length + ' profilů (hodnost)'
+            say('Ještě nejvýš ' + ids.length + ' hledání v žebříčku (hodnost cílů)'
                 + (all.length > ids.length ? ' z ' + all.length + ', víc se nebere' : '')
                 + ', zhruba ' + mmss(ids.length * avgPause) + ' min.');
         }
         for (const id of ids) {
-            let html;
-            try { html = await page('p=najit&s=najitzem&hid=' + id); }
+            try { await zebricekFor(id); }
             catch (e) {
                 if (e.message === STOP) throw e;
                 // A hidden or deleted country; skip it.
-                continue;
             }
-            profily.push('### PROFIL #' + id + '\n' + flatten(html));
         }
     } catch (err) {
         konec = err.message === STOP ? 'Zastaveno — beru, co už je.' : 'CHYBA: ' + err.message;
@@ -333,7 +374,7 @@
     /* ---- hand it over ----------------------------------------------------- */
     stopBtn.style.display = 'none';
     status('');
-    const out = archivy.concat(konflikty, profily).join('\n\n');
+    const out = archivy.concat(xpBloky, konflikty, zebricek).join('\n\n');
     if (!archivy.length && !konflikty.length) {
         say('\n' + (konec ? 'Nic nesebráno.' : 'Za posledních ' + HODIN + ' h nic nového'
             + (zname ? ' (' + zname + ' útoků už v databázi)' : '') + '.'));
@@ -341,7 +382,7 @@
         return;
     }
     say('\n' + nove + ' nových útoků' + (zname ? ', ' + zname + ' už v databázi' : '')
-        + ', ' + konflikty.length + '× konflikty, ' + profily.length + ' profilů'
+        + ', ' + konflikty.length + '× konflikty, ' + naZebricku.size + ' zemí v žebříčku'
         + ' · ' + pages + ' stránek za ' + mmss(Date.now() - started) + '.');
     document.title = '✓ wg sběrač — hotovo';
     try {

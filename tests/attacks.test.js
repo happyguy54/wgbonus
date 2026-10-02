@@ -472,4 +472,77 @@ section('Lord Azeroth (#55), 1.10.: defences and conquests are not stored as att
     ok('our own partisan attack is not', !A.DEFENCE.test('Naši partyzáni podnikli útok na zemi X(#5) a zabili 10 vojáků.'));
 }
 
+section('žebříček and alliance rows, as copied from the game');
+{
+    const z = A.parseZebricek('on\t85\tPošta Útok Rakety Rozvědka Konflikty XP Piňáta(#47)[EJZ] - mazereon (#436276) (zástupce) Vítěz 94.věku94\t4 407km2\t46k\t167k\t(4)\tEJZ\tTech\t\n'
+        + 'Lord Azeroth(#55) - StRRiPes\t4642km2\t81302\t170771\t(5)\tFund');
+    eq('žebříček row: country id, not the player id after it', Object.keys(z).sort().join(','), '47,55');
+    eq('"46k" read as 46 000', z[47].xp, 46000);
+    eq('rounded figure kept as a range', `${z[47].lo}-${z[47].hi}`, '45500-46999');
+    eq('hodnost shown in brackets', z[47].hodnost, 4);
+    eq('prestiž', z[47].prestiz, 167000);
+    eq('alliance row: exact experience', `${z[55].lo}-${z[55].hi}`, '81302-81302');
+    eq('alliance row hodnost', z[55].hodnost, 5);
+    eq('rank table: 80 000 starts Velitel tanků', A.rankFor(80000).nazev, 'Velitel tanků');
+    eq('rank table: 79 999 is still Průzkumník', A.rankFor(79999).n, 4);
+}
+
+section('hodnost of an ally, worked back from its archive (Lord Azeroth, 1.10.)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    // The real Útoky tab, with the page heading that names whose archive it is,
+    // and the alliance row read just after its last message.
+    const archive = 'Alianční archiv (#55)\n'
+        + fs.readFileSync(path.join(__dirname, '..', 'samples', 'archiv-utoky-55.txt'), 'utf8');
+    const { xpEvents } = A.parsePaste(archive);
+    eq('every XP row counted, defences included', xpEvents.length, 12);
+    eq('their sum', xpEvents.reduce((a, e) => a + e.xp, 0), 25029);
+    const zeb = A.parseZebricek('### ZEBRICEK 2026-10-01 08:30:00\nLord Azeroth(#55) - StRRiPes\t4642km2\t81302\t170771\t(5)\tFund');
+
+    // Lord Azeroth's two conquests on kamcatka, as attack records.
+    const first = { cas: '2026-10-01 06:40:50', xp: 3599, utocnik_id: 55, cil_id: 49 };
+    const second = { cas: '2026-10-01 06:41:12', xp: 2865, utocnik_id: 55, cil_id: 49 };
+    // An attack one gain before the threshold was crossed: 80 214 - 1 088.
+    const edge = { cas: '2026-10-01 08:21:36', xp: 1088, utocnik_id: 55, cil_id: 96 };
+    const res = A.applyHodnost([first, second, edge], xpEvents, zeb);
+    eq('06:40:50 - rank 4, though the ally is 5 today', first.hodnost_utocnik, 4);
+    eq('06:41:12 - rank 4', second.hodnost_utocnik, 4);
+    eq('right at the threshold the rank is left empty', edge.hodnost_utocnik, undefined);
+    eq('and counted as uncertain', res.nejiste, 1);
+
+    const kept = { cas: '2026-10-01 06:40:50', xp: 3599, utocnik_id: 55, hodnost_utocnik: 9 };
+    A.applyHodnost([kept], xpEvents, zeb);
+    eq('a value already there is never overwritten', kept.hodnost_utocnik, 9);
+
+    const missing = { cas: '2026-10-01 05:00:00', xp: 777, utocnik_id: 55 };
+    A.applyHodnost([missing], xpEvents, zeb);
+    eq('an attack not in the pasted archive is not guessed', missing.hodnost_utocnik, undefined);
+}
+
+section('hodnost of a defender: only when well past its threshold');
+{
+    const zeb = A.parseZebricek('### ZEBRICEK 2026-10-02 10:00:00\n'
+        + 'A(#1) - a\t100km2\t46k\t1k\t(4)\n'
+        + 'B(#2) - b\t100km2\t44k\t1k\t(4)\n'
+        + 'C(#3) - c\t100km2\t85000\t1k\t(5)');
+    const at = cil => ({ cas: '2026-10-02 08:00:00', cil_id: cil });
+    const [a, b, c] = [at(1), at(2), at(3)];
+    A.applyHodnost([a, b, c], [], zeb);
+    eq('46k (at least 45 500, 5 500 past 40 000) - written', a.hodnost_obrance, 4);
+    eq('44k (maybe 43 500, under 5 000 past) - left empty', b.hodnost_obrance, undefined);
+    eq('85 000 exact, exactly 5 000 past 80 000 - written', c.hodnost_obrance, 5);
+    const old = { cas: '2026-09-28 08:00:00', cil_id: 1 };
+    A.applyHodnost([old], [], zeb);
+    eq('an attack 4 days before the reading is left alone', old.hodnost_obrance, undefined);
+}
+
+section('a row copied from the Útoky tab');
+{
+    const r = A.parseLine('1.10.2026 12:12:14 Nová - Útoky Našim mechům se podařilo během nočního tažení zemí Pošta Ankh-Morpork(#53)[HOLY] - mikrobbb zlikvidovat 10 nepřipravených vojáků. Zničeno bylo 5 útočících a 3 bránících mechů. Získáno 150 zkušeností.');
+    eq('the mail icon\'s caption is not part of the name', r && r.cil_zeme, 'Ankh-Morpork');
+    eq('type', r && r.typ, 'nocni');
+    eq('time', r && r.cas, '2026-10-01 12:12:14');
+}
+
 process.exit(done() ? 1 : 0);

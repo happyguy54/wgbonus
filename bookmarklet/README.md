@@ -42,7 +42,10 @@ se předá stejně.
 1. **Alianční archiv všech spojenců** (i váš vlastní, je v tom seznamu taky),
    jen útoky — `p=archiv&typ=1&tag=1&id=<spojenec>`
 2. **Konflikty** každého spojence, který v okně útočil — prestiž obou stran
-3. **Profil** každého útočníka a každého napadeného — **hodnost**
+3. **Žebříček** kolem každého spojence a každého napadeného — hodnostní
+   zkušenosti a **hodnost** (stejné hledání jako tlačítko „Najít“ v žebříčku
+   podle čísla země; země, které už byly na dříve načtené stránce, se znovu
+   nehledají)
 
 Každý útok si nese, **kdo útočil** (`utocnik_id`, země, hráč). Bez toho by se
 útoky různých spojenců v jedné databázi nedaly rozlišit — a s nimi ani jejich
@@ -57,8 +60,28 @@ Konflikty dál dozadu nesahají, takže u staršího útoku stejně není presti
 a hodnost se za pár dní posune natolik, že by ta čísla pletla. Jakmile stránka
 archivu sáhne za hranici, sběrač dál nelistuje.
 
-Hodnost z profilu je ta **dnešní**, proto se doplní jen k útokům z posledních
-72 hodin a **nikdy nepřepíše** hodnotu, která už u útoku je.
+## Hodnost v okamžiku útoku
+
+Žebříček ukazuje hodnost a zkušenosti **dnes**. Útok mohl proběhnout, když
+země měla hodnost ještě o stupeň nižší — Lord Azeroth (#55) útočil 1.10.
+v 6:40 jako **Průzkumník (4)** a Velitelem tanků (5) se stal až v 8:01 při
+obraně. Proto:
+
+- **Útočník (spojenec):** od dnešních zkušeností se odečte každý zisk z jeho
+  archivu od útoku dál — **i z obrany**, ta se do hodnosti počítá taky
+  (manuál 12.4.1). Ze zaokrouhleného čísla („46k“) a zisků, které záložka
+  Útoky neukazuje (rozvědka, rakety, rezerva 1 000), vyjde rozpětí; když
+  přes něj vede hranice hodnosti, hodnost se **nechá prázdná**
+- **Obránce (nepřítel):** jeho archiv nevidíme, takže jen dnešní hodnost — a ta
+  se zapíše, jen když má **aspoň 5 000 zkušeností nad hranicí** své hodnosti,
+  tedy ji nezískal právě teď
+- jen u útoků z posledních 72 h před přečtením žebříčku; hodnota, která už
+  u útoku je, se **nikdy nepřepíše**
+
+Ručně to jde taky: vložte záložku Útoky spojence (celou stránku, Ctrl+A —
+nadpis „Alianční archiv (#55)“ říká, čí je) a pak stránku žebříčku nebo
+aliance s jeho řádkem. Pozor, obránce dobře bráněný zvládne 5 000 zkušeností
+za pár obran — Lord Azeroth získal 18 500 za 25 minut.
 
 ## Nastavení
 
@@ -95,10 +118,10 @@ Přesně tolik, kolik by trvalo stránky proklikat ručně.
 Kolik to trvá (průměr 7,5 s na stránku):
 
 - **první běh** — 7 spojenců, za 72 h třeba 15 stránek archivu, konflikty
-  u těch, kdo útočili, a profily nových cílů (nejvýš 30): kolem 50 stránek,
-  **asi 6 minut**
+  u těch, kdo útočili, a žebříček kolem spojenců a cílů (nejvýš 30 hledání,
+  obvykle míň): kolem 35–45 stránek, **asi 5 minut**
 - **další běhy** — u každého spojence aspoň jedna stránka archivu, konflikty
-  a profily jen k novým útokům: kolem 15–20 stránek, **2–3 minuty**
+  a žebříček jen k novým útokům: kolem 15–20 stránek, **2–3 minuty**
 
 Konflikty se berou jen u spojenců, kteří mají něco nového — útoky z minula
 už je dostaly. Kdyby někomu chyběla prestiž u starších útoků, vložte jeho

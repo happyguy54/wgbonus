@@ -62,10 +62,11 @@ function konfliktRow(k) {
 
 /**
  * attacks: { allyId: [{ h, xp, cil, obrana? }] } - h = hours ago, newest first
- * hodnost: { countryId: rank } for the profile pages
+ * zeb:     { countryId: ['46k', 4] } - rank experience and hodnost in the žebříček
  * stored:  `cas` + target of attacks the worker already holds, or null = no worker
  */
-function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = false, onFetch = null }) {
+const ALLIES = [44, 47, 52, 55, 68, 83, 118];
+function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = false, onFetch = null }) {
     const calls = [];
     const clip = { text: null };
     const extra = [];
@@ -74,12 +75,29 @@ function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = 
 
     const rowsFor = id => (attacks[id] || []).map(a => Object.assign({ t: ago(a.h) }, a));
 
-    const serve = url => {
+    /** One žebříček row, laid out like the one copied from the game. */
+    const zebRow = id => {
+        const [xp, h] = zeb[id] || ['10k', 2];
+        return `<tr><td>on</td><td>${id}</td><td><a href="index.php?p=mail&amp;to_id=${id}"><img src="img/mail.gif" alt="Pošta"></a>&nbsp;`
+            + `<a href="index.php?p=najit&amp;s=najitzem&amp;hid=${id}">Země ${id}(#${id})</a><a href="index.php?p=najit&amp;s=najittag&amp;tag=X">[X]</a>`
+            + `<a class="pname"> - hrac${id}</a> <span class="pname">(#4${id}0)</span> <img src="img/hvezda.gif" alt="Vítěz 94.věku"><span>94</span></td>`
+            + `<td class="r">4&nbsp;407km<sup>2</sup></td><td class="r">${xp}</td><td class="r">167k</td><td class="c">(${h})</td><td>X</td><td>Tech</td></tr>`;
+    };
+
+    const serve = (url, form) => {
         const q = url.split('?')[1] || '';
         const param = k => { const m = q.match(new RegExp('(?:^|&)' + k + '=([^&]*)')); return m ? m[1] : null; };
         if (/\/attacks\?/.test(url)) {
             if (stored === 'down') throw new Error('connection refused');
             return JSON.stringify({ records: stored.map(([d, cil]) => ({ cas: casOf(d), cil_id: cil })) });
+        }
+        if (param('p') === 'zebricek') {
+            // A search shows the country among its neighbours: here the
+            // allies all sit together, an enemy shows alone.
+            const id = Number(((form || '').match(/search_id=(\d+)/) || [])[1]);
+            const ids = ALLIES.includes(id) ? ALLIES : [id];
+            return '<table class="vis_tbl"><tbody><tr><th>Pořadí</th><th>Země</th></tr>'
+                + ids.map(zebRow).join('') + '</tbody></table>';
         }
         if (param('p') === 'archiv' && param('typ') === '1') {
             const all = rowsFor(Number(param('id')));
@@ -132,10 +150,11 @@ function makeGame({ attacks = {}, hodnost = {}, stored = null, clipboardFails = 
         TextDecoder: global.TextDecoder,
         setTimeout: (fn, ms) => { delays.push(ms); return setImmediate(fn); },
         clearTimeout: t => clearImmediate(t),
-        async fetch(url) {
-            calls.push(url);
+        async fetch(url, opts) {
+            const form = opts && opts.body;
+            calls.push(form ? url + ' ' + form : url);
             if (onFetch) onFetch(url, calls.length, extra);
-            const body = serve(url);
+            const body = serve(url, form);
             if (/\/attacks\?/.test(url)) return { ok: true, json: async () => JSON.parse(body) };
             return { ok: true, arrayBuffer: async () => Buffer.from(body, 'utf8') };
         },
@@ -168,9 +187,9 @@ function paste(text, store = new A.AttackStore()) {
     const added = store.addMany(records);
     const konf = A.parseKonflikty(text);
     const k = A.applyKonflikty(store.records, konf);
-    const prof = A.parseProfily(text);
-    const pr = A.applyProfily(store.records, prof, { hodin: 72 });
-    return { store, records, added, konf, k, prof, pr };
+    const zeb = A.parseZebricek(text);
+    const h = A.applyHodnost(store.records, A.parsePaste(text).xpEvents, zeb);
+    return { store, records, added, konf, k, zeb, h };
 }
 
 /* ----------------------------------------------------------- scenarios -- */
@@ -201,7 +220,9 @@ section(`${label}: every ally in the alliance archive`);
                   { h: 5, xp: 2003, cil: 87, pomoc: true }],
             55: [{ h: 500, xp: 3001, cil: 60 }],
         },
-        hodnost: { 47: 16, 118: 3, 53: 12, 91: 9 },
+        // 47 and 53 are far from any threshold; 91 is only 1 500 past its
+        // rank's start, so its rank may be fresh and must not be written.
+        zeb: { 47: ['200k', 6], 118: ['45k', 4], 53: ['300k', 7], 91: ['82k', 5] },
     }));
     const archiveCalls = game.calls.filter(u => /p=archiv&typ=1/.test(u));
     const visited = [...new Set(archiveCalls.map(u => Number(u.match(/id=(\d+)/)[1])))].sort((a, b) => a - b);
@@ -227,13 +248,15 @@ section(`${label}: every ally in the alliance archive`);
     eq('attacker prestiž of #47 (100+47 k)', a47.prestiz_utocnik, 147000);
     eq('defender prestiž of #53 (200+53 k)', a47.prestiz_obrance, 253000);
 
-    eq('hodnost útočníka from the ally profile', a47.hodnost_utocnik, 16);
-    eq('hodnost obránce from the target profile', a47.hodnost_obrance, 12);
-    eq('the other ally keeps its own rank', a118.hodnost_utocnik, 3);
-    eq('and its target its own', a118.hodnost_obrance, 9);
+    eq('hodnost útočníka worked back from the žebříček', a47.hodnost_utocnik, 6);
+    eq('hodnost obránce, well past its threshold', a47.hodnost_obrance, 7);
+    eq('the other ally gets its own rank', a118.hodnost_utocnik, 4);
+    eq('a defender just past a threshold is left empty', a118.hodnost_obrance, undefined);
 
-    const profileIds = game.calls.filter(u => /najitzem/.test(u)).map(u => Number(u.match(/hid=(\d+)/)[1]));
-    eq('profiles: the attackers, then their targets', profileIds.join(','), '47,118,53,91');
+    const searches = game.calls.filter(u => /p=zebricek/.test(u)).map(u => Number(u.match(/search_id=(\d+)/)[1]));
+    eq('žebříček: one search covers the allies, then each new target', searches.join(','), '44,53,91');
+    ok('no country profiles fetched any more', !game.calls.some(u => /najitzem/.test(u)));
+    ok('XP of the defence messages is passed on too', /### XP #118\n(?:.*\n)*.*\t2002/.test(game.clip.text));
     ok('the menu and page furniture did not leak into the paste', !/Black Hole Generator|Čas provádění/.test(game.clip.text));
 }
 
@@ -286,7 +309,7 @@ section(`${label}: nothing new`);
 {
     const game = await run(code, makeGame({ attacks: { 47: [{ h: 200, xp: 1, cil: 53 }] } }));
     eq('clipboard left alone', game.clip.text, null);
-    ok('no konflikty or profiles fetched', !game.calls.some(u => /konflikty|najitzem/.test(u)));
+    ok('no konflikty or target searches', !game.calls.some(u => /konflikty|search_id=53/.test(u)));
 }
 
 section(`${label}: pages at a reader's pace`);
@@ -303,12 +326,13 @@ section(`${label}: pages at a reader's pace`);
 
 section(`${label}: Zastavit hands over what is collected so far`);
 {
-    // Stop while the third page (#47's archive) is being read: #44 had no
-    // attacks, #47's page still arrives, nothing after it is fetched.
+    // Stop while the fourth page (#47's archive) is being read - after the
+    // menu, the allies' žebříček and #44's empty archive. #47's page still
+    // arrives, nothing after it is fetched.
     const game = await run(code, makeGame({
         attacks: { 47: [{ h: 1, xp: 4701, cil: 53 }], 118: [{ h: 1, xp: 11801, cil: 91 }] },
         onFetch: (url, n, extra) => {
-            if (n === 3) {
+            if (n === 4) {
                 const b = extra.find(e => e.tag === 'button' && /Zastavit/.test(e.textContent || ''));
                 if (b) b.onclick();
             }
@@ -316,9 +340,9 @@ section(`${label}: Zastavit hands over what is collected so far`);
     }));
     const r = paste(game.clip.text || '');
     eq('the attack read before stopping is handed over', r.records.map(x => x.xp).join(','), '4701');
-    ok('nothing fetched after the stop', !game.calls.some(u => /id=118|konflikty|najitzem/.test(u)),
-        game.calls.slice(3).join(' '));
-    eq('no wait left running after the stop', game.calls.filter(u => /index\.php\?/.test(u)).length, 3);
+    ok('nothing fetched after the stop', !game.calls.some(u => /id=118|konflikty|search_id=53/.test(u)),
+        game.calls.slice(4).join(' '));
+    eq('no wait left running after the stop', game.calls.filter(u => /index\.php\?/.test(u)).length, 4);
 
     // Stopped while #47 still has a second page to go: the 30 attacks from
     // its first page must not be lost with it.
@@ -327,7 +351,7 @@ section(`${label}: Zastavit hands over what is collected so far`);
     const g2 = await run(code, makeGame({
         attacks: { 47: many },
         onFetch: (url, n, extra) => {
-            if (n === 3) extra.find(e => e.tag === 'button' && /Zastavit/.test(e.textContent || '')).onclick();
+            if (n === 4) extra.find(e => e.tag === 'button' && /Zastavit/.test(e.textContent || '')).onclick();
         },
     }));
     eq('first page of an ally kept when stopped before its second', paste(g2.clip.text || '').records.length, 30);
@@ -380,21 +404,6 @@ section('two allies on the same target in the same minute');
     const res = A.applyKonflikty([old], r.konf);
     eq('untagged record is not guessed at', old.prestiz_utocnik, null);
     eq('and is counted as ambiguous', res.ambiguous, 1);
-}
-
-section('profiles never overwrite, and only reach 72 h back');
-{
-    const prof = A.parseProfily('### PROFIL #53\n' + PROFILE.replace('Farmář (1)', 'Kapitán (12)'));
-    eq('profile parsed', prof[53] && prof[53].hodnost, 12);
-    const now = new Date(2026, 9, 1, 12, 0, 0);
-    const recent = { cas: '2026-09-30 20:00:00', cil_id: 53 };
-    const kept = { cas: '2026-09-30 20:00:00', cil_id: 53, hodnost_obrance: 14 };
-    const old = { cas: '2026-09-20 20:00:00', cil_id: 53 };
-    const res = A.applyProfily([recent, kept, old], prof, { now, hodin: 72 });
-    eq('recent attack gets the rank', recent.hodnost_obrance, 12);
-    eq('a rank already there stays', kept.hodnost_obrance, 14);
-    eq('an attack 11 days old is left alone', old.hodnost_obrance, undefined);
-    eq('one record touched', res.touched, 1);
 }
 
 section('a hand-copied alliance archive page');
