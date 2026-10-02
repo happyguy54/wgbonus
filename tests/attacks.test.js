@@ -493,7 +493,9 @@ section('žebříček and alliance rows, as copied from the game');
     eq('rounded figure kept as a range', `${z[47].lo}-${z[47].hi}`, '45500-46999');
     eq('hodnost shown in brackets', z[47].hodnost, 4);
     eq('prestiž', z[47].prestiz, 167000);
-    eq('alliance row: exact experience', `${z[55].lo}-${z[55].hi}`, '81302-81302');
+    // A figure without "k" is experience in the alliance: total is at least
+    // that, and within the rank shown.
+    eq('alliance row: a lower bound, up to the end of rank 5', `${z[55].lo}-${z[55].hi}`, '81302-149999');
     eq('alliance row hodnost', z[55].hodnost, 5);
     eq('rank table: 80 000 starts Velitel tanků', A.rankFor(80000).nazev, 'Velitel tanků');
     eq('rank table: 79 999 is still Průzkumník', A.rankFor(79999).n, 4);
@@ -510,7 +512,12 @@ section('hodnost of an ally, worked back from its archive (Lord Azeroth, 1.10.)'
     const { xpEvents } = A.parsePaste(archive);
     eq('every XP row counted, defences included', xpEvents.length, 12);
     eq('their sum', xpEvents.reduce((a, e) => a + e.xp, 0), 25029);
-    const zeb = A.parseZebricek('### ZEBRICEK 2026-10-01 08:30:00\nLord Azeroth(#55) - StRRiPes\t4642km2\t81302\t170771\t(5)\tFund');
+    // Read just after its last message: the žebříček's rounded total, and the
+    // alliance figure as a lower bound - together 81 302 - 81 999.
+    const zeb = A.parseZebricek('### ZEBRICEK 2026-10-01 08:30:00\n'
+        + '13 Lord Azeroth(#55) [EJZ] - StRRiPes (#274276) 92 5 352km2 81k 176k (5) EJZ Fund\n'
+        + 'Lord Azeroth(#55) - StRRiPes\t4642km2\t81302\t170771\t(5)\tFund');
+    eq('rounded total narrowed by the alliance figure', `${zeb[55].lo}-${zeb[55].hi}`, '81302-81999');
 
     // Lord Azeroth's two conquests on kamcatka, as attack records.
     const first = { cas: '2026-10-01 06:40:50', xp: 3599, utocnik_id: 55, cil_id: 49 };
@@ -521,10 +528,19 @@ section('hodnost of an ally, worked back from its archive (Lord Azeroth, 1.10.)'
     eq('06:40:50 - rank 4, though the ally is 5 today', first.hodnost_utocnik, 4);
     eq('06:41:12 - rank 4', second.hodnost_utocnik, 4);
     eq('06:40:50 is certain', first.hodnost_utocnik_jiste, 1);
-    eq('right at the threshold: an estimate from the middle of the range', edge.hodnost_utocnik, 4);
-    eq('marked as one', edge.hodnost_utocnik_jiste, 0);
-    eq('and counted', res.odhad, 1);
-    eq('an estimate weighs 0.2 in a fit', A.scopeFor(Object.assign({}, edge, { prestiz_utocnik: 1, prestiz_obrance: 1, hodnost_obrance: 5 }), {}).vaha, 0.2);
+    // 81 302 - 81 999 minus the last gain, 1 088: 80 214 - 80 911, all rank 5.
+    eq('one gain after crossing the threshold: rank 5', edge.hodnost_utocnik, 5);
+    eq('and certain, thanks to the lower bound', edge.hodnost_utocnik_jiste, 1);
+    eq('nothing left to estimate', res.odhad, 0);
+
+    // The same attack with only a rounded "81k": 79 412 - 80 911 spans the
+    // threshold, so only an estimate.
+    const roughly = Object.assign({}, edge, { hodnost_utocnik: undefined, hodnost_utocnik_jiste: undefined });
+    const res2 = A.applyHodnost([roughly], xpEvents,
+        A.parseZebricek('### ZEBRICEK 2026-10-01 08:30:00\n13 Lord Azeroth(#55) [EJZ] - StRRiPes (#274276) 92 5 352km2 81k 176k (5) EJZ Fund'));
+    eq('from a rounded figure, right at the threshold: an estimate', `${roughly.hodnost_utocnik}/${roughly.hodnost_utocnik_jiste}`, '5/0');
+    eq('counted as one', res2.odhad, 1);
+    eq('an estimate weighs 0.2 in a fit', A.scopeFor(Object.assign({}, roughly, { prestiz_utocnik: 1, prestiz_obrance: 1, hodnost_obrance: 5 }), {}).vaha, 0.2);
     eq('a certain one, with everything else its own, weighs 1', A.scopeFor(Object.assign({}, first, { prestiz_utocnik: 1, prestiz_obrance: 1, hodnost_obrance: 5 }), {}).vaha, 1);
 
     const kept = { cas: '2026-10-01 06:40:50', xp: 3599, utocnik_id: 55, hodnost_utocnik: 9 };
@@ -604,7 +620,7 @@ section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)
 
     const zeb = A.parseZebricek(text);
     eq('all 23 countries read, many per line', Object.keys(zeb).length, 23);
-    eq('"(?)" for hodnost is unknown', zeb[36].hodnost, null);
+    eq('"(?)" for hodnost: the rank follows from the experience', zeb[36].hodnost, 4);
     eq('and does not take its neighbour\'s numbers', `${zeb[36].xp}/${zeb[127].xp}/${zeb[127].hodnost}`, '64000/64000/4');
     eq('player id after the name is not a country', zeb[436276], undefined);
     eq('country without an alliance', zeb[163] && zeb[163].hodnost, 3);
@@ -626,6 +642,30 @@ section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)
     const k = A.applyKonflikty(store.records, A.parseKonflikty(text, 2026));
     eq('prestiž from the konflikty rows there are, defences included', k.matched, 12);
     eq('attacker prestiž at 19:07', byTime('19:07:18').prestiz_utocnik, 170000);
+}
+
+section('an alliance page: experience table and members\' hodnost (tpOwCh)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const read = f => fs.readFileSync(path.join(__dirname, '..', 'samples', f), 'utf8');
+    const page = read('aliance-tpOwCh-clenove.html') + read('aliance-tpOwCh.html');
+    const z = A.parseZebricek(page);
+    eq('all six members', Object.keys(z).sort().join(','), '107,129,41,77,900,95');
+    eq('alliance experience as a lower bound, within rank 5', `${z[95].lo}-${z[95].hi}`, '143444-149999');
+    eq('hodnost from the members table', z[77].hodnost, 6);
+    eq('R23: 18 756 is below rank 3 - the rank\'s own start is the bound', `${z[107].lo}-${z[107].hi}`, '20000-39999');
+    const withZeb = A.parseZebricek(page + '\n2 tpOwCh mAx(#95) [tpOwCh] - MaximusBuchymus (#364432) 4 314km2 143k 186k (5) tpOwCh Dikt'
+        + '\n105 R23(#107) [tpOwCh] - R23 (#443435) 4 344km2 25k 222k (3) tpOwCh Kom');
+    eq('with the žebříček: 143k, raised to 143 444', `${withZeb[95].lo}-${withZeb[95].hi}`, '143444-143999');
+    eq('R23 with the žebříček: its rounding alone', `${withZeb[107].lo}-${withZeb[107].hi}`, '24500-25999');
+    const def = { cas: '2026-10-02 08:00:00', cil_id: 107 };
+    A.applyHodnost([def], [], A.parseZebricek('### ALIANCE tpOwCh 2026-10-02 10:00:00\n' + A.htmlToText(page)));
+    eq('a defender known only to be somewhere in rank 3 is only an estimate', def.hodnost_obrance_jiste, 0);
+    const att = { cas: '2026-10-02 09:00:00', utocnik_id: 95, cil_id: 1, xp: 444 };
+    A.applyHodnost([att], [{ utocnik_id: 95, cas: '2026-10-02 09:00:00', xp: 444 }],
+        A.parseZebricek('### ALIANCE tpOwCh 2026-10-02 10:00:00\n' + A.htmlToText(page)));
+    eq('an attacker within rank 5 either way (143 000 - 149 555): certain', `${att.hodnost_utocnik}/${att.hodnost_utocnik_jiste}`, '5/1');
 }
 
 process.exit(done() ? 1 : 0);

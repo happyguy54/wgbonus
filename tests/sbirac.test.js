@@ -127,6 +127,10 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
                 + rows.length + ' konfliktů</p><table class="vis_tbl"><tbody>' + rows.join('')
                 + '</tbody></table><p class="infomsg">Čas provádění: 0.7s</p>';
         }
+        if (param('p') === 'najit' && param('s') === 'najittag') {
+            return '<div>Aliance [' + decodeURIComponent(param('tag')) + ']</div>'
+                + read('samples/aliance-tpOwCh-clenove.html') + read('samples/aliance-tpOwCh.html');
+        }
         if (param('p') === 'najit') {
             const id = Number(param('hid'));
             return PROFILE.replace(/hid=47">XP Piňáta\(#47\)/, `hid=${id}">Země ${id}(#${id})`)
@@ -344,6 +348,20 @@ section(`${label}: a failing request is never repeated`);
     const twice = [...seen].filter(([, n]) => n > 1).map(([u]) => u);
     ok('no address asked for twice', !twice.length, twice.join(' | '));
     eq('the attacks still arrive, without hodnost', paste(game.clip.text || '').records.length, 2);
+}
+
+section(`${label}: our alliance's page, once, before the archives`);
+{
+    const open = MENU.replace('<ul class="tbl_sim"', '<div>Země #118 Aliance [EJZ]</div><ul class="tbl_sim"');
+    const game = await run(code, makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, openPage: open }));
+    const tagPages = game.calls.filter(u => /s=najittag/.test(u));
+    eq('one alliance page, ours', tagPages.map(u => decodeURIComponent(u.match(/tag=([^&\s]+)/)[1])).join(','), 'EJZ');
+    ok('read before any archive', game.calls.findIndex(u => /s=najittag/.test(u)) < game.calls.findIndex(u => /p=archiv&typ=1/.test(u)));
+    ok('its members on the clipboard, experience and hodnost',
+        /### ALIANCE EJZ \d{4}-\d\d-\d\d \d\d:\d\d:\d\d\n/.test(game.clip.text) && /tpOwCh mAx\(#95\)[^\n]*\t143444/.test(game.clip.text)
+        && /R23\(#107\)[^\n]*\t4344km2\t222187\t\(3\)/.test(game.clip.text));
+    const z = A.parseZebricek(game.clip.text);
+    eq('the page reads them back as lower bounds', `${z[95].lo}-${z[95].hi}`, '143444-149999');
 }
 
 section(`${label}: just one ally, to try it out`);

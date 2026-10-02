@@ -8,9 +8,12 @@
  *      the last HODIN hours        index.php?p=archiv&typ=1&tag=1&id=<ally>
  *   2. konflikty of each ally that attacked in that window - prestiž of both
  *      sides                       index.php?p=konflikty&spec=6&land_6=<ally>&hours_6=<HODIN>
- *   3. the žebříček around every ally and every target hit - rank experience
- *      and hodnost, as the "Najít" button there asks for it
+ *   3. the žebříček around every ally and every target hit - total rank
+ *      experience (rounded, "46k") and hodnost, as its "Najít" button asks
  *                                  POST index.php?p=zebricek  type=1&search_id=<id>
+ *      and our alliance's page, whose "Zkušenosti" (experience gained in the
+ *      alliance) is a lower bound that narrows the rounding
+ *                                  index.php?p=najit&s=najittag&tag=<tag>
  *
  * It all goes onto the clipboard as one text, to be pasted once into
  * "Vložit z herního logu" on the wgbonus page. Each block starts with a
@@ -199,12 +202,16 @@
      * first ally's archive it links to. When none of it works, say what the
      * game sent back instead.
      */
+    // The page the ally list came from; its side panel names our alliance.
+    let menuHtml = '';
+
     async function findAllies() {
         const here = document.documentElement ? document.documentElement.outerHTML : '';
         let list = allies(here);
-        if (list.length) { say('Seznam spojenců beru z otevřené stránky.'); return list; }
+        if (list.length) { menuHtml = here; say('Seznam spojenců beru z otevřené stránky.'); return list; }
 
         const first = await page('p=archiv&tag=1');
+        menuHtml = first;
         list = allies(first);
         if (list.length) return list;
 
@@ -212,6 +219,7 @@
         let last = first;
         if (link) {
             last = await page('p=archiv&tag=1&id=' + link[1]);
+            menuHtml = last;
             list = allies(last);
             if (list.length) return list;
         }
@@ -340,6 +348,49 @@
         if (rows.length) zebricek.push('### ZEBRICEK ' + at + '\n' + rows.join('\n'));
     }
 
+    /* -------------------------------------------------------- alliances --- */
+
+    // Experience gained in the alliance, from the table "Zkušenosti" at the
+    // bottom of an alliance's page, and the members' hodnost. Total experience
+    // is never less, so the page uses it to narrow the žebříček's rounding.
+    const aliance = [];
+    const tagy = new Set();
+
+    async function alianceFor(tag) {
+        if (!tag || tagy.has(tag)) return;
+        tagy.add(tag);
+        const html = await page('p=najit&s=najittag&tag=' + encodeURIComponent(tag));
+        const at = casKey(new Date());
+        const table = html.match(/<table\b[^>]*\bid="dgen"[^>]*>([\s\S]*?)<\/table>/i);
+        const members = html.match(/<table\b[^>]*\bid="alliance-members"[^>]*>([\s\S]*?)<\/table>/i);
+        const lines = [];
+        // Today's hodnost of each member: "R23(#107) - R23  4344km2  222187  (3)".
+        // The page checks the experience below against it.
+        ((members && members[1].match(/<tr\b[\s\S]*?<\/tr>/gi)) || []).forEach(tr => {
+            const tds = (tr.match(/<td\b[^>]*>[\s\S]*?<\/td>/gi) || []).map(oneLine);
+            const i = tds.findIndex(t => /\(#\d+\)/.test(t));
+            if (i < 0 || !/km2?$/.test(tds[i + 1] || '') || !/^\(\d+\)$/.test(tds[i + 3] || '')) return;
+            lines.push([tds[i], tds[i + 1], tds[i + 2], tds[i + 3]].join('\t'));
+        });
+        ((table && table[1].match(/<tr\b[\s\S]*?<\/tr>/gi)) || []).forEach(tr => {
+            const tds = tr.match(/<td\b[^>]*>[\s\S]*?<\/td>/gi) || [];
+            if (tds.length < 2) return;
+            const who = oneLine(tds[0]);
+            const xp = oneLine(tds[1]).replace(/\s+/g, '');
+            const m = who.match(/\(#(\d+)\)/);
+            if (!m || !/^\d+$/.test(xp)) return;
+            lines.push(who + '\t' + xp);
+        });
+        if (lines.length) aliance.push('### ALIANCE ' + tag + ' ' + at + '\n' + lines.join('\n'));
+        else say('Na stránce aliance [' + tag + '] nevidím tabulku Zkušenosti.');
+    }
+
+    /** Our own alliance's tag, as the game's side panel shows it: "Aliance [EJZ]". */
+    const ownTag = html => {
+        const m = flatten(html).match(/Aliance\s*\[([^\]]+)\]/);
+        return m ? m[1].trim() : null;
+    };
+
     /* ------------------------------------------------------------- main --- */
 
     const archivy = [];
@@ -365,6 +416,14 @@
         const cutoff = new Date(Date.now() - HODIN * 3600 * 1000);
         say('Okno ' + HODIN + ' h, od ' + cutoff.toLocaleString('cs-CZ') + '.');
 
+        // Our allies' experience in the alliance - a lower bound for the
+        // žebříček's rounded totals - read before their archives.
+        const nase = ownTag(document.documentElement ? document.documentElement.outerHTML : '') || ownTag(menuHtml);
+        if (nase) {
+            try { await alianceFor(nase); }
+            catch (e) { if (e.message === STOP || e.fatal) throw e; }
+        }
+
         // Attacks the shared store already holds, as "cas|target". Reading
         // needs no password. If the worker is unreachable, everything in the
         // window is collected and the page drops the duplicates instead.
@@ -387,9 +446,9 @@
         const cile = new Set();
 
         for (const s of spojenci) {
-            // The ally's experience is read BEFORE its archive, so every gain
-            // up to that moment is on the archive pages read next. Without it
-            // the run goes on; only that ally's hodnost stays empty.
+            // The ally's total experience is read BEFORE its archive, so every
+            // gain up to that moment is on the archive pages read next.
+            // Without it the run goes on; only that ally's hodnost stays empty.
             try { await zebricekFor(s.id); }
             catch (e) { if (e.message === STOP || e.fatal) throw e; }
             const rows = [];
@@ -472,7 +531,7 @@
     /* ---- hand it over ----------------------------------------------------- */
     stopBtn.style.display = 'none';
     status('');
-    const out = archivy.concat(xpBloky, konflikty, zebricek).join('\n\n');
+    const out = archivy.concat(xpBloky, konflikty, aliance, zebricek).join('\n\n');
     if (!archivy.length && !konflikty.length) {
         say('\n' + (konec ? 'Nic nesebráno.' : 'Za posledních ' + HODIN + ' h nic nového'
             + (zname ? ' (' + zname + ' útoků už v databázi)' : '') + '.'));
@@ -480,7 +539,8 @@
         return;
     }
     say('\n' + nove + ' nových útoků' + (zname ? ', ' + zname + ' už v databázi' : '')
-        + ', ' + konflikty.length + '× konflikty, ' + naZebricku.size + ' zemí v žebříčku'
+        + ', ' + konflikty.length + '× konflikty, ' + zebricek.length + '× žebříček'
+        + (aliance.length ? ', stránka aliance' : '')
         + ' · ' + pages + ' stránek za ' + mmss(Date.now() - started) + '.');
     document.title = '✓ wg sběrač — hotovo';
 

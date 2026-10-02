@@ -350,7 +350,7 @@
             // "### ARCHIV #47 XP Piňáta - mazereon", written by the collector
             // (bookmarklet/sbirac.js), or the archive page's own heading
             // "Alianční archiv (#47)" in a hand-copied page.
-            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL|XP|ZEBRICEK)\b\s*(?:#(\d+))?\s*(.*)$/i);
+            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL|XP|ZEBRICEK|ALIANCE)\b\s*(?:#(\d+))?\s*(.*)$/i);
             const h1 = !sec && line.match(/Alian[čc]n[íi]\s+archiv\s*\(#(\d+)\)/i);
             if (sec || h1) {
                 flush();
@@ -715,26 +715,35 @@
     }
 
     /**
-     * Countries with their rank experience, from the žebříček
-     * (index.php?p=zebricek) or the alliance member list, copied or as the
-     * collector's "### ZEBRICEK <cas>" block:
+     * Countries with their rank experience and hodnost, from three places:
      *
-     *   on 85 Pošta Útok … XP Piňáta(#47)[EJZ] - mazereon (#436276) (zástupce) …  4 407km2  46k  167k  (4)  EJZ  Tech
-     *   Lord Azeroth(#55) - StRRiPes  4642km2  81302  170771  (5)  Fund
+     *   žebříček (p=zebricek), rounded:
+     *     "… XP Piňáta(#47)[EJZ] - mazereon (#436276) … 4 407km2  46k  167k  (4)  EJZ  Tech"
+     *   an alliance's page (p=najit&s=najittag&tag=…), table "Zkušenosti", exact:
+     *     "Nestíhám, nemám čas(#77) - Aram Chroustal  176737"
+     *   the same page, members table, today's hodnost ("Hod"):
+     *     "1  R23(#107) - R23  4344km2  222187  (3)  Kom"
      *
-     * After the area come rank experience, prestiž and "(hodnost)". The block's
-     * time says when the numbers were read; a plain paste counts as read now.
-     * Returns { id: { xp, lo, hi, prestiz, hodnost, at } }.
+     * Total rank experience is only ever shown rounded, in the žebříček. The
+     * "Zkušenosti" figure is experience gained in the alliance (R23: 18 756,
+     * yet hodnost 3, which starts at 20 000, and 25k in the žebříček), and an
+     * exact figure without "k" elsewhere is the same. Total experience cannot
+     * be less, so it is a lower bound. The three are combined into a range:
+     * the žebříček's rounding, raised to the alliance figure, within the
+     * shown rank's thresholds.
+     *
+     * The collector's "### ZEBRICEK <cas>" / "### ALIANCE <tag> <cas>" headings
+     * say when the numbers were read; a plain paste counts as read now.
+     * Returns { id: { xp, lo, hi, prestiz, hodnost, at, nesedi? } }.
      */
     function parseZebricek(rawText, now) {
         const text = htmlToText(rawText);
-        const out = {};
-        let at = null;
         const nowCas = (() => {
             const d = now instanceof Date ? now : new Date();
             const p = x => String(x).padStart(2, '0');
             return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
         })();
+
         // A country is "(#id)" followed by an optional [TAG] and " - player";
         // the player's own "(#436276)" is not. The game prints a whole page of
         // countries as one run of text, so rows are matched one after another,
@@ -744,20 +753,78 @@
         const NOT_NEXT = '(?:(?!' + COUNTRY.replace('(\\d+)', '\\d+') + ')[\\s\\S])*?';
         const ROW = new RegExp(COUNTRY + NOT_NEXT
             + /(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+([\d.,]+)\s*([kM])?\s+([\d.,]+)\s*([kM])?\s+\((\d+|\?)\)/.source, 'g');
+        // Members table: area, prestiž, hodnost - no experience.
+        const MEMBER = new RegExp(COUNTRY + /.*?\s(\d+)\s*km2?\s+(\d+)\s+\((\d+)\)/.source);
+        // "Zkušenosti" table: country, player, then the experience last.
+        const DGEN = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?(?:-\s*.*?)?\s+(\d+)\s*$/;
+
+        const rounded = {}, dgen = {}, shown = {};
+        let at = null, inDgen = false, inMembers = false;
         String(text).replace(/\r/g, '').split('\n').forEach(line => {
-            const head = line.match(/^\s*###\s*(\S+)\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})?/);
-            if (head) { at = head[1].toUpperCase() === 'ZEBRICEK' ? (head[2] || null) : null; return; }
+            const head = line.match(/^\s*###\s*(\S+)/);
+            if (head) {
+                const kind = head[1].toUpperCase();
+                const ts = line.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+                at = (kind === 'ZEBRICEK' || kind === 'ALIANCE') ? (ts ? ts[1] : null) : null;
+                inDgen = inMembers = kind === 'ALIANCE';
+                return;
+            }
+            if (/^\s*(?:Země\s+)?Zku[šs]enosti\s*$/i.test(line)) { inDgen = true; return; }
+            if (/Rozloha\s+Presti[žz]\s+Hod/i.test(line)) { inMembers = true; return; }
+            if (/^\s*Celkem\b/i.test(line)) { inDgen = false; return; }
+            if (/Celkov[áa]|Pr[ůu]m[ěe]rn[áa]/i.test(line)) { inMembers = false; return; }
+            const when = at || nowCas;
+
+            const mem = inMembers && line.match(MEMBER);
+            if (mem && !/\s[\d.,]+\s*[kM]\s/.test(line)) {
+                shown[mem[1]] = { hodnost: Number(mem[4]), at: when };
+                return;
+            }
+            if (inDgen && !/km2?\s/.test(line)) {
+                const d = line.match(DGEN);
+                if (d) dgen[d[1]] = { xp: Number(d[2]), at: when };
+                return;
+            }
             ROW.lastIndex = 0;
             let m;
             while ((m = ROW.exec(line)) !== null) {
                 const xp = xpRange(m[2], m[3]);
                 const pr = xpRange(m[4], m[5]);
                 if (!xp) continue;
-                out[m[1]] = Object.assign(xp, {
-                    id: Number(m[1]), prestiz: pr ? pr.xp : null,
-                    hodnost: m[6] === '?' ? null : Number(m[6]), at: at || nowCas,
-                });
+                const rank = m[6] === '?' ? null : Number(m[6]);
+                if (!m[3]) {
+                    // An exact figure: experience in the alliance, a lower bound.
+                    dgen[m[1]] = { xp: xp.xp, at: when };
+                    if (rank) shown[m[1]] = { hodnost: rank, at: when };
+                    continue;
+                }
+                rounded[m[1]] = Object.assign(xp, { prestiz: pr ? pr.xp : null, hodnost: rank, at: when });
             }
+        });
+
+        const out = {};
+        const ids = new Set([...Object.keys(rounded), ...Object.keys(dgen), ...Object.keys(shown)]);
+        ids.forEach(id => {
+            const r = rounded[id], d = dgen[id], sh = shown[id];
+            const rank = sh ? sh.hodnost : r ? r.hodnost : null;
+            // Without a rank or a žebříček figure there is no upper bound.
+            if (!rank && !r) return;
+            let lo = r ? r.lo : 0, hi = r ? r.hi : Infinity;
+            if (rank) {
+                const next = RANKS.find(x => x.n === rank + 1);
+                lo = Math.max(lo, rankMin(rank));
+                hi = Math.min(hi, next ? next.min - 1 : Infinity);
+            }
+            if (d && d.xp <= hi) lo = Math.max(lo, d.xp);
+            if (lo > hi) { lo = r ? r.lo : lo; hi = r ? r.hi : hi; }
+            const at = [r && r.at, d && d.at, sh && sh.at].filter(Boolean).sort().pop();
+            out[id] = {
+                id: Number(id), lo, hi,
+                xp: Number.isFinite(hi) ? (r ? Math.min(Math.max(r.xp, lo), hi) : (lo + hi) / 2) : lo,
+                prestiz: r ? r.prestiz : null,
+                hodnost: rank || rankFor(lo).n,
+                at,
+            };
         });
         return out;
     }
@@ -788,7 +855,11 @@
      * ours, which a newer reading may replace.
      */
     function applyHodnost(records, xpEvents, zebricek, opts) {
-        const o = Object.assign({ okno: 72, rezerva: 5000, neviditelne: 1000 }, opts || {});
+        // Spy operations and rockets add rank experience too, but too little
+        // to matter - so by default nothing is allowed for gains the Útoky
+        // tab does not show. With an exact figure the attacker's rank is then
+        // exact; only a rounded žebříček figure leaves a range.
+        const o = Object.assign({ okno: 72, rezerva: 5000, neviditelne: 0 }, opts || {});
         const empty = v => v === null || v === undefined || v === '';
         const writable = (rec, k) => empty(rec[k]) || rec[k + '_jiste'] === 0;
         const put = (rec, k, value, sure) => { rec[k] = value; rec[k + '_jiste'] = sure ? 1 : 0; };

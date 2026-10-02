@@ -45,9 +45,12 @@ se předá stejně.
    jen útoky — `p=archiv&typ=1&tag=1&id=<spojenec>`
 2. **Konflikty** každého spojence, který v okně útočil — prestiž obou stran
 3. **Žebříček** kolem každého spojence a každého napadeného — hodnostní
-   zkušenosti a **hodnost** (stejné hledání jako tlačítko „Najít“ v žebříčku
-   podle čísla země; země, které už byly na dříve načtené stránce, se znovu
-   nehledají)
+   zkušenosti (zaokrouhlené, „46k“) a **hodnost** (stejné hledání jako tlačítko
+   „Najít“ v žebříčku podle čísla země; země, které už byly na dříve načtené
+   stránce, se znovu nehledají)
+4. **Stránka naší aliance** (`p=najit&s=najittag&tag=…`) — tabulka
+   „Zkušenosti“ ukazuje zkušenosti **získané v alianci**, ne celkové; celkové
+   nemohou být menší, takže zúží zaokrouhlení ze žebříčku
 
 Každý útok si nese, **kdo útočil** (`utocnik_id`, země, hráč). Bez toho by se
 útoky různých spojenců v jedné databázi nedaly rozlišit — a s nimi ani jejich
@@ -75,10 +78,11 @@ obraně. Proto:
 
 - **Útočník (spojenec):** od dnešních zkušeností se odečte každý zisk z jeho
   archivu od útoku dál — **i z obrany**, ta se do hodnosti počítá taky
-  (manuál 12.4.1). Ze zaokrouhleného čísla („46k“) a zisků, které záložka
-  Útoky neukazuje (rozvědka, rakety, rezerva 1 000), vyjde rozpětí; když
-  přes něj vede hranice hodnosti, zapíše se hodnost ze středu rozpětí jako
-  **odhad**
+  (manuál 12.4.1). Přesné celkové zkušenosti hra neukazuje: žebříček je
+  zaokrouhlí („81k“ = 80 500–81 999), zkušenosti v alianci (81 302) to zdola
+  zúží na 81 302–81 999. Když přes výsledné rozpětí vede hranice hodnosti,
+  zapíše se hodnost ze středu rozpětí jako **odhad**. Zkušenosti z rozvědky
+  a raket se nepočítají — je jich málo
 - **Obránce (nepřítel):** jeho archiv nevidíme, takže jen dnešní hodnost.
   **Aspoň 5 000 zkušeností nad hranicí** = jistá. Blíž u hranice ji mohl
   získat právě během našich útoků: od dnešního čísla se odečtou naše
