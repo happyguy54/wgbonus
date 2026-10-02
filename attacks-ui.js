@@ -871,8 +871,8 @@
                         <strong>Sběrač ze hry:</strong> přetáhněte
                         <a id="sbiracLink" href="#" class="sbirac-link">wg sběrač</a>
                         na lištu záložek. Pak na kterékoli stránce
-                        <code>gold.webgame.cz</code> klikněte na záložku — projde alianční archiv
-                        všech spojenců za 72 h, konflikty a žebříček (kvůli hodnosti) a výsledek dá do schránky.
+                        <code>gold.webgame.cz</code> klikněte na záložku a vyberte jednoho spojence
+                        (na vyzkoušení) nebo všechny — projde jejich alianční archiv za 72 h, konflikty a žebříček (kvůli hodnosti) a výsledek dá do schránky.
                         Stránky načítá tempem čtenáře (5–10 s každá), takže to trvá pár minut;
                         ten panel nechte otevřený. Sem pak stačí vložit (Ctrl+V) a „Načíst útoky“.
                         <button type="button" class="submit" id="sbiracCopy">Zkopírovat adresu záložky</button>

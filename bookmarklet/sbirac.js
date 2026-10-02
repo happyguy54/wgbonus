@@ -37,8 +37,8 @@
     // The link on the wgbonus page fills this in for you.
     const WORKER = '';
 
-    // Optional: only these allies, e.g. [47, 118]. Empty = everyone listed in
-    // the alliance archive.
+    // Optional: only these allies, e.g. [47, 118], without asking. Empty = the
+    // panel asks at the start, one ally or all of them.
     const ZEME = [];
 
     // Seconds to wait before each page, picked at random in this range: the
@@ -231,6 +231,33 @@
         return best;
     }
 
+    /* ---------------------------------------------------------- choice --- */
+
+    /**
+     * Which allies to go through, asked in the panel: one to try it out, or
+     * all of them. Zastavit while choosing just ends the run.
+     */
+    function choose(list) {
+        return new Promise(resolve => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-top:6px';
+            const pick = ids => { wrap.style.display = 'none'; status(''); resolve(ids); };
+            const add = (label, ids, bold) => {
+                const b = document.createElement('button');
+                b.textContent = label;
+                b.style.cssText = 'margin:2px 4px 2px 0;padding:3px 8px;font:11px verdana,sans-serif;cursor:pointer'
+                    + (bold ? ';font-weight:bold' : '');
+                b.onclick = () => pick(ids);
+                wrap.appendChild(b);
+            };
+            add('Všichni (' + list.length + ')', list.map(s => s.id), true);
+            list.forEach(s => add(s.zeme + ' (#' + s.id + ')' + (s.ja ? ' = vy' : ''), [s.id]));
+            box.appendChild(wrap);
+            status('Koho projít? Na vyzkoušení stačí jeden spojenec.');
+            wake = () => pick([]);
+        });
+    }
+
     /* -------------------------------------------------------- žebříček --- */
 
     // Rank experience and hodnost by country. A search shows the country among
@@ -268,8 +295,14 @@
         const first = await page('p=archiv&tag=1');
         let spojenci = allies(first);
         if (!spojenci.length) throw new Error('V archivu nevidím seznam spojenců. Jste přihlášen a v alianci?');
-        if (ZEME.length) spojenci = spojenci.filter(s => ZEME.indexOf(s.id) >= 0);
-        say(spojenci.length + ' spojenců: '
+        if (ZEME.length) {
+            spojenci = spojenci.filter(s => ZEME.indexOf(s.id) >= 0);
+        } else {
+            const ids = await choose(spojenci);
+            if (stopped || !ids.length) throw new Error(STOP);
+            spojenci = spojenci.filter(s => ids.indexOf(s.id) >= 0);
+        }
+        say((spojenci.length === 1 ? 'Jen ' : spojenci.length + ' spojenců: ')
             + spojenci.map(s => s.zeme + ' (#' + s.id + ')' + (s.ja ? ' = vy' : '')).join(', '));
         say('Stránku za ' + PAUZA_S[0] + '–' + PAUZA_S[1] + ' s, takže to potrvá pár minut. '
             + 'Nechte tenhle panel otevřený, hrát můžete v jiném.');

@@ -166,7 +166,20 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
 const button = (game, re) => game.extra.find(e => e.tag === 'button' && re.test(e.textContent || ''));
 
 /** Run one version of the collector against a game; resolves when it finishes. */
-async function run(code, game, { worker } = {}) {
+/**
+ * Answer the panel's "Koho projít?" question: `pick` is an ally's id, or
+ * unset for "Všichni". Resolves once the buttons have been offered.
+ */
+async function answer(game, pick) {
+    const offered = () => game.extra.some(e => e.tag === 'button' && /^Všichni/.test(e.textContent || ''));
+    for (let i = 0; i < 4000 && !offered(); i++) await new Promise(r => setImmediate(r));
+    const want = pick ? new RegExp('\\(#' + pick + '\\)') : /^Všichni/;
+    const b = game.extra.find(e => e.tag === 'button' && want.test(e.textContent || ''));
+    if (!b) throw new Error('choice button not offered: ' + (pick || 'Všichni'));
+    b.onclick();
+}
+
+async function run(code, game, { worker, pick } = {}) {
     let src = code;
     if (worker) {
         const before = src;
@@ -175,6 +188,7 @@ async function run(code, game, { worker } = {}) {
     }
     vm.createContext(game.sandbox);
     vm.runInContext(src, game.sandbox);
+    await answer(game, pick);
     // The bookmarklet is a self-running async function; let it settle.
     for (let i = 0; i < 4000 && game.clip.text === null; i++) await new Promise(r => setImmediate(r));
     for (let i = 0; i < 200; i++) await new Promise(r => setImmediate(r));
@@ -258,6 +272,34 @@ section(`${label}: every ally in the alliance archive`);
     ok('no country profiles fetched any more', !game.calls.some(u => /najitzem/.test(u)));
     ok('XP of the defence messages is passed on too', /### XP #118\n(?:.*\n)*.*\t2002/.test(game.clip.text));
     ok('the menu and page furniture did not leak into the paste', !/Black Hole Generator|Čas provádění/.test(game.clip.text));
+}
+
+section(`${label}: just one ally, to try it out`);
+{
+    const game = await run(code, makeGame({
+        attacks: { 47: [{ h: 1, xp: 4701, cil: 53 }], 118: [{ h: 1, xp: 11801, cil: 91 }] },
+        zeb: { 47: ['200k', 6], 53: ['300k', 7] },
+    }), { pick: 47 });
+    const archives = [...new Set(game.calls.filter(u => /p=archiv&typ=1/.test(u)).map(u => u.match(/id=(\d+)/)[1]))];
+    eq('only the chosen ally\'s archive read', archives.join(','), '47');
+    ok('konflikty only for that ally', game.calls.filter(u => /konflikty/.test(u)).every(u => /land_6=47/.test(u)));
+    ok('no search for the other ally\'s target', !game.calls.some(u => /search_id=91/.test(u)));
+    const r = paste(game.clip.text);
+    eq('its attack collected, with hodnost', r.records.map(x => x.xp + ':' + x.hodnost_utocnik).join(','), '4701:6');
+}
+
+section(`${label}: Zastavit while choosing ends the run`);
+{
+    const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] } });
+    vm.createContext(game.sandbox);
+    vm.runInContext(code, game.sandbox);
+    const offered = () => game.extra.some(e => e.tag === 'button' && /^Všichni/.test(e.textContent || ''));
+    for (let i = 0; i < 4000 && !offered(); i++) await new Promise(r => setImmediate(r));
+    button(game, /Zastavit/).onclick();
+    for (let i = 0; i < 300; i++) await new Promise(r => setImmediate(r));
+    eq('only the alliance menu was read', game.calls.length, 1);
+    eq('nothing handed over', game.clip.text, null);
+    eq('tab title restored', game.sandbox.document.title, 'Webgame');
 }
 
 section(`${label}: paging stops at the edge of the window`);
@@ -377,6 +419,7 @@ section(`${label}: clipboard refused after the long wait`);
     const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, clipboardFails: true });
     vm.createContext(game.sandbox);
     vm.runInContext(code, game.sandbox);
+    await answer(game);
     for (let i = 0; i < 4000 && !game.extra.some(e => e.tag === 'textarea'); i++) await new Promise(r => setImmediate(r));
     const ta = game.extra.find(e => e.tag === 'textarea');
     const btn = button(game, /Zkopírovat/);

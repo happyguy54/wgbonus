@@ -24,15 +24,17 @@ záložku znovu stejným způsobem.
 
 1. Otevřete `gold.webgame.cz` **v samostatném panelu** (kterákoli stránka)
 2. Klikněte na záložku **wg sběrač**
-3. Vpravo nahoře běží výpis: spojenci, kolik nových útoků u koho, konflikty,
+3. V panelu vpravo nahoře vyberte, **koho projít**: jednoho spojence (na
+   vyzkoušení — za minutu, dvě je hotovo) nebo **Všichni**
+4. Panel vypisuje: spojenci, kolik nových útoků u koho, konflikty,
    profily, a kdy přijde další stránka. **Trvá to pár minut** (viz níž) —
    ten panel nechte být, hrát můžete v jiném. Až bude hotovo, v názvu panelu
    se objeví **✓ wg sběrač — hotovo**
-4. Pokud se schránka nedá použít (byl jste v jiném panelu), objeví se tlačítko
+5. Pokud se schránka nedá použít (byl jste v jiném panelu), objeví se tlačítko
    **Zkopírovat do schránky** — klikněte
-5. Na stránce wgbonus vložte do pole **„Vložit z herního logu“** (Ctrl+V)
+6. Na stránce wgbonus vložte do pole **„Vložit z herního logu“** (Ctrl+V)
    a **Načíst útoky**
-6. **Nahrát moje**, ať to vidí ostatní
+7. **Nahrát moje**, ať to vidí ostatní
 
 **Zastavit a vzít, co už je** běh kdykoli ukončí — co se do té doby načetlo,
 se předá stejně.
@@ -91,7 +93,7 @@ Na začátku [`sbirac.js`](sbirac.js):
 - `PAUZA_S` — pauza před každou stránkou, náhodně v rozmezí, výchozí `[5, 10]` s
 - `WORKER` — adresa workeru; odkaz na stránce ji doplní sám. **Heslo sem
   nepatří**, čtení z workeru je veřejné
-- `ZEME` — jen vybraní spojenci, např. `[47, 118]`; prázdné = všichni
+- `ZEME` — rovnou jen tito spojenci, bez ptaní, např. `[47, 118]`; prázdné = panel se zeptá
 
 Po úpravě `sbirac.js` spusťte `node bookmarklet/build.js` — vygeneruje
 [`bookmarklet.txt`](bookmarklet.txt), ze kterého odkaz na stránce vychází.
