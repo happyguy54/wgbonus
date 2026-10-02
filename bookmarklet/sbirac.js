@@ -468,28 +468,32 @@
         + ', ' + konflikty.length + '× konflikty, ' + naZebricku.size + ' zemí v žebříčku'
         + ' · ' + pages + ' stránek za ' + mmss(Date.now() - started) + '.');
     document.title = '✓ wg sběrač — hotovo';
-    try {
-        await navigator.clipboard.writeText(out);
-        say('HOTOVO — ' + Math.round(out.length / 1024) + ' kB ve schránce.'
-            + '\nVložte do pole „Vložit z herního logu“ na stránce wgbonus.');
-    } catch (e) {
-        // Clipboard access lapses after the long wait, and plain http has
-        // none at all. A click is a fresh user action, which always works.
-        const ta = document.createElement('textarea');
-        ta.value = out;
-        ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
-        const btn = document.createElement('button');
-        btn.textContent = 'Zkopírovat do schránky';
-        btn.style.cssText = 'position:fixed;left:2%;top:calc(70% + 8px);z-index:99998;'
-            + 'padding:8px 16px;font:bold 14px verdana,sans-serif';
-        btn.onclick = () => {
+
+    // Copying waits for a click. Written on its own, minutes after the
+    // bookmark was clicked, the clipboard needs a site permission that the
+    // browser words as "see text and images copied to the clipboard" - and
+    // that would then hold for the whole game site. A click needs none.
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Zkopírovat do schránky (' + Math.round(out.length / 1024) + ' kB)';
+    copyBtn.style.cssText = 'margin-top:8px;padding:6px 14px;font:bold 13px verdana,sans-serif;cursor:pointer';
+    box.appendChild(copyBtn);
+    say('HOTOVO — klikněte na „Zkopírovat do schránky“ a pak vložte do pole „Vložit z herního logu“ na stránce wgbonus.');
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(out);
+            copyBtn.textContent = 'Zkopírováno ✓';
+            document.title = TITLE;
+        } catch (e) {
+            // Plain http has no clipboard API; the older way works on a click too.
+            const ta = document.createElement('textarea');
+            ta.value = out;
+            ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
+            document.body.appendChild(ta);
             ta.select();
             let done = false;
             try { done = document.execCommand('copy'); } catch (e2) { done = false; }
-            btn.textContent = done ? 'Zkopírováno ✓' : 'Nejde — označeno, stiskněte Ctrl+C';
-        };
-        document.body.appendChild(ta);
-        document.body.appendChild(btn);
-        say('Klikněte na „Zkopírovat do schránky“ dole.');
-    }
+            copyBtn.textContent = done ? 'Zkopírováno ✓' : 'Nejde — text je označený dole, stiskněte Ctrl+C';
+            if (done) document.title = TITLE;
+        }
+    };
 })();

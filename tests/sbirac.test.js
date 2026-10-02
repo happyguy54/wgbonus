@@ -166,7 +166,8 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
             return { ok: true, url, arrayBuffer: async () => Buffer.from(body, 'utf8') };
         },
     };
-    return { sandbox, calls, clip, extra, delays };
+    const done = () => extra.some(e => /Nic nesebráno|nic nového|CHYBA/.test(String(e.textContent || '')));
+    return { sandbox, calls, clip, extra, delays, done };
 }
 
 /** The collector's own buttons, found by their caption. */
@@ -196,8 +197,12 @@ async function run(code, game, { worker, pick } = {}) {
     vm.createContext(game.sandbox);
     vm.runInContext(src, game.sandbox);
     await answer(game, pick);
-    // The bookmarklet is a self-running async function; let it settle.
-    for (let i = 0; i < 4000 && game.clip.text === null; i++) await new Promise(r => setImmediate(r));
+    // The bookmarklet is a self-running async function; let it settle, then
+    // click its copy button the way a person would.
+    const copy = () => button(game, /^Zkopírovat do schránky/);
+    for (let i = 0; i < 4000 && !copy() && !game.done(); i++) await new Promise(r => setImmediate(r));
+    game.titleAtEnd = game.sandbox.document.title;
+    if (copy()) await copy().onclick();
     for (let i = 0; i < 200; i++) await new Promise(r => setImmediate(r));
     return game;
 }
@@ -420,7 +425,8 @@ section(`${label}: pages at a reader's pace`);
     eq('one wait before every page but the first', game.delays.length, pages - 1);
     ok('every wait between 5 and 10 s', game.delays.every(ms => ms >= 5000 && ms <= 10000), game.delays.join(', '));
     ok('the waits vary', new Set(game.delays).size > 1, game.delays.join(', '));
-    eq('tab title says it is done', game.sandbox.document.title, '✓ wg sběrač — hotovo');
+    eq('tab title says it is done', game.titleAtEnd, '✓ wg sběrač — hotovo');
+    eq('and goes back once copied', game.sandbox.document.title, 'Webgame');
 }
 
 section(`${label}: Zastavit hands over what is collected so far`);
@@ -471,18 +477,21 @@ section(`${label}: konflikty only where there is something new`);
     } finally { Date.now = real; }
 }
 
-section(`${label}: clipboard refused after the long wait`);
+section(`${label}: copying waits for a click, and works without the clipboard API`);
 {
     const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, clipboardFails: true });
     vm.createContext(game.sandbox);
     vm.runInContext(code, game.sandbox);
     await answer(game);
-    for (let i = 0; i < 4000 && !game.extra.some(e => e.tag === 'textarea'); i++) await new Promise(r => setImmediate(r));
+    const copy = () => button(game, /^Zkopírovat do schránky/);
+    for (let i = 0; i < 4000 && !copy(); i++) await new Promise(r => setImmediate(r));
+    ok('a copy button is offered', !!copy());
+    eq('nothing written to the clipboard before the click', game.clip.text, null);
+    const btn = copy();
+    await btn.onclick();
     const ta = game.extra.find(e => e.tag === 'textarea');
-    const btn = button(game, /Zkopírovat/);
-    ok('the text is shown instead', ta && /### ARCHIV #47/.test(ta.value || ''));
-    ok('with a copy button', !!btn && typeof btn.onclick === 'function');
-    if (btn) { btn.onclick(); eq('the button copies', btn.textContent, 'Zkopírováno ✓'); }
+    ok('without the API the text is selected in a box', ta && /### ARCHIV #47/.test(ta.value || ''));
+    eq('and copied the older way', btn.textContent, 'Zkopírováno ✓');
 }
 }
 

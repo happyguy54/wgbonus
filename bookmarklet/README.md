@@ -30,8 +30,8 @@ záložku znovu stejným způsobem.
    profily, a kdy přijde další stránka. **Trvá to pár minut** (viz níž) —
    ten panel nechte být, hrát můžete v jiném. Až bude hotovo, v názvu panelu
    se objeví **✓ wg sběrač — hotovo**
-5. Pokud se schránka nedá použít (byl jste v jiném panelu), objeví se tlačítko
-   **Zkopírovat do schránky** — klikněte
+5. Na konci klikněte na **Zkopírovat do schránky**. Do schránky se zapisuje
+   jen na kliknutí, takže se prohlížeč na žádné povolení neptá
 6. Na stránce wgbonus vložte do pole **„Vložit z herního logu“** (Ctrl+V)
    a **Načíst útoky**
 7. **Nahrát moje**, ať to vidí ostatní
@@ -112,8 +112,11 @@ Testy (`node tests/run.js`) hlídají, že je aktuální.
 - **„Workeru se nedovolám“** — špatná adresa (musí být včetně `https://`) nebo
   je worker dole; sběrač jede dál, jen bez přeskakování známých útoků
 - **„Za posledních 72 h nic nového“** — vše už je v databázi
-- **Tlačítko „Zkopírovat do schránky“** — prohlížeč po dlouhém stahování
-  nepovolil zápis do schránky; klikněte na něj
+- **„gold.webgame.cz chce zobrazit text a obrázky zkopírované do schránky“** —
+  to se ptala starší verze sběrače. **Nepovolujte**: povolení by dostal celý
+  web hry, včetně čtení schránky. Pokud jste už povolil, vlevo od adresy →
+  Nastavení webu → Schránka → Blokovat. Nová verze zapisuje jen po kliknutí
+  na tlačítko a na nic se neptá
 - **Rozsypaná diakritika** — hra na některých stránkách posílá windows-1250,
   sběrač to pozná a překóduje; pokud ne, dejte vědět
 
