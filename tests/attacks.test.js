@@ -668,4 +668,34 @@ section('an alliance page: experience table and members\' hodnost (tpOwCh)');
     eq('an attacker within rank 5 either way (143 000 - 149 555): certain', `${att.hodnost_utocnik}/${att.hodnost_utocnik_jiste}`, '5/1');
 }
 
+section('Lord Azeroth (#55), 2.10.: more wordings (samples/sber-55-tvary.txt)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const text = fs.readFileSync(path.join(__dirname, '..', 'samples', 'sber-55-tvary.txt'), 'utf8');
+    const { records, skipped } = A.parsePaste(text);
+    const at = c => records.find(r => r.cas.endsWith(c));
+    eq('nothing unrecognised', skipped, 0);
+    eq('enemy týl on us ("napadnout náš týl") is a defence', `${at('08:56:09').druh} ${at('08:56:09').utocnik_id}->${at('08:56:09').cil_id}`, 'obrana 49->55');
+    eq('…with the enemy\'s name, not "Tankové brigádě …"', at('08:56:09').utocnik_zeme, 'kamcatka');
+    eq('a failed enemy conquest ("Zaútočila na nás … nepřemohla nás") is a defence', `${at('08:00:35').druh} ${at('08:00:35').typ}`, 'obrana dobyvacny');
+    eq('an enemy týl beaten off ("Bleskový úder tankové brigády X … odražen") is a defence', at('07:14:02').druh, 'obrana');
+    eq('so is the same on 30.9.', at('21:42:18').druh, 'obrana');
+    const p = at('06:47:23');
+    ok('our partisan attack is an attack', A.isAttack(p) && p.typ === 'partyzansky');
+    eq('its target', `${p.cil_id} ${p.cil_zeme}`, '79 Ankh-Morpork');
+    eq('our dead', p.ztraty_utocnik, 7368);
+    eq('theirs', p.ztraty_obrance, 1740);
+    eq('agents killed', p.zabito_agenti, 2);
+    eq('readiness drop', p.pripravenost_pokles, 4);
+    const sc = A.scopeFor(p, {});
+    eq('prestiž of what we killed: 1 740 soldiers + 2 agents x 15', sc.zabito_prestiz, 1740 + 30);
+    eq('their soldiers not counted twice as mechs', sc.zabito_mechove, 0);
+    eq('attacks among the 12 rows: our 4 partisan attacks', records.filter(A.isAttack).length, 4);
+
+    const d = require('../attacks.default.json');
+    const known = (d.records || d).concat(A.parsePaste(fs.readFileSync(path.join(__dirname, '..', 'samples', 'sber-47.txt'), 'utf8')).records.filter(A.isAttack));
+    eq('none of the 127 known attacks reads as a defence', known.filter(r => A.DEFENCE.test(r.raw || '')).length, 0);
+}
+
 process.exit(done() ? 1 : 0);

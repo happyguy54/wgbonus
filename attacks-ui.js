@@ -161,11 +161,12 @@
         ['zabito_tanky', 'zabité tanky obránce'],
         ['zabito_stihacky', 'zabité stíhačky obránce'],
         ['zabito_bunkry', 'zabité bunkry obránce'],
+        ['zabito_agenti', 'zabití agenti (partyzánský útok), prestiž 15 za kus'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
         ['ztraty_mechove_utocnik', 'zničení útočící mechové'],
         ['zabito_vse', 'všechny zabité jednotky obránce včetně mechů'],
-        ['zabito_prestiz', 'zabité jednotky vážené prestiží (voják 1, mech 2,7, stíhačka/bunkr 3,5, tank 5)'],
+        ['zabito_prestiz', 'zabité jednotky vážené prestiží (voják 1, mech 2,7, stíhačka/bunkr 3,5, tank 5, agent 15)'],
         ['ztraty_prestiz_celkem', 'zabito_prestiz + vlastní padlí mechové vážení prestiží'],
         ['attack_lost', 'naše ztracené jednotky (mechové/tanky/stíhačky dle typu útoku)'],
         ['defense_lost', 'jejich ztracené jednotky'],
@@ -770,7 +771,26 @@
         }
         ui.syncInfo.textContent = 'Nahrávám…';
         try {
-            const atk = await syncCall('attacks', 'POST', store.records);
+            // An older worker drops the fields it does not know. Without
+            // `druh` a defence would arrive looking like an attack, and
+            // without `hodnost_*_jiste` an estimate like a certain value - so
+            // to such a worker only attacks go, and estimated hodnost does not.
+            let records = store.records;
+            let stale = '';
+            const health = await syncCall('health', 'GET').catch(() => ({}));
+            const cols = Array.isArray(health.sloupce) ? health.sloupce : [];
+            if (!cols.includes('druh') || !cols.includes('hodnost_utocnik_jiste')) {
+                records = store.attacks().map(r => {
+                    const c = Object.assign({}, r);
+                    ['utocnik', 'obrance'].forEach(side => {
+                        if (c[`hodnost_${side}_jiste`] === 0) c[`hodnost_${side}`] = null;
+                    });
+                    return c;
+                });
+                stale = ' Worker je starší verze: obrany a odhadnutá hodnost se nenahrály'
+                    + ' — nasaďte nový worker/wgbonus-worker.js a nahrajte znovu.';
+            }
+            const atk = await syncCall('attacks', 'POST', records);
             let konfNote = '';
             if (konfliktRows.length) {
                 try {
@@ -781,7 +801,7 @@
             ui.syncInfo.textContent =
                 `Nahráno: nových ${atk.added}`
                 + (atk.duplicates ? `, ${atk.duplicates} už tam bylo` : '')
-                + `, celkem nahoře ${atk.total}` + konfNote + '.';
+                + `, celkem nahoře ${atk.total}` + konfNote + '.' + stale;
         } catch (err) {
             ui.syncInfo.textContent = 'Nahrání selhalo: ' + err.message;
         }

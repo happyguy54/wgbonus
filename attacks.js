@@ -61,7 +61,7 @@
     }
 
     /** Messages where we defended rather than attacked; see parseLine. */
-    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b/i;
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov/i;
 
     /** "10.9.2026 12:12:14" anywhere in a row -> "2026-09-10 12:12:14". */
     function casOf(text) {
@@ -91,9 +91,13 @@
         if (xp === null) return null;
 
         // Defending also earns experience, in messages that are not our
-        // attacks: "Armáda X(#87) prolomila naši obranu …", "Země X(#87) na
-        // nás podnikla partyzánský útok …" and "Nepřátelským mechům X(#49) se
-        // podařilo během nočního tažení naší zemí …" (they hit us), "Byli jsme povoláni
+        // attacks. They hit us: "Armáda X(#87) prolomila naši obranu …", "Země
+        // X(#87) na nás podnikla partyzánský útok …", "Nepřátelským mechům
+        // X(#49) se podařilo během nočního tažení naší zemí …", "Tankové
+        // brigádě X(#49) se podařilo … napadnout náš týl …"; they tried:
+        // "Sebevědomá země X(#38) … Zaútočila na nás dobyvačným útokem, ale
+        // nepřemohla nás", "Bleskový úder tankové brigády X(#45) … byl
+        // odražen" (ours reads "úder naší tankové brigády"); "Byli jsme povoláni
         // zemí Y(#118) na pomoc v obraně …" (we helped an ally defend). Read as
         // attacks they would store the enemy, or our own ally, as the target.
         // Skipped until defence gets its own parser.
@@ -118,7 +122,8 @@
         // Anchored on the word that introduces the target in each wording, so
         // the rest of the sentence cannot be swallowed into the country name.
         // "…byl tanky X(#96) odražen" is how a beaten-off týl names its target.
-        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky';
+        // "Partyzánský útok na X(#79) se zdařil" names it after "útok na".
+        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky|[úu]tok\\s+na';
         const cil = first(text, new RegExp('(?:' + ANCHORS + ')\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
                  || first(text, new RegExp('([^\\t(]{1,60}?)' + TARGET, 'i'));
 
@@ -174,6 +179,19 @@
             rec.zakladny = null;
             // "snížit tak její připravenost o 3%"
             rec.pripravenost_pokles = pct(text, /p[řr]ipravenost\s+o\s+([\d.,]+)\s*%/i);
+        } else if (rec.typ === 'partyzansky') {
+            // "Partyzánský útok na X(#79) se zdařil. Připravenost nepřátelské
+            //  armády byla snížena o 4% , zabito bylo 2 agentů … Při bojích
+            //  zahynulo 7368 našich a 1740 nepřátelských vojáků."
+            rec.ztraty_utocnik = grab(text, /zahynulo\s+([\d\s .]+?)\s*na[šs]ich/i);
+            rec.ztraty_obrance = grab(text, /a\s+([\d\s .]+?)\s*nep[řr][áa]telsk[ýy]ch\s+voj/i);
+            rec.zabito_vojaci = rec.ztraty_obrance;
+            rec.zabito_tanky = null;
+            rec.zabito_stihacky = null;
+            rec.zabito_bunkry = null;
+            rec.zakladny = null;
+            rec.zabito_agenti = grab(text, /zabito\s+bylo\s+([\d\s .]+?)\s*agent/i);
+            rec.pripravenost_pokles = pct(text, /p[řr]ipravenost[^.]{0,40}?sn[íi][žz]ena\s+o\s+([\d.,]+)\s*%/i);
         } else if (rec.typ === 'nalet' || rec.typ === 'bombardovani') {
             // "Bylo zničeno 92 vojenských základen nepřítele, 9741 našich
             //  stíhaček, 4114 nepřátelských stíhaček, 316 bunkrů"
@@ -246,7 +264,7 @@
         while ((m = re.exec(text)) !== null) {
             const before = text.slice(Math.max(0, m.index - 80), m.index);
             const name = before
-                .replace(/^[\s\S]*\b(?:Arm[áa]da|Zem[ěe]|zem[ěe]|zem[íi]|mech[ůu]m|tank[ůu]m|st[íi]ha[čc]k[áa]m|agresi|tanky)\s+/, '')
+                .replace(/^[\s\S]*\b(?:Arm[áa]da|Zem[ěe]|zem[ěe]|zem[íi]|mech[ůu]m|tank[ůu]m|st[íi]ha[čc]k[áa]m|agresi|tanky|brig[áa]d[ěey])\s+/, '')
                 .replace(/^(?:(?:Pošta|Útok|Rakety|Rozvědka|Konflikty)\s+)+/, '')
                 .trim();
             countries.push({ id: Number(m[1]), zeme: name || null, aliance: m[2] || null, hrac: m[3] || null });
@@ -484,6 +502,8 @@
         stihacky: 3.5,
         bunkry: 3.5,
         tanky: 5,
+        // Killed in partisan attacks; 15 as in PRESTIGE_TABLE below.
+        agenti: 15,
     };
 
     /**
@@ -980,7 +1000,7 @@
 
         [
             'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
-            'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
+            'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp', 'zabito_agenti',
         ].forEach(k => { if (rec[k] !== null && rec[k] !== undefined) out[k] = rec[k]; });
 
         const P = (s.prestigeValues && typeof s.prestigeValues === 'object')
@@ -992,7 +1012,8 @@
         // so they must be ADDED to the body count. In týl and nálet the same
         // number is already one of the zabito_* fields, so adding it again
         // would count the defender's dead twice - at two different rates.
-        const defenderInZabito = rec.typ === 'tyl' || rec.typ === 'nalet' || rec.typ === 'bombardovani';
+        const defenderInZabito = rec.typ === 'tyl' || rec.typ === 'nalet' || rec.typ === 'bombardovani'
+            || rec.typ === 'partyzansky';
         out.zabito_mechove = defenderInZabito ? 0 : v('ztraty_obrance');
         out.zabito_obrance_kusu = v('ztraty_obrance');
         out.ztraty_mechove_utocnik = v('ztraty_utocnik');   // kept: old name
@@ -1009,6 +1030,7 @@
                            + v('zabito_tanky') * (P.tanky || 0)
                            + v('zabito_stihacky') * (P.stihacky || 0)
                            + v('zabito_bunkry') * (P.bunkry || 0)
+                           + v('zabito_agenti') * (P.agenti || 0)
                            + out.zabito_mechove * (P.mechove || 0);
 
         // Same, but counting the attacker's own dead mechs as well.

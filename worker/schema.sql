@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS attacks (
   zabito_tanky     INTEGER,
   zabito_stihacky  INTEGER,
   zabito_bunkry    INTEGER,
+  zabito_agenti    INTEGER,
   zabito_celkem    INTEGER,
   zakladny         INTEGER,
   ztraty_utocnik   INTEGER,

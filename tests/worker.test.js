@@ -216,6 +216,7 @@ const atk = (id, extra = {}) => Object.assign({
         eq('konflikt prestiž stored', k.records[0].prestiz_obrance, 1360000);
 
         const h = await (await call(env, 'GET', 'health')).json();
+        ok('health says which fields it stores', Array.isArray(h.sloupce) && h.sloupce.includes('druh') && h.sloupce.includes('hodnost_utocnik_jiste'));
         eq('health counts attacks', h.attacks, 1);
         eq('health counts konflikty', h.konflikty, 1);
     }

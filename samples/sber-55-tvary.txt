@@ -1,0 +1,28 @@
+### ARCHIV #55 Lord Azeroth - StRRiPes
+2.10.2026	8:56:09	Tankové brigádě kamcatka(#49) [TVFN] - chrenco se podařilo bleskovým úderem napadnout náš týl a snížit tak připravenost armády o 3% . My jsme při tom přišli o 0 tanků a nepřítel o 43 tanků. Měli bychom posílit naše tankové divize. Získáno 30 zkušeností.
+2.10.2026	8:00:35	Sebevědomá země Ty Vole Fakt NeKUKám(#38) [TVFN] - Deathlord1 přecenila své síly . Zaútočila na nás dobyvačným útokem , ale nepřemohla nás. Naše ztráty byly 1509 vojáků, 0 tanků, 0 bunkrů a 0 mechů. Nepřítel ztratil 2616 vojáků, 174 tanků, 0 stíhaček, 0 mechů. Připrav. obránce se po útoku zvýšila o 3%. Získáno 1121 zkušeností.
+2.10.2026	7:38:00	Armáda Wörthersee(#61) [HOLY] - 7lord7 prolomila naši obranu a zabrala 657 km2 a 212 budov . V rukou nepřítele zůstalo 38191$, 0t jídla, 813MWh energie a 696 technologií. Naše ztráty byly 3312 vojáků, 1 tanků, 0 bunkrů a 0 mechů. Nepřítel ztratil 3657 vojáků, 148 tanků, 0 stíhaček, 0 mechů. Připrav. obránce se po útoku zvýšila o 10%. Získáno 815 zkušeností.
+2.10.2026	7:37:32	Země Wörthersee(#61) [HOLY] - 7lord7 na nás podnikla partyzánský útok . Připravenost naší armády byla snížena o 0% , zabito bylo 18 agentů a zapálením zásob ropy klesla zásoba energie o 1377 MWh. Při bojích zahynulo 2411 útočících a 1901 našich vojáků. Získáno 572 zkušeností.
+2.10.2026	7:20:34	Nepřátelským mechům Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek se podařilo během nočního tažení naší zemí zlikvidovat 1022 nepřipravených vojáků, 29 tanků a 26 stíhaček. S nimi bylo zničeno 14 vojenských základen. Zničeno bylo 308 útočících a 0 bránících mechů. Získáno 198 zkušeností.
+2.10.2026	7:14:02	Bleskový úder tankové brigády Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek byl odražen. Ztratili jsme při tom 55 tanků a nepřítel 129. Získáno 198 zkušeností.
+2.10.2026	6:50:22	Úplné vítězství! Obsadili jsme 795 km2 a 400 budov země Ankh-Morpork(#79) [HOLY] - mikrobbb . Sebrali jsme 60957$, 234t jídla, 128MWh energie a 514 technologií. Naše ztráty byly 7407 vojáků, 138 tanků, 95 stíhaček, 0 mechů. Nepřítel ztratil 2165 vojáků, 204 tanků, 0 bunkrů a 221 mechů. Připrav. obránce se po útoku zvýšila o 9%. Získáno 5309 zkušeností.
+2.10.2026	6:47:23	Partyzánský útok na Ankh-Morpork(#79) [HOLY] - mikrobbb se zdařil. Připravenost nepřátelské armády byla snížena o 4% , zabito bylo 2 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 201 MWh. Při bojích zahynulo 7368 našich a 1740 nepřátelských vojáků. Získáno 1895 zkušeností.
+2.10.2026	6:47:11	Partyzánský útok na Ankh-Morpork(#79) [HOLY] - mikrobbb se zdařil. Připravenost nepřátelské armády byla snížena o 5% , zabito bylo 2 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 240 MWh. Při bojích zahynulo 7854 našich a 1638 nepřátelských vojáků. Získáno 1694 zkušeností.
+2.10.2026	6:43:46	Partyzánský útok na Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek se zdařil. Připravenost nepřátelské armády byla snížena o 2% , zabito bylo 2 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 222 MWh. Při bojích zahynulo 5340 našich a 1202 nepřátelských vojáků. Získáno 821 zkušeností.
+30.9.2026	21:42:18	Bleskový úder tankové brigády kamcatka(#49) [TVFN] - chrenco byl odražen. Ztratili jsme při tom 12 tanků a nepřítel 28. Získáno 120 zkušeností.
+30.9.2026	20:05:16	Partyzánský útok na Don Quijote de la Mancha(#71) [TVFN] - Traboss se zdařil. Připravenost nepřátelské armády byla snížena o 5% , zabito bylo 0 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 0 MWh. Při bojích zahynulo 2641 našich a 1236 nepřátelských vojáků. Získáno 1509 zkušeností.
+
+### KONFLIKTY #55
+Nalezeno 112 konfliktů
+ 2.10.
+06:47 Lord Azeroth(#55) [EJZ] - StRRiPes 92 268k pr.
+ ---> Ankh-Morpork(#79) [HOLY] - mikrobbb (zástupce) 255k pr. Partyzánský útok 
+ Pokles připr., agentů 
+ 2.10.
+06:43 Lord Azeroth(#55) [EJZ] - StRRiPes 92 237k pr.
+ ---> Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek (předseda) 158k pr. Partyzánský útok 
+ Pokles připr., agentů 
+ 2.10.
+07:14 Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek (předseda) 134k pr.
+ ---> Lord Azeroth(#55) [EJZ] - StRRiPes 92 291k pr. Zaútočit na týl 
+Ubránil se 

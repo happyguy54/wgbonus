@@ -34,7 +34,7 @@ const COLUMNS = {
     attacks: [
         'id', 'cas', 'typ', 'cil_id', 'cil_zeme', 'cil_aliance', 'cil_hrac',
         'utocnik_id', 'utocnik_zeme', 'utocnik_hrac', 'druh',
-        'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
+        'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry', 'zabito_agenti',
         'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
         'hodnost_utocnik_jiste', 'hodnost_obrance_jiste',
@@ -61,6 +61,7 @@ const ADDED = {
         utocnik_zeme: 'TEXT',
         utocnik_hrac: 'TEXT',
         druh: 'TEXT',
+        zabito_agenti: 'INTEGER',
         hodnost_utocnik_jiste: 'INTEGER',
         hodnost_obrance_jiste: 'INTEGER',
     },
@@ -153,6 +154,9 @@ export default {
                 }
                 // Filled in by the first upload; listed so a stale database shows.
                 if (missing.length) out.chybi_sloupce = missing;
+                // What this worker stores, so the page can tell an old one,
+                // which would silently drop fields it does not know.
+                out.sloupce = COLUMNS.attacks;
                 return json(out);
             }
 
