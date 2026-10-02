@@ -53,8 +53,12 @@ Každý útok si nese, **kdo útočil** (`utocnik_id`, země, hráč). Bez toho 
 útoky různých spojenců v jedné databázi nedaly rozlišit — a s nimi ani jejich
 hodnost a prestiž. V grafu je na to filtr **Útočník**.
 
-Obranné zprávy („prolomila naši obranu“, „byli jsme povoláni na pomoc v obraně“)
-se nesbírají — nejsou to naše útoky a zatím je nic nečte.
+Obrany („prolomila naši obranu“, „na nás podnikla partyzánský útok“,
+„Nepřátelským mechům … naší zemí“), pomoc spojenci („byli jsme povoláni na pomoc
+v obraně“) a dobyvačné útoky, které parser zatím neumí přečíst, se **ukládají
+taky**, ale zvlášť (pole `druh`: `obrana`, `pomoc`, `dobyvani`). U obrany je
+útočníkem nepřítel a cílem náš spojenec. Do tabulky útoků, grafu ani fitů se
+nepočítají — stránka jen ukáže, kolik jich je uloženo.
 
 ## Proč jen 72 hodin
 
@@ -73,12 +77,17 @@ obraně. Proto:
   archivu od útoku dál — **i z obrany**, ta se do hodnosti počítá taky
   (manuál 12.4.1). Ze zaokrouhleného čísla („46k“) a zisků, které záložka
   Útoky neukazuje (rozvědka, rakety, rezerva 1 000), vyjde rozpětí; když
-  přes něj vede hranice hodnosti, hodnost se **nechá prázdná**
-- **Obránce (nepřítel):** jeho archiv nevidíme, takže jen dnešní hodnost — a ta
-  se zapíše, jen když má **aspoň 5 000 zkušeností nad hranicí** své hodnosti,
-  tedy ji nezískal právě teď
-- jen u útoků z posledních 72 h před přečtením žebříčku; hodnota, která už
-  u útoku je, se **nikdy nepřepíše**
+  přes něj vede hranice hodnosti, zapíše se hodnost ze středu rozpětí jako
+  **odhad**
+- **Obránce (nepřítel):** jeho archiv nevidíme, takže jen dnešní hodnost.
+  **Aspoň 5 000 zkušeností nad hranicí** = jistá. Blíž u hranice ji mohl
+  získat právě během našich útoků: od dnešního čísla se odečtou naše
+  zkušenosti ze všech útoků na něj od toho útoku dál, a když to spadne pod
+  hranici, útok se připíše **předchozí hodnosti** — vždy jen jako odhad
+- **Odhad má ve fitu váhu 0,2** místo 1 (proměnná `vaha`, `hodnost_jista`)
+- jen u útoků z posledních 72 h před přečtením žebříčku; hodnota, kterou jste
+  zadal nebo která je jistá, se **nikdy nepřepíše** — odhad nahradí novější
+  přesnější čtení
 
 Ručně to jde taky: vložte záložku Útoky spojence (celou stránku, Ctrl+A —
 nadpis „Alianční archiv (#55)“ říká, čí je) a pak stránku žebříčku nebo

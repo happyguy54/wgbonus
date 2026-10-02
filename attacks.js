@@ -211,6 +211,73 @@
     }
 
     /**
+     * Archive messages with experience that are not our attacks, or not yet
+     * readable as one. They are stored too, as their own kind (`druh`), so
+     * nothing is lost, but every analysis of attacks leaves them out:
+     *
+     *   obrana   - they attacked us: "Armáda X(#96) prolomila naši obranu …",
+     *              "Země X(#87) na nás podnikla partyzánský útok …",
+     *              "Nepřátelským mechům X(#49) … během nočního tažení naší zemí …"
+     *   pomoc    - we helped an ally defend: "Byli jsme povoláni zemí A(#118)
+     *              na pomoc v obraně proti agresi X(#87) …"
+     *   dobyvani - our conquest, whose losses the parser cannot read yet:
+     *              "Úplné vítězství! Obsadili jsme 430 km2 a 209 budov země X(#49) …"
+     *
+     * The roles are the real ones: in a defence the enemy is `utocnik_*` and
+     * our ally (whose archive it is) is `cil_*`. Only the time, the countries,
+     * the type and the experience are read; the full text stays in `raw`.
+     */
+    function parseOther(line, owner) {
+        const text = String(line).replace(/ /g, ' ').trim();
+        const xp = grab(text, /Z[íi]sk[áa]no\s+([\d\s .]+)\s*zku[šs]enost/i);
+        const cas = casOf(text);
+        if (xp === null || !cas) return null;
+
+        const pomoc = /byli\s+jsme\s+povol[áa]n/i.test(text);
+        const obrana = !pomoc && DEFENCE.test(text);
+        const dobyvani = !obrana && !pomoc && /Obsadili\s+jsme\s+[\d\s]+\s*km/i.test(text);
+        if (!obrana && !pomoc && !dobyvani) return null;
+
+        // Every country in the message, with the name just before "(#id)"
+        // stripped of the words that introduce it and of the mail icon's caption.
+        const countries = [];
+        const re = /\(#(\d+)\)\s*(?:\[([^\]]*)\])?\s*(?:-\s*(\S+))?/g;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            const before = text.slice(Math.max(0, m.index - 80), m.index);
+            const name = before
+                .replace(/^[\s\S]*\b(?:Arm[áa]da|Zem[ěe]|zem[ěe]|zem[íi]|mech[ůu]m|tank[ůu]m|st[íi]ha[čc]k[áa]m|agresi|tanky)\s+/, '')
+                .replace(/^(?:(?:Pošta|Útok|Rakety|Rozvědka|Konflikty)\s+)+/, '')
+                .trim();
+            countries.push({ id: Number(m[1]), zeme: name || null, aliance: m[2] || null, hrac: m[3] || null });
+        }
+        const enemy = pomoc ? countries[1] || null : countries[0] || null;
+        const ours = owner ? { id: owner.utocnik_id, zeme: owner.utocnik_zeme || null, hrac: owner.utocnik_hrac || null } : null;
+
+        const type = detectType(text)
+            || (/zabral[ao]?\s+[\d\s]+\s*km|Obsadili\s+jsme/i.test(text) ? TYPES.find(t => t.id === 'dobyvacny') : null);
+        const side = (who, prefix) => ({
+            [prefix + '_id']: who ? who.id : null,
+            [prefix + '_zeme']: who ? who.zeme : null,
+            [prefix + '_hrac']: who ? who.hrac : null,
+        });
+        const rec = Object.assign({
+            druh: obrana ? 'obrana' : pomoc ? 'pomoc' : 'dobyvani',
+            cas, xp, raw: text,
+            typ: type ? type.id : null,
+            typLabel: type ? type.label : null,
+        }, dobyvani
+            ? Object.assign(side(ours, 'utocnik'), side(enemy, 'cil'), { cil_aliance: enemy ? enemy.aliance : null })
+            : Object.assign(side(enemy, 'utocnik'), side(ours, 'cil')));
+        // Read better later, these must keep the same identity.
+        rec.id = [rec.druh, cas, rec.utocnik_id, rec.cil_id, xp].join('|');
+        return rec;
+    }
+
+    /** True for our attacks - the only records any attack analysis uses. */
+    const isAttack = rec => !!rec && (!rec.druh || rec.druh === 'utok');
+
+    /**
      * Parse a whole paste. Rows may be split across several physical lines, so
      * lines are joined until a line ends with the experience sentence.
      */
@@ -263,11 +330,14 @@
             addXp(attacker && attacker.utocnik_id, casOf(buffer),
                 grab(buffer, /Z[íi]sk[áa]no\s+([\d\s .]+)\s*zku[šs]enost/i));
             const rec = parseLine(buffer);
+            const other = rec ? null : parseOther(buffer, attacker);
             if (rec) {
                 // Not part of the signature, so tagging cannot turn a record
                 // already stored into a "new" one.
                 if (attacker) Object.assign(rec, attacker);
                 records.push(rec);
+            } else if (other) {
+                records.push(other);
             } else if (/Z[íi]sk[áa]no\s+[\d\s .]+\s*zku[šs]enost/i.test(buffer)) {
                 // Only a message with experience that we could not read is
                 // "unrecognised"; headings, menus or žebříček rows are not.
@@ -366,15 +436,28 @@
 
         clear() { this.records = []; this.byId = new Set(); }
 
+        /** Our attacks only - defences and unread conquests are kept apart. */
+        attacks() {
+            return this.records.filter(isAttack);
+        }
+
+        /** How many of each other kind (`druh`) are stored alongside. */
+        others() {
+            const m = {};
+            this.records.forEach(r => { if (!isAttack(r)) m[r.druh] = (m[r.druh] || 0) + 1; });
+            return m;
+        }
+
         /** Attack type ids present, with counts. */
         types() {
             const m = new Map();
-            this.records.forEach(r => m.set(r.typ, (m.get(r.typ) || 0) + 1));
+            this.attacks().forEach(r => m.set(r.typ, (m.get(r.typ) || 0) + 1));
             return [...m.entries()].map(([typ, count]) => ({ typ, label: typeLabel(typ), count }));
         }
 
         byType(typ) {
-            return typ ? this.records.filter(r => r.typ === typ) : this.records.slice();
+            const a = this.attacks();
+            return typ ? a.filter(r => r.typ === typ) : a;
         }
 
         toJSON() {
@@ -680,55 +763,76 @@
     }
 
     /**
-     * Hodnost of both sides at the moment of each attack.
+     * Hodnost of both sides at the moment of each attack. Every value written
+     * is marked certain (`hodnost_*_jiste` = 1) or an estimate (0); an
+     * estimate weighs 0.2 in fits instead of 1 (see scopeFor).
      *
      * Attacker (an ally): today's rank experience minus every gain in that
      * ally's archive from the attack on - its own XP included, since the rank
      * during an attack is the one before its XP is added. Only gains up to the
-     * moment the experience was read count. `neviditelne` allows for gains the
-     * Útoky tab does not show (spy operations, rockets); with a rounded figure
-     * ("46k") the range widens further. If the range spans a rank threshold
-     * the rank is left empty rather than guessed.
+     * moment the experience was read count. A rounded figure ("46k") and gains
+     * the Útoky tab does not show (spy operations, rockets; `neviditelne`)
+     * make a range; if a rank threshold falls inside it, the rank in the
+     * middle of the range is written as an estimate.
      *
      * Defender (an enemy): their archive is not ours to see, so only today's
-     * rank is known. It is written only when they are at least `rezerva` above
-     * that rank's threshold - well past it, so not crossed just now.
+     * rank is known. At least `rezerva` past that rank's threshold, it is
+     * taken as certain. Closer than that, they may have crossed it during
+     * these very attacks: our XP from every attack on them from this one on
+     * stands in for what they gained since, and if today's figure minus that
+     * falls below the threshold, the attack is put at the previous rank. Either
+     * way only as an estimate.
      *
-     * Only attacks within `okno` hours of the reading are touched, and a value
-     * already on a record is never overwritten.
+     * Only attacks within `okno` hours of the reading are touched. A value
+     * already on a record is never overwritten - unless it is an estimate of
+     * ours, which a newer reading may replace.
      */
     function applyHodnost(records, xpEvents, zebricek, opts) {
         const o = Object.assign({ okno: 72, rezerva: 5000, neviditelne: 1000 }, opts || {});
         const empty = v => v === null || v === undefined || v === '';
+        const writable = (rec, k) => empty(rec[k]) || rec[k + '_jiste'] === 0;
+        const put = (rec, k, value, sure) => { rec[k] = value; rec[k + '_jiste'] = sure ? 1 : 0; };
         const byAlly = new Map();
         (xpEvents || []).forEach(e => {
             if (!byAlly.has(e.utocnik_id)) byAlly.set(e.utocnik_id, []);
             byAlly.get(e.utocnik_id).push(e);
         });
+        const attacks = (records || []).filter(isAttack);
 
-        const res = { utocnik: 0, obrance: 0, nejiste: 0 };
-        (records || []).forEach(rec => {
+        const res = { utocnik: 0, obrance: 0, odhad: 0 };
+        attacks.forEach(rec => {
             if (!rec.cas) return;
             const atk = rec.utocnik_id ? zebricek[rec.utocnik_id] : null;
             const def = rec.cil_id ? zebricek[rec.cil_id] : null;
 
-            if (atk && empty(rec.hodnost_utocnik) && inWindow(rec.cas, atk.at, o.okno)) {
+            if (atk && writable(rec, 'hodnost_utocnik') && inWindow(rec.cas, atk.at, o.okno)) {
                 const events = byAlly.get(rec.utocnik_id) || [];
                 // The attack's own row must be among the gains, or the list
                 // does not reach back far enough to start from.
-                const own = events.some(e => e.cas === rec.cas && e.xp === rec.xp);
-                const after = events.filter(e => e.cas >= rec.cas && e.cas <= atk.at);
-                const sum = after.reduce((a, e) => a + e.xp, 0);
-                const lo = rankFor(atk.lo - sum - o.neviditelne);
-                const hi = rankFor(atk.hi - sum);
-                if (own && lo.n === hi.n) { rec.hodnost_utocnik = lo.n; res.utocnik++; }
-                else res.nejiste++;
+                if (events.some(e => e.cas === rec.cas && e.xp === rec.xp)) {
+                    const sum = events.filter(e => e.cas >= rec.cas && e.cas <= atk.at).reduce((a, e) => a + e.xp, 0);
+                    const from = atk.lo - sum - o.neviditelne;
+                    const to = atk.hi - sum;
+                    const lo = rankFor(from);
+                    const sure = lo.n === rankFor(to).n;
+                    put(rec, 'hodnost_utocnik', sure ? lo.n : rankFor((from + to) / 2).n, sure);
+                    if (sure) res.utocnik++; else res.odhad++;
+                }
             }
 
-            if (def && empty(rec.hodnost_obrance) && inWindow(rec.cas, def.at, o.okno)) {
+            if (def && writable(rec, 'hodnost_obrance') && inWindow(rec.cas, def.at, o.okno)) {
                 const now = def.hodnost || rankFor(def.lo).n;
-                if (def.lo - rankMin(now) >= o.rezerva) { rec.hodnost_obrance = now; res.obrance++; }
-                else res.nejiste++;
+                if (def.lo - rankMin(now) >= o.rezerva) {
+                    put(rec, 'hodnost_obrance', now, true);
+                    res.obrance++;
+                } else {
+                    const gained = attacks
+                        .filter(r => r.cil_id === rec.cil_id && r.cas >= rec.cas && r.cas <= def.at)
+                        .reduce((a, r) => a + (Number(r.xp) || 0), 0);
+                    const before = def.xp - gained < rankMin(now) && now > 1 ? now - 1 : now;
+                    put(rec, 'hodnost_obrance', before, false);
+                    res.odhad++;
+                }
             }
         });
         return res;
@@ -881,9 +985,10 @@
         out.hodnost_obrance = ho.value;
 
         // 1 when every figure is the record's own, DEFAULT_WEIGHT when any of
-        // them is a stand-in.
+        // them is a stand-in - or a hodnost that is only an estimate.
         out.vlastni_hodnoty = (pu.own && po.own && hu.own && ho.own) ? 1 : 0;
-        out.vaha = out.vlastni_hodnoty ? 1 : DEFAULT_WEIGHT;
+        out.hodnost_jista = (rec.hodnost_utocnik_jiste === 0 || rec.hodnost_obrance_jiste === 0) ? 0 : 1;
+        out.vaha = (out.vlastni_hodnoty && out.hodnost_jista) ? 1 : DEFAULT_WEIGHT;
 
         // Manual 6.2.6: (hodnost obránce - hodnost útočníka) * 5, capped +-20 %,
         // effective only from attacker rank 5 and when the gap exceeds 1.
@@ -918,6 +1023,8 @@
         applyKonflikty,
         parseZebricek,
         applyHodnost,
+        parseOther,
+        isAttack,
         rankFor,
         RANKS,
         DEFENCE,

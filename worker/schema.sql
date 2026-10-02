@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS attacks (
   utocnik_id       INTEGER,
   utocnik_zeme     TEXT,
   utocnik_hrac     TEXT,
+  druh             TEXT,
   zabito_vojaci    INTEGER,
   zabito_tanky     INTEGER,
   zabito_stihacky  INTEGER,
@@ -25,6 +26,8 @@ CREATE TABLE IF NOT EXISTS attacks (
   prestiz_obrance  INTEGER,
   hodnost_utocnik  INTEGER,
   hodnost_obrance  INTEGER,
+  hodnost_utocnik_jiste INTEGER,
+  hodnost_obrance_jiste INTEGER,
   pripravenost_pokles REAL,
   spokojenost_pokles  REAL,
   raw              TEXT,
@@ -56,6 +59,7 @@ CREATE INDEX IF NOT EXISTS konflikty_cas ON konflikty (cas);
 CREATE INDEX IF NOT EXISTS konflikty_obr ON konflikty (obrance_id);
 
 -- Columns added after the first deploy (pripravenost_pokles,
--- spokojenost_pokles, utocnik_*, rozloha, budovy) do NOT need ALTER TABLE by
+-- spokojenost_pokles, utocnik_*, druh, hodnost_*_jiste, rozloha, budovy) do
+-- NOT need ALTER TABLE by
 -- hand: the worker adds whatever is missing on the first upload. GET /health
 -- lists them under "chybi_sloupce" until then.

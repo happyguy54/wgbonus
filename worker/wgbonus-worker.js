@@ -33,10 +33,11 @@ const DEFAULT_LIMIT = 20000;
 const COLUMNS = {
     attacks: [
         'id', 'cas', 'typ', 'cil_id', 'cil_zeme', 'cil_aliance', 'cil_hrac',
-        'utocnik_id', 'utocnik_zeme', 'utocnik_hrac',
+        'utocnik_id', 'utocnik_zeme', 'utocnik_hrac', 'druh',
         'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
         'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
+        'hodnost_utocnik_jiste', 'hodnost_obrance_jiste',
         'pripravenost_pokles', 'spokojenost_pokles', 'raw', 'vlozeno',
     ],
     konflikty: [
@@ -59,6 +60,9 @@ const ADDED = {
         utocnik_id: 'INTEGER',
         utocnik_zeme: 'TEXT',
         utocnik_hrac: 'TEXT',
+        druh: 'TEXT',
+        hodnost_utocnik_jiste: 'INTEGER',
+        hodnost_obrance_jiste: 'INTEGER',
     },
     konflikty: {
         rozloha: 'INTEGER',

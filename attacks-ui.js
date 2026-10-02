@@ -88,7 +88,8 @@
         store.records.forEach(rec => {
             const src = byId.get(rec.id);
             if (!src) return;
-            ['prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance']
+            ['prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
+             'hodnost_utocnik_jiste', 'hodnost_obrance_jiste']
                 .forEach(k => { if (src[k] !== undefined && src[k] !== null) rec[k] = src[k]; });
         });
         if (data.settings) settings = Object.assign(settings, data.settings);
@@ -178,7 +179,8 @@
         ['defense_all', 'všechny zabité jednotky obránce včetně mechů'],
         ['attack_prestiz', 'padlí útočící mechové vážení prestiží'],
         ['defense_prestiz', 'zabité jednotky obránce vážené prestiží'],
-        ['vaha', 'váha záznamu ve fitu (1 = vlastní prestiž/hodnost, 0,2 = výchozí)'],
+        ['vaha', 'váha záznamu ve fitu (1 = vlastní a jistá prestiž/hodnost, 0,2 = výchozí nebo odhad)'],
+        ['hodnost_jista', '1 když hodnost obou stran není jen odhad, jinak 0'],
         ['vlastni_hodnoty', '1 když má záznam vlastní prestiž a hodnost, jinak 0'],
         ['zakladny', 'zničené vojenské základny'],
         ['ztraty_utocnik', 'zničené útočící jednotky'],
@@ -350,7 +352,13 @@
     function renderTable() {
         const filter = ui.typeFilter.value;
         const rows = store.byType(filter === '*' ? null : filter);
-        ui.count.textContent = `${store.records.length} útoků celkem, zobrazeno ${rows.length}`;
+        // Defences and conquests the parser cannot read yet are stored too,
+        // but kept out of everything that analyses attacks.
+        const other = store.others();
+        const KIND = { obrana: 'obran', pomoc: 'pomocí spojenci', dobyvani: 'dobyvačných (zatím nečtených)' };
+        const extra = Object.keys(other).map(k => `${other[k]} ${KIND[k] || k}`).join(', ');
+        ui.count.textContent = `${store.attacks().length} útoků celkem, zobrazeno ${rows.length}`
+            + (extra ? ` · uloženo i ${extra} — do výpočtů se nepočítají` : '');
 
         if (!rows.length) {
             ui.tableBody.innerHTML = '<tr><td colspan="11" class="rdata c">Zatím žádné útoky — vložte je výše.</td></tr>';
@@ -398,7 +406,7 @@
         if (!ui.plotTarget) return;
         const typ = ui.plotType.value;
         const seen = new Map();
-        store.records.forEach(r => {
+        store.attacks().forEach(r => {
             if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
             const key = String(r.cil_id || '?');
             if (!seen.has(key)) seen.set(key, { label: r.cil_zeme || ('#' + key), n: 0 });
@@ -415,7 +423,7 @@
         if (!ui.plotAttacker) return;
         const typ = ui.plotType.value;
         const seen = new Map();
-        store.records.forEach(r => {
+        store.attacks().forEach(r => {
             if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
             const key = r.utocnik_id ? String(r.utocnik_id) : '?';
             if (!seen.has(key)) seen.set(key, { name: null, n: 0 });
@@ -450,7 +458,7 @@
                            && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker);
 
         const grouped = new Map();
-        store.records.forEach(rec => {
+        store.attacks().forEach(rec => {
             const typ = rec.typ || 'neznámý';
             if (!wanted(rec)) return;
             const scope = A.scopeFor(rec, settings);
@@ -461,7 +469,9 @@
             grouped.get(typ).push({
                 x, y: rec.xp, cas: rec.cas, cil_id: rec.cil_id, cil_zeme: rec.cil_zeme,
                 title: `${A.typeLabel(typ)}\n${rec.cas || ''}\nx = ${fmtNum(x)}\nxp = ${fmtNum(rec.xp)}`
-                     + (scope.vlastni_hodnoty ? '' : `\n(výchozí prestiž/hodnost, váha ${scope.vaha})`),
+                     + (scope.vaha < 1
+                        ? `\n(${scope.hodnost_jista ? 'výchozí prestiž/hodnost' : 'hodnost jen odhadnutá'}, váha ${scope.vaha})`
+                        : ''),
             });
         });
 
@@ -524,7 +534,7 @@
             let eqCompiled;
             try { eqCompiled = Engine.compile(eq.expression); } catch (e) { return; }
             const pts = [];
-            store.records.forEach(rec => {
+            store.attacks().forEach(rec => {
                 const typ = rec.typ || 'neznámý';
                 if (!wanted(rec)) return;
                 if (eq.typ !== '*' && eq.typ !== typ) return;
@@ -603,11 +613,14 @@
         // once. Navigating to the right page is the tedious part, so whatever
         // comes back should just work without being sorted into two boxes.
         const { records, skipped, xpEvents } = A.parsePaste(text);
+        const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
+        const addedAttacks = store.attacks().length - before;
 
         const bits = [];
         if (records.length) {
-            bits.push(`přidáno ${added} útoků`);
+            bits.push(`přidáno ${addedAttacks} útoků`
+                + (added - addedAttacks ? ` (a ${added - addedAttacks} obran a dobyvačných, mimo výpočty)` : ''));
             if (duplicates) bits.push(`${duplicates} už bylo v databázi`);
         }
 
@@ -636,9 +649,9 @@
         if (Object.keys(zebLog).length) {
             const res = A.applyHodnost(store.records, xpLog, zebLog);
             if (Object.keys(zeb).length || res.utocnik || res.obrance) {
-                bits.push(`žebříček: ${Object.keys(zebLog).length} zemí, hodnost útočníka doplněna k ${res.utocnik}`
-                    + `, obránce k ${res.obrance}`
-                    + (res.nejiste ? `, ${res.nejiste}× nejisté (blízko hranice hodnosti) — nechávám prázdné` : ''));
+                bits.push(`žebříček: ${Object.keys(zebLog).length} zemí, hodnost útočníka jistě u ${res.utocnik}`
+                    + `, obránce u ${res.obrance}`
+                    + (res.odhad ? `, ${res.odhad}× jen odhad (blízko hranice hodnosti, ve fitu váha 0,2)` : ''));
             }
         }
 

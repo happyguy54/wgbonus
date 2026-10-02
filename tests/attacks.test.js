@@ -460,14 +460,26 @@ section('country profile: the only source of hodnost and sesvačenost');
     eq('hodnost name', z.hodnost_nazev, 'Farmář');
 }
 
-section('Lord Azeroth (#55), 1.10.: defences and conquests are not stored as attacks');
+section('Lord Azeroth (#55), 1.10.: defences and conquests stored apart from attacks');
 {
     const fs = require('fs');
     const path = require('path');
-    const text = fs.readFileSync(path.join(__dirname, '..', 'samples', 'archiv-utoky-55.txt'), 'utf8');
+    const text = 'Alianční archiv (#55)\n' + fs.readFileSync(path.join(__dirname, '..', 'samples', 'archiv-utoky-55.txt'), 'utf8');
     const { records, skipped } = A.parsePaste(text);
-    eq('nothing stored from 10 defences and 2 unparseable conquests', records.length, 0);
-    eq('all 12 rows counted as unrecognised', skipped, 12);
+    eq('no attacks among them', records.filter(A.isAttack).length, 0);
+    eq('10 defences', records.filter(r => r.druh === 'obrana').length, 10);
+    eq('2 conquests, kept for when they can be read', records.filter(r => r.druh === 'dobyvani').length, 2);
+    eq('nothing unrecognised', skipped, 0);
+    const d = records.find(r => r.cas === '2026-10-01 08:00:24');
+    eq('a defence: the enemy is the attacker', `${d.utocnik_id} ${d.utocnik_zeme}`, '87 Horší, než zlo.');
+    eq('and our ally the target', d.cil_id, 55);
+    eq('type of their attack', d.typ, 'partyzansky');
+    const c = records.find(r => r.cas === '2026-10-01 06:40:50');
+    eq('a conquest: our ally attacks', `${c.utocnik_id} -> ${c.cil_id} ${c.cil_zeme}`, '55 -> 49 kamcatka');
+    const store = new A.AttackStore(); store.addMany(records);
+    eq('the store\'s attack list leaves them out', store.attacks().length, 0);
+    eq('and so do its types', store.types().length, 0);
+    eq('but counts them', JSON.stringify(store.others()), '{"obrana":10,"dobyvani":2}');
     ok('enemy partisan attack on us is a defence', A.DEFENCE.test('Země Pošta Horší, než zlo.(#87)[HOLY] - White Dead na nás podnikla partyzánský útok.'));
     ok('our own partisan attack is not', !A.DEFENCE.test('Naši partyzáni podnikli útok na zemi X(#5) a zabili 10 vojáků.'));
 }
@@ -508,8 +520,12 @@ section('hodnost of an ally, worked back from its archive (Lord Azeroth, 1.10.)'
     const res = A.applyHodnost([first, second, edge], xpEvents, zeb);
     eq('06:40:50 - rank 4, though the ally is 5 today', first.hodnost_utocnik, 4);
     eq('06:41:12 - rank 4', second.hodnost_utocnik, 4);
-    eq('right at the threshold the rank is left empty', edge.hodnost_utocnik, undefined);
-    eq('and counted as uncertain', res.nejiste, 1);
+    eq('06:40:50 is certain', first.hodnost_utocnik_jiste, 1);
+    eq('right at the threshold: an estimate from the middle of the range', edge.hodnost_utocnik, 4);
+    eq('marked as one', edge.hodnost_utocnik_jiste, 0);
+    eq('and counted', res.odhad, 1);
+    eq('an estimate weighs 0.2 in a fit', A.scopeFor(Object.assign({}, edge, { prestiz_utocnik: 1, prestiz_obrance: 1, hodnost_obrance: 5 }), {}).vaha, 0.2);
+    eq('a certain one, with everything else its own, weighs 1', A.scopeFor(Object.assign({}, first, { prestiz_utocnik: 1, prestiz_obrance: 1, hodnost_obrance: 5 }), {}).vaha, 1);
 
     const kept = { cas: '2026-10-01 06:40:50', xp: 3599, utocnik_id: 55, hodnost_utocnik: 9 };
     A.applyHodnost([kept], xpEvents, zeb);
@@ -530,11 +546,29 @@ section('hodnost of a defender: only when well past its threshold');
     const [a, b, c] = [at(1), at(2), at(3)];
     A.applyHodnost([a, b, c], [], zeb);
     eq('46k (at least 45 500, 5 500 past 40 000) - written', a.hodnost_obrance, 4);
-    eq('44k (maybe 43 500, under 5 000 past) - left empty', b.hodnost_obrance, undefined);
+    eq('44k (maybe 43 500, under 5 000 past) - today\'s rank, as an estimate', `${b.hodnost_obrance}/${b.hodnost_obrance_jiste}`, '4/0');
+    eq('46k - certain', a.hodnost_obrance_jiste, 1);
     eq('85 000 exact, exactly 5 000 past 80 000 - written', c.hodnost_obrance, 5);
     const old = { cas: '2026-09-28 08:00:00', cil_id: 1 };
     A.applyHodnost([old], [], zeb);
     eq('an attack 4 days before the reading is left alone', old.hodnost_obrance, undefined);
+
+    // Just past a threshold, with several of our attacks on them since: the
+    // earlier ones most likely hit the previous rank.
+    const zeb2 = A.parseZebricek('### ZEBRICEK 2026-10-02 10:00:00\nD(#4) - d\t100km2\t41k\t1k\t(4)');
+    const round = ['07:00:00', '07:10:00', '07:20:00', '07:30:00']
+        .map(t => ({ cas: '2026-10-02 ' + t, cil_id: 4, xp: 800 }));
+    A.applyHodnost(round, [], zeb2);
+    eq('41k now, 3 200 of ours since the first: that one was rank 3', round[0].hodnost_obrance, 3);
+    eq('with 800 since the last: still rank 4', round[3].hodnost_obrance, 4);
+    ok('all of them only estimates', round.every(r => r.hodnost_obrance_jiste === 0));
+
+    // A newer reading may replace an estimate, never a certain or typed value.
+    const est = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 4, hodnost_obrance_jiste: 0 };
+    const typed = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 9 };
+    A.applyHodnost([est, typed], [], zeb);
+    eq('estimate replaced by a certain value', `${est.hodnost_obrance}/${est.hodnost_obrance_jiste}`, '5/1');
+    eq('a value without a mark (typed in) stays', typed.hodnost_obrance, 9);
 }
 
 section('a row copied from the Útoky tab');
@@ -553,10 +587,14 @@ section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)
     const { records, xpEvents } = A.parsePaste(text);
     const byTime = c => records.find(r => r.cas === '2026-10-01 ' + c);
 
-    ok('enemy noční tažení on us ("Nepřátelským mechům … naší zemí") not stored as ours',
-        !records.some(r => /Nepřátelským/.test(r.raw)));
-    ok('no conquest stored (not parsed yet)', !records.some(r => /Obsadili jsme/.test(r.raw)));
-    eq('what is left: our noční tažení and týl', records.length, 21);
+    const attacks = records.filter(A.isAttack);
+    ok('enemy noční tažení on us ("Nepřátelským mechům … naší zemí") is not one of ours',
+        !attacks.some(r => /Nepřátelským/.test(r.raw)));
+    const enemy = records.find(r => r.cas === '2026-10-01 21:18:57');
+    eq('it is stored as a defence: kamcatka attacked #47', `${enemy.druh} ${enemy.utocnik_id}->${enemy.cil_id} ${enemy.typ}`, 'obrana 49->47 nocni');
+    ok('no conquest among the attacks (not read yet)', !attacks.some(r => /Obsadili jsme/.test(r.raw)));
+    eq('conquests kept apart', records.filter(r => r.druh === 'dobyvani').length, 4);
+    eq('our noční tažení and týl', attacks.length, 21);
     const f = byTime('19:01:34');
     eq('beaten-off týl: type', f && f.typ, 'tyl');
     eq('beaten-off týl: our losses', f && f.ztraty_utocnik, 80);
@@ -576,15 +614,17 @@ section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)
     // 46k today minus ~44k gained since 30.9. leaves ~1 500 on 30.9. - Farmář,
     // as the country profile showed that day.
     eq('18:55:54 attacker rank 1', byTime('18:55:54').hodnost_utocnik, 1);
-    eq('19:03:53 just under 10 000 - left empty', byTime('19:03:53').hodnost_utocnik, undefined);
+    eq('19:03:53 just under 10 000 - only an estimate', byTime('19:03:53').hodnost_utocnik_jiste, 0);
     eq('19:04:16 rank 2', byTime('19:04:16').hodnost_utocnik, 2);
-    eq('19:06:40 just under 20 000 - left empty', byTime('19:06:40').hodnost_utocnik, undefined);
+    eq('19:06:40 just under 20 000 - only an estimate', byTime('19:06:40').hodnost_utocnik_jiste, 0);
     eq('19:07:18 rank 3', byTime('19:07:18').hodnost_utocnik, 3);
     eq('defender Wörthersee, 71k, well past rank 4', byTime('18:58:18').hodnost_obrance, 4);
-    eq('defender mihalec, 13k, only 2 500 past rank 2 - left empty', byTime('18:55:54').hodnost_obrance, undefined);
+    eq('defender mihalec, 13k, only 2 500 past rank 2 - rank 2 as an estimate',
+        `${byTime('18:55:54').hodnost_obrance}/${byTime('18:55:54').hodnost_obrance_jiste}`, '2/0');
+    eq('a certain attacker rank is marked so', byTime('19:07:18').hodnost_utocnik_jiste, 1);
 
     const k = A.applyKonflikty(store.records, A.parseKonflikty(text, 2026));
-    eq('prestiž from the konflikty rows there are', k.matched, 9);
+    eq('prestiž from the konflikty rows there are, defences included', k.matched, 12);
     eq('attacker prestiž at 19:07', byTime('19:07:18').prestiz_utocnik, 170000);
 }
 

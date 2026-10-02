@@ -261,11 +261,12 @@ section(`${label}: every ally in the alliance archive`);
     eq('all seven allies visited', visited.join(','), '44,47,52,55,68,83,118');
 
     const r = paste(game.clip.text);
-    eq('only attacks inside 72 h, no defence messages', r.records.length, 3);
+    const attacks = r.records.filter(A.isAttack);
+    eq('attacks inside 72 h', attacks.length, 3);
     ok('100 h and 500 h old left out', !r.records.some(x => x.xp === 1003 || x.xp === 3001));
-    ok('defence message left out', !r.records.some(x => x.xp === 2002));
-    ok('helping an ally defend left out', !r.records.some(x => x.xp === 2003));
-    ok('neither reached the clipboard at all', !/obranu|povoláni/.test(game.clip.text));
+    eq('a defence is collected, as a defence', (r.records.find(x => x.xp === 2002) || {}).druh, 'obrana');
+    eq('so is helping an ally defend', (r.records.find(x => x.xp === 2003) || {}).druh, 'pomoc');
+    ok('neither counted as an attack', !attacks.some(x => x.xp === 2002 || x.xp === 2003));
 
     const a47 = r.records.find(x => x.xp === 1001);
     const a118 = r.records.find(x => x.xp === 2001);
@@ -283,7 +284,9 @@ section(`${label}: every ally in the alliance archive`);
     eq('hodnost útočníka worked back from the žebříček', a47.hodnost_utocnik, 6);
     eq('hodnost obránce, well past its threshold', a47.hodnost_obrance, 7);
     eq('the other ally gets its own rank', a118.hodnost_utocnik, 4);
-    eq('a defender just past a threshold is left empty', a118.hodnost_obrance, undefined);
+    // 82k today, only 2 000 past 80 000; our 2 001 since then puts it under.
+    eq('a defender just past a threshold: the previous rank, as an estimate',
+        `${a118.hodnost_obrance}/${a118.hodnost_obrance_jiste}`, '4/0');
 
     const searches = game.calls.filter(u => /p=zebricek/.test(u)).map(u => Number(u.match(/search_id=(\d+)/)[1]));
     eq('žebříček: one search for the allies, one for 53 (91 is on that page too)', searches.join(','), '44,53');
@@ -528,9 +531,11 @@ section('a hand-copied alliance archive page');
     // added next to the defence message it already contains.
     const html = MENU.replace('<tbody><tr>', '<tbody>' + archiveRow({ t: ago(1), xp: 4242, cil: 53 }) + '<tr>');
     const { records } = A.parsePaste(html);
-    eq('only the attack is read, not the defence message', records.length, 1);
-    eq('tagged with the archive owner from the heading', records[0] && records[0].utocnik_id, 47);
-    eq('the target is the defender, not the enemy who hit us', records[0] && records[0].cil_id, 53);
+    const attacks = records.filter(A.isAttack);
+    eq('one attack', attacks.length, 1);
+    eq('tagged with the archive owner from the heading', attacks[0] && attacks[0].utocnik_id, 47);
+    eq('the target is the defender, not the enemy who hit us', attacks[0] && attacks[0].cil_id, 53);
+    ok('the page\'s defence and help messages kept apart', records.filter(r => !A.isAttack(r)).every(r => /^(obrana|pomoc)$/.test(r.druh)));
 }
 
 section('collector and page agree on what a defence message is');

@@ -394,7 +394,7 @@
             catch (e) { if (e.message === STOP || e.fatal) throw e; }
             const rows = [];
             const xpRows = [];
-            let vOkne = 0, limit = 0;
+            let vOkne = 0, limit = 0, obran = 0;
             try {
                 for (let n = 0; n < MAX_STRAN; n++) {
                     const html = await page('p=archiv&typ=1&tag=1&id=' + s.id + (limit ? '&limit=' + limit : ''));
@@ -404,11 +404,15 @@
                         if (m.t < cutoff) { older = true; continue; }
                         // Every gain counts towards hodnost, defences included.
                         if (m.xp) xpRows.push(casKey(m.t) + '\t' + m.xpVal);
-                        if (!m.xp || m.obrana) continue;
+                        if (!m.xp) continue;
                         vOkne++;
-                        if (known.has(casKey(m.t) + '|' + (m.cil == null ? '' : m.cil))) { zname++; continue; }
+                        // Defences are stored too, as their own kind, with our
+                        // ally as the target - that is the key they are known by.
+                        const cil = m.obrana ? s.id : m.cil;
+                        if (known.has(casKey(m.t) + '|' + (cil == null ? '' : cil))) { zname++; continue; }
                         rows.push(m.line);
-                        if (m.cil) cile.add(m.cil);
+                        if (m.obrana) obran++;
+                        else if (m.cil) cile.add(m.cil);
                     }
                     // Newest first: once a page reaches past the window, nothing
                     // further back can be inside it.
@@ -422,6 +426,7 @@
                 // Keep what this ally's pages gave so far, even when stopped
                 // half-way through them.
                 say(s.zeme + ' (#' + s.id + '): ' + rows.length + ' nových'
+                    + (obran ? ' (z toho ' + obran + ' obran)' : '')
                     + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
                 if (rows.length) {
                     archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
