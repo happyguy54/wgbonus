@@ -94,11 +94,13 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
         }
         if (param('p') === 'zebricek') {
             // A search shows the country among its neighbours: here the
-            // allies all sit together, an enemy shows alone.
+            // allies all sit together, and 53 sits next to 91. Like the real
+            // page, the rows are not closed, so the whole list is one run of
+            // text - only the first country of it is not enough.
             const id = Number(((form || '').match(/search_id=(\d+)/) || [])[1]);
-            const ids = ALLIES.includes(id) ? ALLIES : [id];
-            return '<table class="vis_tbl"><tbody><tr><th>Pořadí</th><th>Země</th></tr>'
-                + ids.map(zebRow).join('') + '</tbody></table>';
+            const ids = ALLIES.includes(id) ? ALLIES : id === 53 ? [53, 91] : [id];
+            return '<table class="vis_tbl"><tbody><tr><th>Pořadí</th><th>Země</th></tr><tr>'
+                + ids.map(zebRow).join('').replace(/<\/?tr>/g, '') + '</tr></tbody></table>';
         }
         if (param('p') === 'archiv' && param('typ') === '1') {
             const all = rowsFor(Number(param('id')));
@@ -119,7 +121,11 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
             const id = Number(param('land_6'));
             const rows = rowsFor(id).filter(a => !a.obrana && a.h <= 72)
                 .map(a => konfliktRow({ t: a.t, od: id, cil: a.cil, pu: 100 + id, po: 200 + a.cil }));
-            return '<table class="vis_tbl"><tbody>' + rows.join('') + '</tbody></table>';
+            // The real page has the game's menu and your resources around
+            // the list.
+            return '<div>Pracovna</div><div>Peníze: 13 Prestiž: 142 741</div><p class="infomsg">Nalezeno '
+                + rows.length + ' konfliktů</p><table class="vis_tbl"><tbody>' + rows.join('')
+                + '</tbody></table><p class="infomsg">Čas provádění: 0.7s</p>';
         }
         if (param('p') === 'najit') {
             const id = Number(param('hid'));
@@ -280,7 +286,8 @@ section(`${label}: every ally in the alliance archive`);
     eq('a defender just past a threshold is left empty', a118.hodnost_obrance, undefined);
 
     const searches = game.calls.filter(u => /p=zebricek/.test(u)).map(u => Number(u.match(/search_id=(\d+)/)[1]));
-    eq('žebříček: one search covers the allies, then each new target', searches.join(','), '44,53,91');
+    eq('žebříček: one search for the allies, one for 53 (91 is on that page too)', searches.join(','), '44,53');
+    ok('konflikty without the game menu around them', !/Pracovna|Peníze/.test(game.clip.text));
     ok('no country profiles fetched any more', !game.calls.some(u => /najitzem/.test(u)));
     ok('XP of the defence messages is passed on too', /### XP #118\n(?:.*\n)*.*\t2002/.test(game.clip.text));
     ok('the menu and page furniture did not leak into the paste', !/Black Hole Generator|Čas provádění/.test(game.clip.text));

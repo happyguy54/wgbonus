@@ -545,4 +545,47 @@ section('a row copied from the Útoky tab');
     eq('time', r && r.cas, '2026-10-01 12:12:14');
 }
 
+section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const text = fs.readFileSync(path.join(__dirname, '..', 'samples', 'sber-47.txt'), 'utf8');
+    const { records, xpEvents } = A.parsePaste(text);
+    const byTime = c => records.find(r => r.cas === '2026-10-01 ' + c);
+
+    ok('enemy noční tažení on us ("Nepřátelským mechům … naší zemí") not stored as ours',
+        !records.some(r => /Nepřátelským/.test(r.raw)));
+    ok('no conquest stored (not parsed yet)', !records.some(r => /Obsadili jsme/.test(r.raw)));
+    eq('what is left: our noční tažení and týl', records.length, 21);
+    const f = byTime('19:01:34');
+    eq('beaten-off týl: type', f && f.typ, 'tyl');
+    eq('beaten-off týl: our losses', f && f.ztraty_utocnik, 80);
+    eq('beaten-off týl: theirs', f && f.ztraty_obrance, 22);
+    eq('beaten-off týl: target name', f && f.cil_zeme, 'C8H10N4O2');
+    eq('every XP gain kept for hodnost', xpEvents.length, 40);
+
+    const zeb = A.parseZebricek(text);
+    eq('all 23 countries read, many per line', Object.keys(zeb).length, 23);
+    eq('"(?)" for hodnost is unknown', zeb[36].hodnost, null);
+    eq('and does not take its neighbour\'s numbers', `${zeb[36].xp}/${zeb[127].xp}/${zeb[127].hodnost}`, '64000/64000/4');
+    eq('player id after the name is not a country', zeb[436276], undefined);
+    eq('country without an alliance', zeb[163] && zeb[163].hodnost, 3);
+
+    const store = new A.AttackStore(); store.addMany(records);
+    A.applyHodnost(store.records, xpEvents, zeb);
+    // 46k today minus ~44k gained since 30.9. leaves ~1 500 on 30.9. - Farmář,
+    // as the country profile showed that day.
+    eq('18:55:54 attacker rank 1', byTime('18:55:54').hodnost_utocnik, 1);
+    eq('19:03:53 just under 10 000 - left empty', byTime('19:03:53').hodnost_utocnik, undefined);
+    eq('19:04:16 rank 2', byTime('19:04:16').hodnost_utocnik, 2);
+    eq('19:06:40 just under 20 000 - left empty', byTime('19:06:40').hodnost_utocnik, undefined);
+    eq('19:07:18 rank 3', byTime('19:07:18').hodnost_utocnik, 3);
+    eq('defender Wörthersee, 71k, well past rank 4', byTime('18:58:18').hodnost_obrance, 4);
+    eq('defender mihalec, 13k, only 2 500 past rank 2 - left empty', byTime('18:55:54').hodnost_obrance, undefined);
+
+    const k = A.applyKonflikty(store.records, A.parseKonflikty(text, 2026));
+    eq('prestiž from the konflikty rows there are', k.matched, 9);
+    eq('attacker prestiž at 19:07', byTime('19:07:18').prestiz_utocnik, 170000);
+}
+
 process.exit(done() ? 1 : 0);

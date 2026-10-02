@@ -61,7 +61,7 @@
     }
 
     /** Messages where we defended rather than attacked; see parseLine. */
-    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)/i;
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b/i;
 
     /** "10.9.2026 12:12:14" anywhere in a row -> "2026-09-10 12:12:14". */
     function casOf(text) {
@@ -91,8 +91,9 @@
         if (xp === null) return null;
 
         // Defending also earns experience, in messages that are not our
-        // attacks: "Armáda X(#87) prolomila naši obranu …" and "Země X(#87) na
-        // nás podnikla partyzánský útok …" (they hit us), "Byli jsme povoláni
+        // attacks: "Armáda X(#87) prolomila naši obranu …", "Země X(#87) na
+        // nás podnikla partyzánský útok …" and "Nepřátelským mechům X(#49) se
+        // podařilo během nočního tažení naší zemí …" (they hit us), "Byli jsme povoláni
         // zemí Y(#118) na pomoc v obraně …" (we helped an ally defend). Read as
         // attacks they would store the enemy, or our own ally, as the target.
         // Skipped until defence gets its own parser.
@@ -116,7 +117,8 @@
         const TARGET = '\\s*\\(#(\\d+)\\)\\s*(?:\\[([^\\]]*)\\])?\\s*-\\s*(\\S+)';
         // Anchored on the word that introduces the target in each wording, so
         // the rest of the sentence cannot be swallowed into the country name.
-        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi';
+        // "…byl tanky X(#96) odražen" is how a beaten-off týl names its target.
+        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky';
         const cil = first(text, new RegExp('(?:' + ANCHORS + ')\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
                  || first(text, new RegExp('([^\\t(]{1,60}?)' + TARGET, 'i'));
 
@@ -159,6 +161,12 @@
             // "My jsme při tom přišli o 4159 tanků a nepřítel o 1668 tanků."
             rec.ztraty_utocnik = grab(text, /p[řr][ii]šli\s+o\s+([\d\s .]+)\s*tank/i);
             rec.ztraty_obrance = grab(text, /nep[řr][íi]tel\s+o\s+([\d\s .]+)\s*tank/i);
+            // Beaten off: "… byl tanky X(#96) odražen. Ztratili jsme při tom
+            // 80 tanků a nepřítel 22."
+            if (rec.ztraty_utocnik === null) {
+                rec.ztraty_utocnik = grab(text, /Ztratili\s+jsme\s+p[řr]i\s+tom\s+([\d\s .]+?)\s*tank/i);
+                rec.ztraty_obrance = grab(text, /tank[ůu]\s+a\s+nep[řr][íi]tel\s+([\d\s .]+?)\s*\./i);
+            }
             rec.zabito_tanky = rec.ztraty_obrance;
             rec.zabito_vojaci = null;
             rec.zabito_stihacky = null;
@@ -644,18 +652,29 @@
             const p = x => String(x).padStart(2, '0');
             return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
         })();
-        const ROW = /\(#(\d+)\)[\s\S]*?(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+([\d.,]+)\s*([kM])?\s+([\d.,]+)\s*([kM])?\s+\((\d+)\)/;
+        // A country is "(#id)" followed by an optional [TAG] and " - player";
+        // the player's own "(#436276)" is not. The game prints a whole page of
+        // countries as one run of text, so rows are matched one after another,
+        // and a row may not reach into the next country's numbers - a country
+        // with "(?)" for hodnost would otherwise take its neighbour's.
+        const COUNTRY = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s/.source;
+        const NOT_NEXT = '(?:(?!' + COUNTRY.replace('(\\d+)', '\\d+') + ')[\\s\\S])*?';
+        const ROW = new RegExp(COUNTRY + NOT_NEXT
+            + /(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+([\d.,]+)\s*([kM])?\s+([\d.,]+)\s*([kM])?\s+\((\d+|\?)\)/.source, 'g');
         String(text).replace(/\r/g, '').split('\n').forEach(line => {
             const head = line.match(/^\s*###\s*(\S+)\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})?/);
             if (head) { at = head[1].toUpperCase() === 'ZEBRICEK' ? (head[2] || null) : null; return; }
-            const m = line.match(ROW);
-            if (!m) return;
-            const xp = xpRange(m[2], m[3]);
-            const pr = xpRange(m[4], m[5]);
-            if (!xp) return;
-            out[m[1]] = Object.assign(xp, {
-                id: Number(m[1]), prestiz: pr ? pr.xp : null, hodnost: Number(m[6]), at: at || nowCas,
-            });
+            ROW.lastIndex = 0;
+            let m;
+            while ((m = ROW.exec(line)) !== null) {
+                const xp = xpRange(m[2], m[3]);
+                const pr = xpRange(m[4], m[5]);
+                if (!xp) continue;
+                out[m[1]] = Object.assign(xp, {
+                    id: Number(m[1]), prestiz: pr ? pr.xp : null,
+                    hodnost: m[6] === '?' ? null : Number(m[6]), at: at || nowCas,
+                });
+            }
         });
         return out;
     }

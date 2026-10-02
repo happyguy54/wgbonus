@@ -261,11 +261,12 @@
                 xp: !!xp,
                 xpVal: xp ? Number(xp[1].replace(/\s+/g, '')) : null,
                 // Defending earns experience too: "… prolomila naši obranu …",
-                // "… na nás podnikla partyzánský útok" (they hit us) and "Byli
-                // jsme povoláni … na pomoc v obraně" (we helped an ally). Not our
+                // "… na nás podnikla partyzánský útok", "Nepřátelským mechům …
+                // během nočního tažení naší zemí" (they hit us) and "Byli jsme
+                // povoláni … na pomoc v obraně" (we helped an ally). Not our
                 // attacks; the page skips them with the same pattern (DEFENCE
                 // in attacks.js).
-                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)/i.test(text),
+                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b/i.test(text),
                 cil: cil ? Number(cil[1]) : null,
             });
         }
@@ -324,14 +325,18 @@
         naZebricku.add(id);
         const html = await page('p=zebricek', 'type=1&search_id=' + id + '&action=' + encodeURIComponent('Najít'));
         const at = casKey(new Date());
+        // The game does not put one country per table row - a whole page of
+        // them comes out as one run of text - so take each country from
+        // "(#id) [TAG] - player" to its "(hodnost)", one per line. The player's
+        // own "(#436276)" is not a country: no " - " follows it.
         const rows = [];
-        (html.match(/<tr\b[\s\S]*?<\/tr>/gi) || []).forEach(tr => {
-            const line = oneLine(tr);
-            const m = line.match(/\(#(\d+)\)/);
-            if (!m || !/km2?\s/.test(line) || !/\(\d+\)/.test(line)) return;
-            rows.push(line);
+        const re = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s(?:(?!\(#\d+\)\s*(?:\[[^\]]*\]\s*)?-\s)[\s\S])*?km2?\s+[\d.,]+\s*[kM]?\s+[\d.,]+\s*[kM]?\s+\((?:\d+|\?)\)/g;
+        const text = oneLine(html);
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            rows.push(m[0]);
             naZebricku.add(Number(m[1]));
-        });
+        }
         if (rows.length) zebricek.push('### ZEBRICEK ' + at + '\n' + rows.join('\n'));
     }
 
@@ -429,7 +434,12 @@
             // every page costs seconds, and older attacks got theirs last run.
             if (rows.length) {
                 const k = flatten(await page('p=konflikty&spec=6&land_6=' + s.id + '&hours_6=' + HODIN));
-                konflikty.push('### KONFLIKTY #' + s.id + '\n' + k);
+                // Only the list itself; the menu and your own resources around
+                // it do not belong on the clipboard.
+                const from = k.search(/Nalezeno\s+\d+\s+konflikt/i);
+                const to = k.search(/[ČC]as\s+prov[áa]d[ěe]n[íi]/i);
+                konflikty.push('### KONFLIKTY #' + s.id + '\n'
+                    + k.slice(from < 0 ? 0 : from, to > from ? to : k.length).trim());
             }
         }
 
