@@ -398,6 +398,7 @@
         // hodnost counts both, so working an ally's rank back from today needs
         // all of them (see applyHodnost).
         const xpEvents = [];
+        const unread = [];
         const addXp = (utocnik_id, cas, xp) => {
             if (utocnik_id && cas && Number.isFinite(xp)) xpEvents.push({ utocnik_id, cas, xp });
         };
@@ -419,7 +420,9 @@
             } else if (/Z[íi]sk[áa]no\s+[\d\s .]+\s*zku[šs]enost/i.test(buffer)) {
                 // Only a message with experience that we could not read is
                 // "unrecognised"; headings, menus or žebříček rows are not.
+                // Kept, so a new wording can be shown and taught to the parser.
                 skipped++;
+                unread.push(buffer.trim());
             }
             buffer = '';
         };
@@ -477,7 +480,7 @@
             seen.add(k);
             return true;
         });
-        return { records, skipped, xpEvents: unique };
+        return { records, skipped, unread, xpEvents: unique };
     }
 
     /* --------------------------------------------------------------- store */

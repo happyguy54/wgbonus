@@ -753,4 +753,13 @@ section('a conquest valued for analysis, and conquests stored unread upgraded');
     eq('with the numbers from its text', `${stored.ztraty_mechove}/${stored.zabrano_km2}`, '452/563');
 }
 
+section('unread messages are kept, to be shown');
+{
+    const { records, skipped, unread } = A.parsePaste('2.10.2026\t9:00:00\tNěco úplně nového se stalo zemi X(#5). Získáno 77 zkušeností.\n'
+        + '2.10.2026\t9:01:00\tNašim mechům se podařilo během nočního tažení zemí Y(#6)[A] - y zlikvidovat 10 nepřipravených vojáků. Zničeno bylo 5 útočících a 3 bránících mechů. Získáno 150 zkušeností.');
+    eq('one read', records.length, 1);
+    eq('one not', skipped, 1);
+    ok('its text kept', unread.length === 1 && /Něco úplně nového/.test(unread[0]));
+}
+
 process.exit(done() ? 1 : 0);

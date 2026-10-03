@@ -634,7 +634,7 @@
         // One box for everything: an attack log, a Konflikty list, or both at
         // once. Navigating to the right page is the tedious part, so whatever
         // comes back should just work without being sorted into two boxes.
-        const { records, skipped, xpEvents } = A.parsePaste(text);
+        const { records, skipped, unread, xpEvents } = A.parsePaste(text);
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
@@ -643,7 +643,7 @@
         const bits = [];
         if (records.length) {
             bits.push(`přidáno ${addedAttacks} útoků`
-                + (added - addedAttacks ? ` (a ${added - addedAttacks} obran a dobyvačných, mimo výpočty)` : ''));
+                + (added - addedAttacks ? ` (a ${added - addedAttacks} obran, mimo výpočty)` : ''));
             if (duplicates) bits.push(`${duplicates} už bylo v databázi`);
         }
 
@@ -656,7 +656,7 @@
             });
             const res = A.applyKonflikty(store.records, konf);
             bits.push(`${konf.length} řádků konfliktů, prestiž doplněna k ${res.matched} útokům`
-                + (res.ambiguous ? ` (${res.ambiguous} nejasných — víc spojenců na stejný cíl ve stejné minutě)` : ''));
+                + (res.ambiguous ? ` (${res.ambiguous} nešlo spárovat s řádky konfliktů)` : ''));
         }
 
         // Hodnost needs the archive's XP gains and the žebříček's experience.
@@ -684,6 +684,21 @@
             bits.push(`${skipped} řádků nerozpoznáno`);
         }
         ui.pasteInfo.textContent = bits.join(', ') + '.';
+        if (unread && unread.length) {
+            // Messages with experience in a wording the parser does not know
+            // yet - listed so they can be copied and taught to it.
+            const box = document.createElement('details');
+            const sum = document.createElement('summary');
+            sum.textContent = `Nerozpoznané řádky (${unread.length}) — zkopírujte je, ať je parser naučím`;
+            const pre = document.createElement('textarea');
+            pre.className = 'formula-input attack-paste';
+            pre.readOnly = true;
+            pre.rows = Math.min(8, unread.length * 2);
+            pre.value = unread.join('\n');
+            box.appendChild(sum);
+            box.appendChild(pre);
+            ui.pasteInfo.appendChild(box);
+        }
 
         if (added) ui.paste.value = '';
         writeLocal();
@@ -710,7 +725,7 @@
         ui.konfliktInfo.textContent =
             `Načteno ${res.rows} řádků, prestiž doplněna k ${res.matched} útokům`
             + (res.unmatched ? `, ${res.unmatched} útoků bez shody (čas nebo cíl nesedí)` : '')
-            + (res.ambiguous ? `, z toho ${res.ambiguous} nejasných (víc spojenců na stejný cíl ve stejné minutě)` : '') + '.';
+            + (res.ambiguous ? `, z toho ${res.ambiguous} nešlo spárovat s řádky konfliktů` : '') + '.';
         if (res.matched) ui.konfliktPaste.value = '';
         writeLocal();
         renderAll();
@@ -765,6 +780,10 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
+            // With an archive and žebříček pasted in this session, records that
+            // arrive now get their hodnost too - the order of paste and
+            // download does not matter.
+            if (Object.keys(zebLog).length) A.applyHodnost(store.records, xpLog, zebLog);
 
             let konfNote = '';
             try {
