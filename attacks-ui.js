@@ -795,22 +795,24 @@
         ui.syncInfo.textContent = 'Nahrávám…';
         try {
             // An older worker drops the fields it does not know. Without
-            // `druh` a defence would arrive looking like an attack, and
-            // without `hodnost_*_jiste` an estimate like a certain value - so
-            // to such a worker only attacks go, and estimated hodnost does not.
+            // `druh` a defence would arrive looking like an attack, without
+            // `hodnost_*_jiste` an estimate like a certain value, and without
+            // `zabrano_km2` a conquest would be stored without its losses and
+            // land - for good, as no longer unread. So to such a worker only
+            // the other attacks go, and estimated hodnost does not.
             let records = store.records;
             let stale = '';
             const health = await syncCall('health', 'GET').catch(() => ({}));
             const cols = Array.isArray(health.sloupce) ? health.sloupce : [];
-            if (!cols.includes('druh') || !cols.includes('hodnost_utocnik_jiste')) {
-                records = store.attacks().map(r => {
+            if (!['druh', 'hodnost_utocnik_jiste', 'zabrano_km2'].every(c => cols.includes(c))) {
+                records = store.attacks().filter(r => r.typ !== 'dobyvacny').map(r => {
                     const c = Object.assign({}, r);
                     ['utocnik', 'obrance'].forEach(side => {
                         if (c[`hodnost_${side}_jiste`] === 0) c[`hodnost_${side}`] = null;
                     });
                     return c;
                 });
-                stale = ' Worker je starší verze: obrany a odhadnutá hodnost se nenahrály'
+                stale = ' Worker je starší verze: obrany, dobyvačné útoky a odhadnutá hodnost se nenahrály'
                     + ' — nasaďte nový worker/wgbonus-worker.js a nahrajte znovu.';
             }
             const atk = await syncCall('attacks', 'POST', records);
