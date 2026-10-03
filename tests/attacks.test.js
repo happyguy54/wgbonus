@@ -698,4 +698,36 @@ section('Lord Azeroth (#55), 2.10.: more wordings (samples/sber-55-tvary.txt)');
     eq('none of the 127 known attacks reads as a defence', known.filter(r => A.DEFENCE.test(r.raw || '')).length, 0);
 }
 
+section('several attacks in one minute: each gets its own konflikty row');
+{
+    // Lord Azeroth's partisan attacks on kamcatka at 06:38 on 1.10. The
+    // konflikty list them newest first; the shared store returns them in any
+    // order. A rocket in the same minute is not one of them.
+    const rec = (cas, xp) => ({ cas: '2026-10-01 ' + cas, utocnik_id: 55, cil_id: 49, typ: 'partyzansky', xp });
+    const row = (pu, po, typ = 'partyzansky') => ({ cas: '2026-10-01 06:38', utocnik_id: 55, obrance_id: 49, typ, prestiz_utocnik: pu * 1000, prestiz_obrance: po * 1000 });
+    const rows = [row(159, 186), row(155, 187), row(151, 188), row(148, 189, null)];
+    for (const [label, list] of [['newest first, as listed', rows], ['shuffled, as stored', [rows[1], rows[3], rows[0], rows[2]]]]) {
+        const r = [rec('06:38:59', 1266), rec('06:38:34', 1349), rec('06:38:49', 1301)];
+        const res = A.applyKonflikty(r, list);
+        const p = c => { const x = r.find(y => y.cas.endsWith(c)); return `${x.prestiz_utocnik / 1000}/${x.prestiz_obrance / 1000}`; };
+        eq(`${label}: 06:38:34 gets the earliest row`, p('06:38:34'), '151/188');
+        eq(`${label}: 06:38:49 the next`, p('06:38:49'), '155/187');
+        eq(`${label}: 06:38:59 the last`, p('06:38:59'), '159/186');
+        eq(`${label}: all three matched`, res.matched, 3);
+    }
+
+    // A conquest in the same minute as partisan attacks: matched by type.
+    const conquest = { cas: '2026-10-01 06:38:40', utocnik_id: 55, cil_id: 49, typ: 'dobyvacny', druh: 'dobyvani', xp: 3599 };
+    const partisan = rec('06:38:20', 1349);
+    A.applyKonflikty([conquest, partisan], [row(173, 183, 'dobyvacny'), row(151, 188)]);
+    eq('the conquest gets the conquest row', conquest.prestiz_utocnik, 173000);
+    eq('the partisan attack its own', partisan.prestiz_utocnik, 151000);
+
+    // Two attacks, three different rows: no way to pair them - nothing is guessed.
+    const two = [rec('06:38:34', 1349), rec('06:38:49', 1301)];
+    const res2 = A.applyKonflikty(two, rows.slice(0, 3));
+    ok('rows that cannot be paired give no prestiž', two.every(x => x.prestiz_utocnik === undefined));
+    eq('and are counted as unclear', res2.ambiguous, 2);
+}
+
 process.exit(done() ? 1 : 0);

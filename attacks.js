@@ -658,38 +658,70 @@
      */
     function applyKonflikty(records, rows) {
         const minute = cas => String(cas || '').slice(0, 16);
+        const typ = x => x.typ || '?';
 
-        // In a coordinated round several allies hit the same target within the
-        // same minute, so defender + minute alone can hand one ally's prestiž
-        // to another. When the record knows its attacker, the attacker is part
-        // of the key. When it does not (older records), a match is taken only
-        // if a single attacker hit that target in that minute.
-        const full = new Map();
-        const byDefender = new Map();
-        rows.forEach(r => {
+        // Konflikty show only the minute, so several attacks can share a row
+        // time. They are told apart by attacker, target, minute and type, and
+        // within that paired in order: the earliest attack with the earliest
+        // row. The list's own order is lost once rows come back from the
+        // shared store, but prestiž keeps it - over a run of attacks the
+        // attacker's rises and the defender's falls (true of every such group
+        // seen so far).
+        const inOrder = list => list.slice().sort((a, b) =>
+            (a.prestiz_utocnik || 0) - (b.prestiz_utocnik || 0)
+            || (b.prestiz_obrance || 0) - (a.prestiz_obrance || 0)
+            || b._i - a._i);
+        const group = (map, key, item) => { if (!map.has(key)) map.set(key, []); map.get(key).push(item); };
+
+        // In a coordinated round several allies hit the same target in the
+        // same minute, so the attacker is part of the key whenever the record
+        // knows it. Without it (older records), only a minute in which a
+        // single attacker hit that target counts.
+        const full = new Map(), byDefender = new Map();
+        // A record of unknown type takes rows of any type ("*"); a row of
+        // unknown type - a rocket, say - never matches a typed attack.
+        rows.forEach((r, i) => {
             if (!r.obrance_id) return;
-            full.set(`${r.utocnik_id}|${r.obrance_id}|${minute(r.cas)}`, r);
-            const k = `${r.obrance_id}|${minute(r.cas)}`;
-            if (!byDefender.has(k)) byDefender.set(k, []);
-            byDefender.get(k).push(r);
+            const row = Object.assign({}, r, { _i: i });
+            for (const t of [typ(r), '*']) {
+                group(full, `${r.utocnik_id}|${r.obrance_id}|${minute(r.cas)}|${t}`, row);
+                group(byDefender, `${r.obrance_id}|${minute(r.cas)}|${t}`, row);
+            }
         });
 
-        let matched = 0, unmatched = 0, ambiguous = 0;
+        const wanted = new Map();
+        let unmatched = 0;
         records.forEach(rec => {
             if (!rec.cil_id || !rec.cas) { unmatched++; return; }
-            let hit = null;
-            if (rec.utocnik_id) {
-                hit = full.get(`${rec.utocnik_id}|${rec.cil_id}|${minute(rec.cas)}`) || null;
-            } else {
-                const list = byDefender.get(`${rec.cil_id}|${minute(rec.cas)}`) || [];
-                const who = new Set(list.map(r => r.utocnik_id));
-                if (who.size === 1) hit = list[list.length - 1];
-                else if (who.size > 1) ambiguous++;
+            const t = rec.typ ? rec.typ : '*';
+            const key = rec.utocnik_id
+                ? `F|${rec.utocnik_id}|${rec.cil_id}|${minute(rec.cas)}|${t}`
+                : `D|${rec.cil_id}|${minute(rec.cas)}|${t}`;
+            group(wanted, key, rec);
+        });
+
+        let matched = 0, ambiguous = 0;
+        wanted.forEach((recs, key) => {
+            const rowKey = key.slice(2);
+            let list = (key[0] === 'F' ? full : byDefender).get(rowKey) || [];
+            if (key[0] === 'D' && new Set(list.map(r => r.utocnik_id)).size > 1) {
+                ambiguous += recs.length; unmatched += recs.length; return;
             }
-            if (!hit) { unmatched++; return; }
-            if (hit.prestiz_utocnik) rec.prestiz_utocnik = hit.prestiz_utocnik;
-            if (hit.prestiz_obrance) rec.prestiz_obrance = hit.prestiz_obrance;
-            matched++;
+            if (!list.length) { unmatched += recs.length; return; }
+            list = inOrder(list);
+            const same = list.every(r => r.prestiz_utocnik === list[0].prestiz_utocnik
+                && r.prestiz_obrance === list[0].prestiz_obrance);
+            // As many rows as attacks: pair them in order. Otherwise only when
+            // every row says the same - a guess would put wrong prestiž in.
+            if (list.length !== recs.length && !same) {
+                ambiguous += recs.length; unmatched += recs.length; return;
+            }
+            recs.slice().sort((a, b) => String(a.cas).localeCompare(String(b.cas))).forEach((rec, i) => {
+                const hit = list.length === recs.length ? list[i] : list[0];
+                if (hit.prestiz_utocnik) rec.prestiz_utocnik = hit.prestiz_utocnik;
+                if (hit.prestiz_obrance) rec.prestiz_obrance = hit.prestiz_obrance;
+                matched++;
+            });
         });
         return { matched, unmatched, ambiguous, rows: rows.length };
     }
