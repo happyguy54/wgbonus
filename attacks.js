@@ -915,8 +915,8 @@
 
     /**
      * Countries with the advance Tajemství mozku (+25 % XP), as typed in the
-     * page's context: "47, 83, 118 od 2.10.2026 13:00". A country without
-     * "od" has had it all along. -> [{ id, od? }] with od as "YYYY-MM-DD HH:MM".
+     * page's context: "47, 83, 118 od 3.10.2026 13:15". A country without
+     * "od" has had it all along. -> [{ id, od? }] with od as "YYYY-MM-DD HH:MM[:SS]".
      */
     let mozekMemo = { text: null, list: [] };
     function parseMozek(text) {
@@ -925,10 +925,10 @@
         const pad = n => String(n).padStart(2, '0');
         const list = [];
         src.split(/[,;\n]+/).forEach(part => {
-            const m = part.match(/#?(\d+)(?:\s*(?:od|@)\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?)?/i);
+            const m = part.match(/#?(\d+)(?:\s*(?:od|@)\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?)?/i);
             if (!m) return;
             const v = { id: Number(m[1]) };
-            if (m[2]) v.od = `${m[4]}-${pad(m[3])}-${pad(m[2])} ${pad(m[5] || 0)}:${m[6] || '00'}`;
+            if (m[2]) v.od = `${m[4]}-${pad(m[3])}-${pad(m[2])} ${pad(m[5] || 0)}:${m[6] || '00'}` + (m[7] ? ':' + m[7] : '');
             list.push(v);
         });
         mozekMemo = { text: src, list };

@@ -27,11 +27,12 @@ or −8 to +2 % if that attacker had the advance.
 What made the difference:
 
 - **Tajemství mozku** (+25 % XP). The smallest týl XP is 150, or 188
-  (= 150 × 1.25). #47 and #83 always got 188, #44, #52 and #68 always 150,
-  and #118 got 150 on 1.10 and 188 on 3.10. Fitting with these flags drops
-  the median error from 9 % to 3 %. The floor itself is
-  multiplied (max(150, …) × 1.25) but the hodnost factor is not. #55 shows
-  no sign of it in partisan attacks.
+  (= 150 × 1.25). Who has it (confirmed by the user): #47 and #83 all along,
+  #118 from just before 3.10 13:15:18, #55 between its partisan attacks at
+  2.10 06:47:11 and 06:47:23 (the second gave more XP for less damage);
+  #44, #52 and #68 not. Fitting with these flags drops the median error from
+  9 % to 3 %. The floor itself is multiplied (max(150, …) × 1.25), the
+  hodnost factor is not.
 - **Prestiž enters asymmetrically**: XP grows with the defender's prestiž
   to about the power 2/3, and falls with our own about 1 : 1. A single
   ratio (pd/pa)^e cannot do both and left ±9 % between rounds. The rank-gap
@@ -51,4 +52,4 @@ type within about ±0.1, which may be noise.
 
 The three formulas are in the plot's presets ("… (fit 3.10.)"). The variable
 `mozek` is 1.25 for attackers listed under **Kontext → Tajemství mozku**
-(e.g. `47, 83, 118 od 2.10.2026 13:00`), otherwise 1.
+(EJZ: `47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15`), otherwise 1.

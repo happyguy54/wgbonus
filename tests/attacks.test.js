@@ -826,6 +826,8 @@ section('Tajemství mozku: who has it, from when');
     const L = A.parseMozek('47, #83; 118 od 2.10.2026 13:00');
     eq('ids, and a start for the one that researched it later', JSON.stringify(L), '[{"id":47},{"id":83},{"id":118,"od":"2026-10-02 13:00"}]');
     eq('without a time it starts at midnight', A.parseMozek('118 od 2.10.2026')[0].od, '2026-10-02 00:00');
+    eq('with seconds, between two attacks', A.mozekFor({ utocnik_id: 55, cas: '2026-10-02 06:47:11' }, '55 od 2.10.2026 6:47:15')
+        + '/' + A.mozekFor({ utocnik_id: 55, cas: '2026-10-02 06:47:23' }, '55 od 2.10.2026 6:47:15'), '1/1.25');
     const at = (id, cas) => A.mozekFor({ utocnik_id: id, cas }, '47, 83, 118 od 2.10.2026 13:00');
     eq('has it all along', at(47, '2026-09-30 20:00:00'), 1.25);
     eq('before researching it', at(118, '2026-10-01 10:17:40'), 1);

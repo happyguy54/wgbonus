@@ -1020,7 +1020,7 @@
                             <td class="rdata r"><input id="hodnostO" type="number" class="formula-input"></td></tr>
                         <tr><td class="rname l"><label for="mozek">Tajemství mozku</label></td>
                             <td class="rdata r"><input id="mozek" type="text" class="formula-input"
-                                placeholder="47, 83, 118 od 2.10.2026 13:00"></td></tr>
+                                placeholder="47, 83, 118 od 3.10.2026 13:15"></td></tr>
                     </table>
                     <p class="formula-hint">
                         Prestiž a hodnost platí pro záznamy, které vlastní nemají.

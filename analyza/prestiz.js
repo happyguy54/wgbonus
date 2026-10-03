@@ -5,8 +5,10 @@
 const { rows, nm, stats } = require('./lib.js');
 const { ok, raw, rounds } = require('./rounds.js');
 const { DEFENCE } = require('../attacks.js');
-// Týl floors: #47 and #83 always 188, #44 #52 #68 always 150, #118 150 on 1.10 and 188 on 3.10.
-const brain = r => (r.ut === 47 || r.ut === 83 || (r.ut === 118 && r.cas > '2026-10-02')) ? 1.25 : 1;
+// Tajemství mozku (the user, 2026-10-03): #47 and #83 all along, #118 from just
+// before 3.10 13:15:18, #55 between its attacks at 2.10 06:47:11 and 06:47:23;
+// #44 #52 #68 not. The týl floors agree (150 without, 188 with).
+const brain = r => (r.ut === 47 || r.ut === 83 || (r.ut === 118 && r.cas >= '2026-10-03 13:15') || (r.ut === 55 && r.cas >= '2026-10-02 06:47:15')) ? 1.25 : 1;
 // Manual 6.2.6: (hO - hU) × 5 %, at most ±20 %, only from attacker rank 5, a gap of 1 does nothing.
 const manual = r => { const g = r.hd - r.hu; return r.hu >= 5 && Math.abs(g) > 1 ? 1 + Math.max(-20, Math.min(20, 5 * g)) / 100 : 1; };
 const base = r => r.ut != null && ok(r) && r.pa && r.pd && r.hu != null && r.hd != null && r.hjd && r.hju && !DEFENCE.test(raw.get(r.id) || '');

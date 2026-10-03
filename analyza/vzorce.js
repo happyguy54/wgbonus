@@ -9,8 +9,8 @@ const load = f => JSON.parse(fs.readFileSync(__dirname + '/' + f, 'utf8')).recor
 const recs = load('attacks.json');
 A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.applyKonflikty(recs, load('konflikty.json'));
 
-// From the týl floors (150 without the advance, 188 with it).
-const MOZEK = '47, 83, 118 od 2.10.2026';
+// Tajemství mozku, as confirmed by the user (týl floors agree: 150 without, 188 with).
+const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15';
 const HOD = '(1 + hodnost_bonus / 100)';
 const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocnik / 100000, ${b})`;
 const VZORCE = {
