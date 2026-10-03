@@ -486,6 +486,8 @@ section('Lord Azeroth (#55), 1.10.: defences and conquests stored apart from att
     eq('and counts the defences apart', JSON.stringify(store.others()), '{"obrana":10}');
     ok('enemy partisan attack on us is a defence', A.DEFENCE.test('Země Pošta Horší, než zlo.(#87)[HOLY] - White Dead na nás podnikla partyzánský útok.'));
     ok('our own partisan attack is not', !A.DEFENCE.test('Naši partyzáni podnikli útok na zemi X(#5) a zabili 10 vojáků.'));
+    const odvr = A.parsePaste('### ARCHIV\n3.10.2026 10:07:32 Naši vojáci odvrátili partyzánský útok Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek . Zahynulo při tom 1471 našich a 3357 nepřátelských vojáků. Získáno 2042 zkušeností.').records[0];
+    eq('a repelled partisan attack is a defence, by the enemy', [odvr.druh, odvr.typ, odvr.utocnik_id, odvr.utocnik_zeme].join('|'), 'obrana|partyzansky|45|Xenofobni humanista');
 }
 
 section('žebříček and alliance rows, as copied from the game');
@@ -813,6 +815,24 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('a failed attack stored without its mark gets it back', A.markFailures([stored, okRec]), 1);
     eq('marked', stored.uspech, 0);
     eq('a successful one is left alone', okRec.uspech, undefined);
+    const def = { id: 'z', typ: 'partyzansky', xp: 2042, utocnik_id: 83, cil_id: 45, cil_zeme: 'Xenofobni humanista',
+        raw: '3.10.2026 10:07:32 Naši vojáci odvrátili partyzánský útok Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek . Zahynulo při tom 1471 našich a 3357 nepřátelských vojáků. Získáno 2042 zkušeností.' };
+    eq('a defence stored as our attack is marked, once', [A.markDefences([def, okRec]), A.markDefences([def])].join(','), '1,0');
+    eq('the enemy becomes the attacker, the id stays', [def.druh, def.utocnik_id, def.utocnik_zeme, def.cil_id, def.id].join('|'), 'obrana|45|Xenofobni humanista|83|z');
+}
+
+section('Tajemství mozku: who has it, from when');
+{
+    const L = A.parseMozek('47, #83; 118 od 2.10.2026 13:00');
+    eq('ids, and a start for the one that researched it later', JSON.stringify(L), '[{"id":47},{"id":83},{"id":118,"od":"2026-10-02 13:00"}]');
+    eq('without a time it starts at midnight', A.parseMozek('118 od 2.10.2026')[0].od, '2026-10-02 00:00');
+    const at = (id, cas) => A.mozekFor({ utocnik_id: id, cas }, '47, 83, 118 od 2.10.2026 13:00');
+    eq('has it all along', at(47, '2026-09-30 20:00:00'), 1.25);
+    eq('before researching it', at(118, '2026-10-01 10:17:40'), 1);
+    eq('after', at(118, '2026-10-03 13:22:09'), 1.25);
+    eq('not listed', at(68, '2026-10-03 09:13:00'), 1);
+    eq('as a formula variable', A.scopeFor({ typ: 'tyl', utocnik_id: 83, cas: '2026-10-02 15:52:18', xp: 188 }, { mozek: '83' }).mozek, 1.25);
+    eq('nothing typed: 1', A.scopeFor({ typ: 'tyl', utocnik_id: 83, cas: '2026-10-02 15:52:18', xp: 188 }, {}).mozek, 1);
 }
 
 section('wars: when each began, hours since for an attack');

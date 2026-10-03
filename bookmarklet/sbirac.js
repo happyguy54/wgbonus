@@ -276,7 +276,7 @@
                 // "Bleskový úder tankové brigády X … byl odražen" and "Byli jsme
                 // povoláni … na pomoc v obraně". Not our attacks; the page tells
                 // them apart with the same pattern (DEFENCE in attacks.js).
-                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov/i.test(text),
+                obrana: /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov|odvr[áa]til[aiy]?\s/i.test(text),
                 cil: cil ? Number(cil[1]) : null,
             });
         }

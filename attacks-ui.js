@@ -36,6 +36,7 @@
         prestizObrance: 0,
         hodnostUtocnik: 0,
         hodnostObrance: 0,
+        mozek: '',
     };
 
     /** User equations, one per attack type (or '*' for all). */
@@ -87,7 +88,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -179,6 +180,7 @@
         ['zabrano_budovy', 'zabrané budovy (dobyvačný útok)'],
         ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
+        ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
         ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
@@ -661,7 +663,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -813,7 +815,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
@@ -931,6 +933,7 @@
             prestizObrance: parseFloat(ui.prestizO.value) || 0,
             hodnostUtocnik: parseFloat(ui.hodnostU.value) || 0,
             hodnostObrance: parseFloat(ui.hodnostO.value) || 0,
+            mozek: ui.mozek.value.trim(),
         };
         writeLocal();
         renderAll();
@@ -1015,9 +1018,15 @@
                             <td class="rdata r"><input id="hodnostU" type="number" class="formula-input"></td></tr>
                         <tr><td class="rname l"><label for="hodnostO">Hodnost obránce</label></td>
                             <td class="rdata r"><input id="hodnostO" type="number" class="formula-input"></td></tr>
+                        <tr><td class="rname l"><label for="mozek">Tajemství mozku</label></td>
+                            <td class="rdata r"><input id="mozek" type="text" class="formula-input"
+                                placeholder="47, 83, 118 od 2.10.2026 13:00"></td></tr>
                     </table>
                     <p class="formula-hint">
-                        Platí pro všechny záznamy — log prestiž ani hodnost neuvádí.
+                        Prestiž a hodnost platí pro záznamy, které vlastní nemají.
+                        Tajemství mozku: čísla zemí útočníků s tímto pokrokem (+25 % zkušeností),
+                        u nově vyzkoumaného s „od datum čas“ — ve vzorci proměnná <code>mozek</code> (1,25 / 1).
+                        Poznáte ho podle týlu: nejmenší zisk je 150, s pokrokem 188.
                     </p>
                 </div>
             </div>
@@ -1144,6 +1153,7 @@
             prestizO: document.getElementById('prestizO'),
             hodnostU: document.getElementById('hodnostU'),
             hodnostO: document.getElementById('hodnostO'),
+            mozek: document.getElementById('mozek'),
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
@@ -1201,7 +1211,7 @@
             r.readAsText(file); ev.target.value = '';
         });
 
-        ['prestizU', 'prestizO', 'hodnostU', 'hodnostO']
+        ['prestizU', 'prestizO', 'hodnostU', 'hodnostO', 'mozek']
             .forEach(k => ui[k].addEventListener('input', readSettings));
         document.getElementById('konfliktAdd').addEventListener('click', onKonflikty);
         document.getElementById('syncTest').addEventListener('click', async () => {
@@ -1291,7 +1301,13 @@
 
         const HF = '(1 + clamp(sign(hodnost_obrance - hodnost_utocnik) * max(0, '
                  + 'abs(hodnost_obrance - hodnost_utocnik) - 1) * 5, -20, 20) / 100)';
+        // Fitted on 2026-10-03 (analyza/vzorce.js): 2.8 %, 3.4 % and 3.3 % median error.
+        const HOD = '(1 + hodnost_bonus / 100)';
+        const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
+            ['noční tažení (fit 3.10.)', `0.547 * (defense_prestiz + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`],
+            ['týl (fit 3.10.)', `max(150, 3.58 * (zabito_tanky + 0.29 * attack_lost) * ${PRES(0.7, 1.15)} * ${HOD}) * mozek`],
+            ['partyzánský (fit 3.10.)', `0.975 * (defense_prestiz + 0.15 * attack_lost) * ${PRES(0.61, 1.12)} * ${HOD} * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],
@@ -1322,6 +1338,7 @@
         ui.prestizO.value = settings.prestizObrance || '';
         ui.hodnostU.value = settings.hodnostUtocnik || '';
         ui.hodnostO.value = settings.hodnostObrance || '';
+        ui.mozek.value = settings.mozek || '';
     }
 
     async function init() {

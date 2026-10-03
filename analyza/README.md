@@ -3,51 +3,52 @@
 `node analyza/data.js` downloads the shared store into `rows.json`; `lib.js`
 (least squares, Nelder-Mead, hodnost factor) and `rounds.js` (rounds = same
 attacker and target within 30 minutes; a fit with a free multiplier per round)
-are what the findings below came from. `rows.json` and `attacks.json` are not
+are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
-## Findings so far (2026-10-03, 355 attacks with prestiž and hodnost)
+## Findings (2026-10-03, 212 attacks with certain prestiž and hodnost)
 
-**Noční tažení** (122 successful). Within rounds the error is ±1.2 %, about
-the precision of the data (konflikty round prestiž to 1k):
+`node analyza/prestiz.js` fits them, `node analyza/vzorce.js` checks the
+formulas below through the page's own engine.
 
-    xp ∝ (units killed × prestiž + 5 × bases destroyed + 0.25 × our losses × prestiž) × (pd / pa)^0.95
+    xp = k × (what the defender lost in prestiž + w × what we lost)
+           × (pd / 100 000)^a / (pa / 100 000)^b
+           × hodnost (manual 6.2.6) × Tajemství mozku
 
-Bases count as buildings (5 each) - without them ±3.6 %. Between rounds a
-multiplier of about ±7 % remains unexplained; country size, an additive
-c·√(pa·pd) and government do not explain it. The hodnost factor
-(gap × 5 %, ±20 %, no effect for a gap of 1) helps when applied to every
-attacker rank, though the manual says from rank 5. War phase does not
-explain it either (checked against EJZ's war start and end times,
-`valky.txt`): 104 of 122 attacks were in full war, yet their rounds range from
--21 % to +15 %, and the three first-hour rounds disagree (+4, +10, -28 %).
+| type | k | w | a | b | median error | 90 % within |
+|---|---|---|---|---|---|---|
+| noční tažení | 0.547 | 0.37 of our prestiž (≈ 1 per mech) | 0.60 | 0.99 | 2.8 % | 6.3 % |
+| týl | 3.58 per tank | 0.29 of our tanks | 0.70 | 1.15 | 3.4 % | 16 % * |
+| partyzánský | 0.975 | 0.15 of our soldiers | 0.61 | 1.12 | 3.3 % | 11 % |
 
-What the shift follows is the attacker - the same defender gives different
-shifts by attacker (#67: 47 +14 %, 68 -21 %; #91: 47 +13 %, 52 -9 %):
+\* týl's tail is the old age (prestiž 2.5-7.7 M): 15-27 % above the formula,
+or −8 to +2 % if that attacker had the advance.
 
-    47 XP Piňáta        +1 to +15 %   (5 rounds)
-    83 Pyro             +2 to  +6 %   (4)
-    68 Siddhártha       mostly -1 to -28 %  (10)
-    52 World of Apoc.   -9 to -12 %   (3)
+What made the difference:
 
-In týl and conquests the per-attacker shifts do not match these, so it is not
-a fixed property of the country either. Open question for the players: what
-changes XP per country - generals, advances, government, army experience?
+- **Tajemství mozku** (+25 % XP). The smallest týl XP is 150, or 188
+  (= 150 × 1.25). #47 and #83 always got 188, #44, #52 and #68 always 150,
+  and #118 got 150 on 1.10 and 188 on 3.10. Fitting with these flags drops
+  the median error from 9 % to 3 %. The floor itself is
+  multiplied (max(150, …) × 1.25) but the hodnost factor is not. #55 shows
+  no sign of it in partisan attacks.
+- **Prestiž enters asymmetrically**: XP grows with the defender's prestiž
+  to about the power 2/3, and falls with our own about 1 : 1. A single
+  ratio (pd/pa)^e cannot do both and left ±9 % between rounds. The rank-gap
+  factors that seemed to help (~8 % per rank on every rank) were standing
+  in for this. With the asymmetry in place they add nothing, and the manual's
+  rule (gap × 5 %, ±20 %, only from attacker rank 5, a gap of 1 does nothing)
+  is the one that helps (partisan 5.8 → 3.1 %).
+- **Units count at their prestiž values**. Fitting a free weight per unit
+  type for noční gives tank 4.5, fighter 3.2, base 4.9 and mech 2.85,
+  against prestiž values of 5, 3.5, 5 and 2.7.
 
-Best global equation so far - as typed into the page's equation box, checked
-through its engine (median error 6.0 %, 90 % within 13.4 %):
+Still open: conquests (sesvačenost, land), war multiplier and first hour
+(this data is almost all in full war), and exact powers - a, b differ by
+type within about ±0.1, which may be noise.
 
-    0.43 * (defense_prestiz + 0.519*attack_prestiz) * pow(prestiz_obrance / prestiz_utocnik, 0.719) * (1 + clamp(max(0, sign(abs(hodnost_obrance - hodnost_utocnik) - 1)) * (hodnost_obrance - hodnost_utocnik) * 5, -20, 20) / 100)
+## Page
 
-(`defense_prestiz` includes the bases since 2026-10-03.)
-
-**Partyzánský** (46): within rounds ±2.6 %; our losses barely count
-(w ≈ 0.03), ratio exponent ≈ 0.68.
-
-**Týl** (88, new age): same structure as noční - (their tanks + 0.34 × ours)
-× (pd/pa)^0.86, within rounds ±5.4 %. XP is mostly 150-400; the minimum is
-150 in some rounds and 188 (= 150 × 1.25) in others, so a per-round multiplier
-applies even to the floor. The readiness drop alone does not explain it.
-
-**Dobyvačný** (48): sesvačenost lowers XP of normal attacks (manual), not yet
-in the data.
+The three formulas are in the plot's presets ("… (fit 3.10.)"). The variable
+`mozek` is 1.25 for attackers listed under **Kontext → Tajemství mozku**
+(e.g. `47, 83, 118 od 2.10.2026 13:00`), otherwise 1.

@@ -61,7 +61,7 @@
     }
 
     /** Messages where we defended rather than attacked; see parseLine. */
-    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov/i;
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov|odvr[áa]til[aiy]?\s/i;
 
     /** "10.9.2026 12:12:14" anywhere in a row -> "2026-09-10 12:12:14". */
     function casOf(text) {
@@ -304,7 +304,7 @@
         while ((m = re.exec(text)) !== null) {
             const before = text.slice(Math.max(0, m.index - 80), m.index);
             const name = before
-                .replace(/^[\s\S]*\b(?:Arm[áa]da|Zem[ěe]|zem[ěe]|zem[íi]|mech[ůu]m|tank[ůu]m|st[íi]ha[čc]k[áa]m|agresi|tanky|brig[áa]d[ěey])\s+/, '')
+                .replace(/^[\s\S]*(?:\b(?:Arm[áa]da|Zem[ěe]|zem[ěe]|zem[íi]|mech[ůu]m|tank[ůu]m|st[íi]ha[čc]k[áa]m|agresi|tanky|brig[áa]d[ěey])|\s[úu]tok)\s+/, '')
                 .replace(/^(?:(?:Pošta|Útok|Rakety|Rozvědka|Konflikty)\s+)+/, '')
                 .trim();
             countries.push({ id: Number(m[1]), zeme: name || null, aliance: m[2] || null, hrac: m[3] || null });
@@ -380,6 +380,24 @@
         (records || []).forEach(rec => {
             if (!isAttack(rec) || rec.uspech === 0 || !FAILED.test(rec.raw || '')) return;
             rec.uspech = 0;
+            n++;
+        });
+        return n;
+    }
+
+    /**
+     * Defences an older parser stored as our attacks ("Naši vojáci odvrátili
+     * partyzánský útok X(#45)"): mark them and turn the roles round, as
+     * parseOther would - the enemy attacked. The id stays. Returns how many.
+     */
+    function markDefences(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!rec || rec.druh || !DEFENCE.test(rec.raw || '')) return;
+            rec.druh = 'obrana';
+            ['_id', '_zeme', '_hrac'].forEach(k => {
+                [rec['utocnik' + k], rec['cil' + k]] = [rec['cil' + k] ?? null, rec['utocnik' + k] ?? null];
+            });
             n++;
         });
         return n;
@@ -895,6 +913,34 @@
         return best;
     }
 
+    /**
+     * Countries with the advance Tajemství mozku (+25 % XP), as typed in the
+     * page's context: "47, 83, 118 od 2.10.2026 13:00". A country without
+     * "od" has had it all along. -> [{ id, od? }] with od as "YYYY-MM-DD HH:MM".
+     */
+    let mozekMemo = { text: null, list: [] };
+    function parseMozek(text) {
+        const src = String(text || '');
+        if (mozekMemo.text === src) return mozekMemo.list;
+        const pad = n => String(n).padStart(2, '0');
+        const list = [];
+        src.split(/[,;\n]+/).forEach(part => {
+            const m = part.match(/#?(\d+)(?:\s*(?:od|@)\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2}))?)?/i);
+            if (!m) return;
+            const v = { id: Number(m[1]) };
+            if (m[2]) v.od = `${m[4]}-${pad(m[3])}-${pad(m[2])} ${pad(m[5] || 0)}:${m[6] || '00'}`;
+            list.push(v);
+        });
+        mozekMemo = { text: src, list };
+        return list;
+    }
+
+    /** 1.25 when the attacker had Tajemství mozku at the time of the attack. */
+    function mozekFor(rec, text) {
+        const m = parseMozek(text).find(v => v.id === Number(rec.utocnik_id));
+        return m && (!m.od || String(rec.cas || '') >= m.od) ? 1.25 : 1;
+    }
+
     /** "2026-09-30 20:25:26" -> Date in local time, as the game shows it. */
     function casDate(cas) {
         const m = String(cas || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
@@ -1255,6 +1301,9 @@
         const wh = warHours(rec, s.valky);
         if (wh !== null) out.valka_hodin = wh;
 
+        // Tajemství mozku: the attacker's XP × 1.25 (settings.mozek).
+        out.mozek = mozekFor(rec, s.mozek);
+
         // Same, but counting the attacker's own dead as well.
         out.ztraty_prestiz_celkem = out.zabito_prestiz + ourPrestiz;
 
@@ -1350,8 +1399,11 @@
         isAttack,
         upgradeConquests,
         markFailures,
+        markDefences,
         parseValky,
         warHours,
+        parseMozek,
+        mozekFor,
         rankFor,
         RANKS,
         DEFENCE,
