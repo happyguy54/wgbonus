@@ -379,7 +379,8 @@
         const KIND = { obrana: 'obran', pomoc: 'pomocí spojenci', dobyvani: 'dobyvačných (zatím nečtených)' };
         const extra = Object.keys(other).map(k => `${other[k]} ${KIND[k] || k}`).join(', ');
         ui.count.textContent = `${store.attacks().length} útoků celkem, zobrazeno ${rows.length}`
-            + (extra ? ` · uloženo i ${extra} — do výpočtů se nepočítají` : '');
+            + (extra ? ` · uloženo i ${extra} — do výpočtů se nepočítají` : '')
+            + (store.merged ? ` · ${store.merged}× stejná zpráva pod jiným id, sloučeno` : '');
 
         if (!rows.length) {
             ui.tableBody.innerHTML = '<tr><td colspan="11" class="rdata c">Zatím žádné útoky — vložte je výše.</td></tr>';

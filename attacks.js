@@ -485,17 +485,41 @@
 
     /* --------------------------------------------------------------- store */
 
+    /**
+     * The message a record was read from: its time to the second, target and
+     * experience. Two records with the same are the same message, even under
+     * different ids - an id is calculated from the parsed numbers, so a parser
+     * fix gives an old message a new one.
+     */
+    const messageKey = rec => (rec && rec.cas && rec.cil_id !== null && rec.cil_id !== undefined
+        && rec.xp !== null && rec.xp !== undefined) ? `${rec.cas}|${rec.cil_id}|${rec.xp}` : null;
+
     class AttackStore {
         constructor(records) {
             this.records = [];
             this.byId = new Set();
+            this.byMessage = new Map();
+            this.merged = 0;
             if (records) this.addMany(records);
         }
 
-        /** Returns true when the record was new. */
+        /**
+         * Returns true when the record was new. The same message under another
+         * id is not added again; only the fields it has and the stored record
+         * lacks are filled in - nothing already there is overwritten.
+         */
         add(rec) {
             if (!rec || !rec.id || this.byId.has(rec.id)) return false;
+            const key = messageKey(rec);
+            const same = key ? this.byMessage.get(key) : null;
+            if (same) {
+                const empty = v => v === null || v === undefined || v === '';
+                Object.keys(rec).forEach(k => { if (k !== 'id' && empty(same[k]) && !empty(rec[k])) same[k] = rec[k]; });
+                this.merged++;
+                return false;
+            }
             this.byId.add(rec.id);
+            if (key) this.byMessage.set(key, rec);
             this.records.push(rec);
             return true;
         }
@@ -510,12 +534,14 @@
         remove(id) {
             const i = this.records.findIndex(r => r.id === id);
             if (i < 0) return false;
+            const key = messageKey(this.records[i]);
+            if (key && this.byMessage.get(key) === this.records[i]) this.byMessage.delete(key);
             this.records.splice(i, 1);
             this.byId.delete(id);
             return true;
         }
 
-        clear() { this.records = []; this.byId = new Set(); }
+        clear() { this.records = []; this.byId = new Set(); this.byMessage = new Map(); this.merged = 0; }
 
         /** Our attacks only - defences and unread conquests are kept apart. */
         attacks() {

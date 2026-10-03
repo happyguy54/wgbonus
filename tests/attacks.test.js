@@ -762,4 +762,20 @@ section('unread messages are kept, to be shown');
     ok('its text kept', unread.length === 1 && /Něco úplně nového/.test(unread[0]));
 }
 
+section('the same message under another id is stored once');
+{
+    const store = new A.AttackStore();
+    const first = { id: 'old-signature', cas: '2026-09-30 21:42:18', cil_id: 49, xp: 120, typ: 'tyl', ztraty_utocnik: 12 };
+    const again = { id: 'new-signature', cas: '2026-09-30 21:42:18', cil_id: 49, xp: 120, typ: 'tyl', ztraty_utocnik: 99, utocnik_id: 55, prestiz_utocnik: 142000 };
+    eq('first added', store.add(first), true);
+    eq('the same message again is not', store.add(again), false);
+    eq('one record', store.records.length, 1);
+    eq('nothing overwritten', first.ztraty_utocnik, 12);
+    eq('what was missing filled in', `${first.utocnik_id}/${first.prestiz_utocnik}`, '55/142000');
+    eq('counted as merged', store.merged, 1);
+    eq('a different second is a different message', store.add(Object.assign({}, again, { id: 'x', cas: '2026-09-30 21:42:19' })), true);
+    store.remove('old-signature');
+    eq('once removed, the message can come back', store.add(Object.assign({}, again, { id: 'y' })), true);
+}
+
 process.exit(done() ? 1 : 0);
