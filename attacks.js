@@ -855,18 +855,20 @@
     /**
      * Wars of an alliance (Konflikty → Války aliance,
      * p=konflikty&s=awarstat&getali=<tag>): "Válka TVFN vs. .B.I.S. … Od
-     * 30.09. 08:07 … Probíhá už 83 hodin." Returns [{ ali, proti, od }],
-     * od as "2026-09-30 08:07".
+     * 30.09. 08:07 … Probíhá už 83 hodin." or, once over, "… Od 30.09. 08:02
+     * do 3.10. 09:01". Returns [{ ali, proti, od, do? }] as "2026-09-30 08:07".
      */
     function parseValky(rawText, year) {
         const text = htmlToText(rawText).replace(/\s+/g, ' ');
         const Y = year || new Date().getFullYear();
         const pad = x => String(x).padStart(2, '0');
         const out = [];
-        const re = /V[áa]lka\s+(\S+)\s+vs\.?\s+(\S+)\s+Od\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s+)?(\d{1,2}):(\d{2})/gi;
+        const re = /V[áa]lka\s+(\S+)\s+vs\.?\s+(\S+)\s+Od\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s+)?(\d{1,2}):(\d{2})(?:\s+do\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s+)?(\d{1,2}):(\d{2}))?/gi;
         let m;
         while ((m = re.exec(text)) !== null) {
-            out.push({ ali: m[1], proti: m[2], od: `${m[5] || Y}-${pad(m[4])}-${pad(m[3])} ${pad(m[6])}:${m[7]}` });
+            const v = { ali: m[1], proti: m[2], od: `${m[5] || Y}-${pad(m[4])}-${pad(m[3])} ${pad(m[6])}:${m[7]}` };
+            if (m[8]) v.do = `${m[10] || Y}-${pad(m[9])}-${pad(m[8])} ${pad(m[11])}:${m[12]}`;
+            out.push(v);
         }
         return out;
     }
@@ -885,6 +887,8 @@
             if (v.proti !== rec.cil_aliance && v.ali !== rec.cil_aliance) return;
             const od = casDate(v.od);
             if (!t || !od || od > t) return;
+            // An attack after the war ended was not in it.
+            if (v.do && casDate(v.do) < t) return;
             const h = (t - od) / 3600e3;
             if (best === null || h < best) best = h;
         });

@@ -429,7 +429,7 @@
             // phase (full force after 12 hours, more in its first hour).
             try {
                 const w = flatten(await page('p=konflikty&s=awarstat&getali=' + encodeURIComponent(nase))).replace(/\s+/g, ' ');
-                const lines = w.match(/V[áa]lka\s+\S+\s+vs\.?\s+\S+\s+Od\s+\d{1,2}\.\s*\d{1,2}\.\s*(?:\d{4}\s+)?\d{1,2}:\d{2}[^V]{0,40}/gi) || [];
+                const lines = w.match(/V[áa]lka\s+\S+\s+vs\.?\s+\S+\s+Od\s+\d{1,2}\.\s*\d{1,2}\.\s*(?:\d{4}\s+)?\d{1,2}:\d{2}(?:\s+do\s+\d{1,2}\.\s*\d{1,2}\.\s*(?:\d{4}\s+)?\d{1,2}:\d{2})?[^V]{0,40}/gi) || [];
                 if (lines.length) valky.push('### VALKY ' + casKey(new Date()) + '\n' + lines.map(x => x.trim()).join('\n'));
                 say(lines.length + ' válek aliance.');
             } catch (e) { if (e.message === STOP || e.fatal) throw e; }

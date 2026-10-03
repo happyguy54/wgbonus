@@ -827,4 +827,16 @@ section('wars: when each began, hours since for an attack');
     eq('no war with that alliance: none', A.warHours({ cas: '2026-09-30 20:37:00', cil_aliance: 'HOLY' }, v), null);
 }
 
+section('wars that have ended');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const v = A.parseValky(fs.readFileSync(path.join(__dirname, '..', 'samples', 'valky-ejz.txt'), 'utf8'), 2026);
+    eq('four wars of EJZ', v.map(x => x.ali + '×' + x.proti).join(), 'EJZ×MaNTiNeL,NATO×EJZ,EJZ×TVFN,EJZ×HOLY');
+    eq('an ended one has its end', v[3].do, '2026-10-03 13:33');
+    eq('an ongoing one has none', v[1].do, undefined);
+    eq('during the war: hours since it began', A.warHours({ cas: '2026-10-03 13:22:00', cil_aliance: 'HOLY' }, v), 77 + 21 / 60);
+    eq('after it ended: not in war', A.warHours({ cas: '2026-10-03 14:00:00', cil_aliance: 'HOLY' }, v), null);
+}
+
 process.exit(done() ? 1 : 0);
