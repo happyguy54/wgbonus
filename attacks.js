@@ -465,7 +465,7 @@
             // "### ARCHIV #47 XP Piňáta - mazereon", written by the collector
             // (bookmarklet/sbirac.js), or the archive page's own heading
             // "Alianční archiv (#47)" in a hand-copied page.
-            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL|XP|ZEBRICEK|ALIANCE)\b\s*(?:#(\d+))?\s*(.*)$/i);
+            const sec = line.match(/^\s*###\s*(ARCHIV|KONFLIKTY|PROFIL|XP|ZEBRICEK|ALIANCE|VALKY)\b\s*(?:#(\d+))?\s*(.*)$/i);
             const h1 = !sec && line.match(/Alian[čc]n[íi]\s+archiv\s*\(#(\d+)\)/i);
             if (sec || h1) {
                 flush();
@@ -852,6 +852,45 @@
         return { matched, unmatched, ambiguous, rows: rows.length };
     }
 
+    /**
+     * Wars of an alliance (Konflikty → Války aliance,
+     * p=konflikty&s=awarstat&getali=<tag>): "Válka TVFN vs. .B.I.S. … Od
+     * 30.09. 08:07 … Probíhá už 83 hodin." Returns [{ ali, proti, od }],
+     * od as "2026-09-30 08:07".
+     */
+    function parseValky(rawText, year) {
+        const text = htmlToText(rawText).replace(/\s+/g, ' ');
+        const Y = year || new Date().getFullYear();
+        const pad = x => String(x).padStart(2, '0');
+        const out = [];
+        const re = /V[áa]lka\s+(\S+)\s+vs\.?\s+(\S+)\s+Od\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s+)?(\d{1,2}):(\d{2})/gi;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            out.push({ ali: m[1], proti: m[2], od: `${m[5] || Y}-${pad(m[4])}-${pad(m[3])} ${pad(m[6])}:${m[7]}` });
+        }
+        return out;
+    }
+
+    /**
+     * Hours from the start of the war with the target's alliance to the
+     * attack, or null when no such war is known. The manual (6.2.6, 6.2.1):
+     * a war is in full force 12 hours after it starts, its first hour of
+     * that gives more experience.
+     */
+    function warHours(rec, valky) {
+        if (!rec || !rec.cas || !rec.cil_aliance || !valky || !valky.length) return null;
+        const t = casDate(rec.cas);
+        let best = null;
+        valky.forEach(v => {
+            if (v.proti !== rec.cil_aliance && v.ali !== rec.cil_aliance) return;
+            const od = casDate(v.od);
+            if (!t || !od || od > t) return;
+            const h = (t - od) / 3600e3;
+            if (best === null || h < best) best = h;
+        });
+        return best;
+    }
+
     /** "2026-09-30 20:25:26" -> Date in local time, as the game shows it. */
     function casDate(cas) {
         const m = String(cas || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
@@ -1207,6 +1246,11 @@
         // 1 unless the attack was beaten off or failed.
         out.uspech = rec.uspech === 0 ? 0 : 1;
 
+        // Hours since the war with the target's alliance began, when the
+        // wars are known (settings.valky, from the collector or a paste).
+        const wh = warHours(rec, s.valky);
+        if (wh !== null) out.valka_hodin = wh;
+
         // Same, but counting the attacker's own dead as well.
         out.ztraty_prestiz_celkem = out.zabito_prestiz + ourPrestiz;
 
@@ -1302,6 +1346,8 @@
         isAttack,
         upgradeConquests,
         markFailures,
+        parseValky,
+        warHours,
         rankFor,
         RANKS,
         DEFENCE,

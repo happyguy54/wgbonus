@@ -2687,3 +2687,8 @@ input.plot-x {
 }
 .sbirac-link:hover { background: rgba(255, 128, 0, 0.12); }
 .sbirac .submit { margin-left: 4px; }
+
+/* Axis range boxes next to the plot. */
+.plot-controls .plot-range {
+	width: 7em;
+}

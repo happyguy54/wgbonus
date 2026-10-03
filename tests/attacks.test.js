@@ -815,4 +815,16 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('a successful one is left alone', okRec.uspech, undefined);
 }
 
+section('wars: when each began, hours since for an attack');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const v = A.parseValky(fs.readFileSync(path.join(__dirname, '..', 'samples', 'valky-tvfn.html'), 'utf8'), 2026);
+    eq('one war read', JSON.stringify(v), '[{"ali":"TVFN","proti":".B.I.S.","od":"2026-09-30 08:07"}]');
+    eq('the collector\'s line reads the same', JSON.stringify(A.parseValky('### VALKY 2026-10-03 16:00:00\nVálka TVFN vs. .B.I.S. Od 30.09. 08:07 Probíhá už 83 hodin.', 2026)), JSON.stringify(v));
+    eq('hours since it began', A.warHours({ cas: '2026-09-30 20:37:00', cil_aliance: '.B.I.S.' }, v), 12.5);
+    eq('as a formula variable', A.scopeFor({ cas: '2026-09-30 20:37:00', cil_aliance: '.B.I.S.', typ: 'nocni' }, { valky: v }).valka_hodin, 12.5);
+    eq('no war with that alliance: none', A.warHours({ cas: '2026-09-30 20:37:00', cil_aliance: 'HOLY' }, v), null);
+}
+
 process.exit(done() ? 1 : 0);

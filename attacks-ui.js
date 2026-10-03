@@ -179,6 +179,7 @@
         ['zabrano_budovy', 'zabrané budovy (dobyvačný útok)'],
         ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
+        ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
         ['ztraty_mechove_utocnik', 'zničení útočící mechové'],
@@ -263,10 +264,12 @@
     }
 
     /** Dependency-free SVG scatter plot. */
-    function scatter(series, xLabel, yLabel, curves) {
+    function scatter(series, xLabel, yLabel, curves, range) {
         const W = 640, H = 360, P = { t: 14, r: 14, b: 42, l: 66 };
+        const rg = range || {};
         const all = series.flatMap(s => s.points).concat((curves || []).flatMap(c => c.points));
-        if (!all.length) return '<p class="formula-hint">Žádná data k vykreslení.</p>';
+        if (!all.length) return '<p class="formula-hint">Žádná data k vykreslení'
+            + (Object.values(rg).some(v => v !== null) ? ' v zadaném rozsahu.' : '.') + '</p>';
 
         const xs = all.map(p => p.x), ys = all.map(p => p.y);
         let x0 = Math.min(...xs), x1 = Math.max(...xs);
@@ -276,6 +279,13 @@
         // a little headroom so points are not glued to the frame
         const padX = (x1 - x0) * 0.05, padY = (y1 - y0) * 0.05;
         x0 -= padX; x1 += padX; y0 -= padY; y1 += padY;
+        // A range typed in fixes that side of the axis exactly.
+        if (rg.x0 !== null && rg.x0 !== undefined) x0 = rg.x0;
+        if (rg.x1 !== null && rg.x1 !== undefined) x1 = rg.x1;
+        if (rg.y0 !== null && rg.y0 !== undefined) y0 = rg.y0;
+        if (rg.y1 !== null && rg.y1 !== undefined) y1 = rg.y1;
+        if (x1 <= x0) x1 = x0 + 1;
+        if (y1 <= y0) y1 = y0 + 1;
 
         const sx = v => P.l + (v - x0) / (x1 - x0) * (W - P.l - P.r);
         const sy = v => H - P.b - (v - y0) / (y1 - y0) * (H - P.t - P.b);
@@ -483,6 +493,14 @@
                            && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker)
                            && forAnalysis(rec);
 
+        // Axis ranges typed in; empty means automatic. Points outside are
+        // left out, and the fitted lines use only what is shown - so zooming
+        // in on low-XP attacks also fits them alone.
+        const num = el => { const v = el ? parseFloat(String(el.value).replace(',', '.')) : NaN; return Number.isFinite(v) ? v : null; };
+        const range = { x0: num(ui.plotX0), x1: num(ui.plotX1), y0: num(ui.plotY0), y1: num(ui.plotY1) };
+        const inRange = (x, y) => (range.x0 === null || x >= range.x0) && (range.x1 === null || x <= range.x1)
+            && (y === null || ((range.y0 === null || y >= range.y0) && (range.y1 === null || y <= range.y1)));
+
         const grouped = new Map();
         store.attacks().forEach(rec => {
             const typ = rec.typ || 'neznámý';
@@ -491,6 +509,7 @@
             let x;
             try { x = compiled.eval(scope); } catch (e) { return; }
             if (!Number.isFinite(x) || !Number.isFinite(rec.xp)) return;
+            if (!inRange(x, rec.xp)) return;
             if (!grouped.has(typ)) grouped.set(typ, []);
             grouped.get(typ).push({
                 x, y: rec.xp, cas: rec.cas, cil_id: rec.cil_id, cil_zeme: rec.cil_zeme,
@@ -567,14 +586,14 @@
                 const scope = A.scopeFor(rec, settings);
                 let x, y;
                 try { x = compiled.eval(scope); y = eqCompiled.eval(scope); } catch (e) { return; }
-                if (Number.isFinite(x) && Number.isFinite(y)) pts.push({ x, y });
+                if (Number.isFinite(x) && Number.isFinite(y) && inRange(x, rec.xp)) pts.push({ x, y });
             });
             if (pts.length > 1) {
                 curves.push({ label: eq.expression, points: pts, color: CURVE_COLORS[i % CURVE_COLORS.length] });
             }
         });
 
-        ui.plot.innerHTML = scatter(series, expr, 'zkušenosti (xp)', fits.concat(curves));
+        ui.plot.innerHTML = scatter(series, expr, 'zkušenosti (xp)', fits.concat(curves), range);
     }
 
     function renderEquations() {
@@ -662,6 +681,15 @@
             const res = A.applyKonflikty(store.records, konf);
             bits.push(`${konf.length} řádků konfliktů, prestiž doplněna k ${res.matched} útokům`
                 + (res.ambiguous ? ` (${res.ambiguous} nešlo spárovat s řádky konfliktů)` : ''));
+        }
+
+        // When our wars began, for valka_hodin. Kept with the settings, so
+        // they survive a reload.
+        const valky = A.parseValky(text);
+        if (valky.length) {
+            const have = new Set((settings.valky || []).map(v => `${v.ali}|${v.proti}|${v.od}`));
+            settings.valky = (settings.valky || []).concat(valky.filter(v => !have.has(`${v.ali}|${v.proti}|${v.od}`)));
+            bits.push(`války: ${valky.length} (${valky.map(v => v.ali + ' × ' + v.proti).join(', ')})`);
         }
 
         // Hodnost needs the archive's XP gains and the žebříček's experience.
@@ -897,6 +925,8 @@
 
     function readSettings() {
         settings = {
+            // The wars read from a paste stay; only the inputs are read here.
+            valky: settings.valky || [],
             prestizUtocnik: parseFloat(ui.prestizU.value) || 0,
             prestizObrance: parseFloat(ui.prestizO.value) || 0,
             hodnostUtocnik: parseFloat(ui.hodnostU.value) || 0,
@@ -1004,6 +1034,13 @@
                 <label class="plot-check"><input type="checkbox" id="plotFit" checked> Proložit přímku</label>
                 <label class="plot-check" title="Útoky bez vlastní prestiže a hodnosti zůstanou v tabulce, ale do grafu a fitů se nepočítají">
                     <input type="checkbox" id="plotOwnOnly" checked> Jen s prestiží a hodností</label>
+            </div>
+            <div class="plot-controls" title="Prázdné = automaticky. Útoky mimo rozsah se nezobrazí a nepočítají do proložených přímek.">
+                <label>Osa X od</label><input type="text" id="plotX0" class="formula-input plot-range" inputmode="decimal">
+                <label>do</label><input type="text" id="plotX1" class="formula-input plot-range" inputmode="decimal">
+                <label>Osa Y (xp) od</label><input type="text" id="plotY0" class="formula-input plot-range" inputmode="decimal">
+                <label>do</label><input type="text" id="plotY1" class="formula-input plot-range" inputmode="decimal">
+                <button type="button" class="submit" id="plotRangeReset">Celý rozsah</button>
             </div>
             <div class="plot-controls">
                 <label for="plotX">Osa X:</label>
@@ -1117,6 +1154,10 @@
             plotByTime: document.getElementById('plotByTime'),
             plotFit: document.getElementById('plotFit'),
             plotOwnOnly: document.getElementById('plotOwnOnly'),
+            plotX0: document.getElementById('plotX0'),
+            plotX1: document.getElementById('plotX1'),
+            plotY0: document.getElementById('plotY0'),
+            plotY1: document.getElementById('plotY1'),
             plotInsert: document.getElementById('plotInsert'),
             plotPreset: document.getElementById('plotPreset'),
             plotError: document.getElementById('plotError'),
@@ -1223,6 +1264,11 @@
         ui.plotAttacker.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
+        ['plotX0', 'plotX1', 'plotY0', 'plotY1'].forEach(k => ui[k].addEventListener('input', renderPlot));
+        document.getElementById('plotRangeReset').addEventListener('click', () => {
+            ['plotX0', 'plotX1', 'plotY0', 'plotY1'].forEach(k => { ui[k].value = ''; });
+            renderPlot();
+        });
         try { if (localStorage.getItem(OWN_KEY) === '0') ui.plotOwnOnly.checked = false; } catch (e) { /* blocked */ }
         ui.plotOwnOnly.addEventListener('change', () => {
             try { localStorage.setItem(OWN_KEY, ui.plotOwnOnly.checked ? '1' : '0'); } catch (e) { /* blocked */ }

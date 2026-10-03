@@ -117,6 +117,7 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
                 + pageRows.map(archiveRow).join('') + '</tbody></table>' + more);
         }
         if (param('p') === 'archiv') return menu;
+        if (param('p') === 'konflikty' && param('s') === 'awarstat') return read('samples/valky-tvfn.html');
         if (param('p') === 'konflikty') {
             const id = Number(param('land_6'));
             const rows = rowsFor(id).filter(a => !a.obrana && a.h <= 72)
@@ -362,6 +363,8 @@ section(`${label}: our alliance's page, once, before the archives`);
         && /R23\(#107\)[^\n]*\t4344km2\t222187\t\(3\)/.test(game.clip.text));
     const z = A.parseZebricek(game.clip.text);
     eq('the page reads them back as lower bounds', `${z[95].lo}-${z[95].hi}`, '143444-149999');
+    ok('our wars fetched once', game.calls.filter(u => /s=awarstat&getali=EJZ/.test(u)).length === 1);
+    eq('and read back by the page', A.parseValky(game.clip.text, 2026).map(v => v.ali + '×' + v.proti + ' ' + v.od).join(), 'TVFN×.B.I.S. 2026-09-30 08:07');
 }
 
 section(`${label}: just one ally, to try it out`);

@@ -8,7 +8,9 @@
  *      the last HODIN hours        index.php?p=archiv&typ=1&tag=1&id=<ally>
  *   2. konflikty of each ally that attacked in that window - prestiž of both
  *      sides                       index.php?p=konflikty&spec=6&land_6=<ally>&hours_6=<HODIN>
- *   3. the žebříček around every ally and every target hit - total rank
+ *   3. the wars of our alliance - when each began
+ *                                  index.php?p=konflikty&s=awarstat&getali=<tag>
+ *   4. the žebříček around every ally and every target hit - total rank
  *      experience (rounded, "46k") and hodnost, as its "Najít" button asks
  *                                  POST index.php?p=zebricek  type=1&search_id=<id>
  *      and our alliance's page, whose "Zkušenosti" (experience gained in the
@@ -354,6 +356,7 @@
     // bottom of an alliance's page, and the members' hodnost. Total experience
     // is never less, so the page uses it to narrow the žebříček's rounding.
     const aliance = [];
+    const valky = [];
     const tagy = new Set();
 
     async function alianceFor(tag) {
@@ -422,6 +425,14 @@
         if (nase) {
             try { await alianceFor(nase); }
             catch (e) { if (e.message === STOP || e.fatal) throw e; }
+            // When each of our wars began - experience depends on the war's
+            // phase (full force after 12 hours, more in its first hour).
+            try {
+                const w = flatten(await page('p=konflikty&s=awarstat&getali=' + encodeURIComponent(nase))).replace(/\s+/g, ' ');
+                const lines = w.match(/V[áa]lka\s+\S+\s+vs\.?\s+\S+\s+Od\s+\d{1,2}\.\s*\d{1,2}\.\s*(?:\d{4}\s+)?\d{1,2}:\d{2}[^V]{0,40}/gi) || [];
+                if (lines.length) valky.push('### VALKY ' + casKey(new Date()) + '\n' + lines.map(x => x.trim()).join('\n'));
+                say(lines.length + ' válek aliance.');
+            } catch (e) { if (e.message === STOP || e.fatal) throw e; }
         }
 
         // Attacks the shared store already holds, as "cas|target". Reading
@@ -531,7 +542,7 @@
     /* ---- hand it over ----------------------------------------------------- */
     stopBtn.style.display = 'none';
     status('');
-    const out = archivy.concat(xpBloky, konflikty, aliance, zebricek).join('\n\n');
+    const out = archivy.concat(xpBloky, konflikty, aliance, valky, zebricek).join('\n\n');
     if (!archivy.length && !konflikty.length) {
         say('\n' + (konec ? 'Nic nesebráno.' : 'Za posledních ' + HODIN + ' h nic nového'
             + (zname ? ' (' + zname + ' útoků už v databázi)' : '') + '.'));
