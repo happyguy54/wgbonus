@@ -112,7 +112,7 @@
         // Our attack beaten off or failed: "Země X nebyla poražena", "…byl
         // tanky X odražen", "Naši vojáci nevnikli…", "…se nepodařilo obejít
         // přesilu…". Probably worth far less experience, so marked.
-        const failed = /nebyla\s+pora[žz]ena|odra[žz]en|nevnikli|nepoda[řr]ilo/i.test(text);
+        const failed = FAILED.test(text);
 
         const cas = casOf(text);
 
@@ -363,6 +363,23 @@
             KEEP.forEach(k => { if (rec[k] !== undefined && rec[k] !== null) kept[k] = rec[k]; });
             Object.keys(rec).forEach(k => { delete rec[k]; });
             Object.assign(rec, read, kept, { druh: 'utok' });
+            n++;
+        });
+        return n;
+    }
+
+    /** Our attack beaten off or failed (see parseLine). */
+    const FAILED = /nebyla\s+pora[žz]ena|odra[žz]en|nevnikli|nepoda[řr]ilo/i;
+
+    /**
+     * Mark failed attacks from their text where the mark is missing - an
+     * older worker dropped the uspech field on upload. Returns how many.
+     */
+    function markFailures(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!isAttack(rec) || rec.uspech === 0 || !FAILED.test(rec.raw || '')) return;
+            rec.uspech = 0;
             n++;
         });
         return n;
@@ -1213,8 +1230,12 @@
         out.attack_jednotka_cena = perUnit
             ? (out.ztraty_utocnik_kusu ? ourPrestiz / out.ztraty_utocnik_kusu : 0)
             : atkRate;
-        // What they lost: units, and in a conquest land and buildings too.
-        out.defense_prestiz = out.zabito_prestiz + out.zabrano_prestiz;
+        // Military bases destroyed - buildings, 5 prestiž each. Fitting XP
+        // within rounds of noční tažení, leaving them out costs ±3.6 % instead
+        // of ±1.2 %.
+        out.zakladny_prestiz = v('zakladny') * (P.budovy || 0);
+        // What they lost: units, bases, and in a conquest land and buildings.
+        out.defense_prestiz = out.zabito_prestiz + out.zakladny_prestiz + out.zabrano_prestiz;
 
         // Prestiž and hodnost are per-attack in the game, but the message log
         // does not carry them. A record may have its own values; otherwise the
@@ -1280,6 +1301,7 @@
         parseOther,
         isAttack,
         upgradeConquests,
+        markFailures,
         rankFor,
         RANKS,
         DEFENCE,

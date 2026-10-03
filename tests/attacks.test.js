@@ -802,4 +802,17 @@ section('our failed attacks (samples/neuspesne.txt)');
     eq('and 1 for an attack that worked', A.scopeFor({ typ: 'nocni', xp: 1 }, {}).uspech, 1);
 }
 
+section('bases count in defense_prestiz; failures re-marked from text');
+{
+    const r = A.parseLine('10.9.2026\t12:12:14\tNašim mechům se podařilo během nočního tažení zemí Ankh-Morpork(#53)[HOLY] - mikrobbb zlikvidovat 6138 nepřipravených vojáků, 1244 tanků a 1303 stíhaček. S nimi bylo zničeno 102 vojenských základen. Zničeno bylo 6787 útočících a 4387 bránících mechů. Získáno 10251 zkušeností.');
+    const sc = A.scopeFor(r, {});
+    eq('102 bases x 5', sc.zakladny_prestiz, 510);
+    eq('defense_prestiz = units + bases', sc.defense_prestiz, sc.zabito_prestiz + 510);
+    const stored = { id: 'x', typ: 'nocni', xp: 354, raw: 'Našim jednotkám se nepodařilo obejít přesilu nepřátelských mechů X(#49) při nočním tažení. Získáno 354 zkušeností.' };
+    const okRec = { id: 'y', typ: 'nocni', xp: 1000, raw: r.raw };
+    eq('a failed attack stored without its mark gets it back', A.markFailures([stored, okRec]), 1);
+    eq('marked', stored.uspech, 0);
+    eq('a successful one is left alone', okRec.uspech, undefined);
+}
+
 process.exit(done() ? 1 : 0);

@@ -87,6 +87,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
+        A.markFailures(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -195,7 +196,8 @@
         ['defense_zakladny', 'zničené základny obránce'],
         ['defense_all', 'všechny zabité jednotky obránce včetně mechů'],
         ['attack_prestiz', 'naše padlé jednotky vážené prestiží (u dobyvačného útoku všechny druhy)'],
-        ['defense_prestiz', 'zabité jednotky obránce vážené prestiží + zabrané území a budovy'],
+        ['defense_prestiz', 'zabité jednotky obránce vážené prestiží + zničené vojenské základny (5) + zabrané území a budovy'],
+        ['zakladny_prestiz', 'zničené vojenské základny × 5 (budovy)'],
         ['vaha', 'váha záznamu ve fitu (1 = vlastní a jistá prestiž/hodnost, 0,2 = výchozí nebo odhad)'],
         ['hodnost_jista', '1 když hodnost obou stran není jen odhad, jinak 0'],
         ['vlastni_hodnoty', '1 když má záznam vlastní prestiž a hodnost, jinak 0'],
@@ -640,6 +642,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
+        A.markFailures(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -782,6 +785,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
+        A.markFailures(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
@@ -819,13 +823,14 @@
             // `druh` a defence would arrive looking like an attack, without
             // `hodnost_*_jiste` an estimate like a certain value, and without
             // `zabrano_km2` a conquest would be stored without its losses and
-            // land - for good, as no longer unread. So to such a worker only
+            // land - for good, as no longer unread; without `uspech` a failed
+            // attack would pass for a successful one. So to such a worker only
             // the other attacks go, and estimated hodnost does not.
             let records = store.records;
             let stale = '';
             const health = await syncCall('health', 'GET').catch(() => ({}));
             const cols = Array.isArray(health.sloupce) ? health.sloupce : [];
-            if (!['druh', 'hodnost_utocnik_jiste', 'zabrano_km2'].every(c => cols.includes(c))) {
+            if (!['druh', 'hodnost_utocnik_jiste', 'zabrano_km2', 'uspech'].every(c => cols.includes(c))) {
                 records = store.attacks().filter(r => r.typ !== 'dobyvacny').map(r => {
                     const c = Object.assign({}, r);
                     ['utocnik', 'obrance'].forEach(side => {
