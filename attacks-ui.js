@@ -177,6 +177,7 @@
         ['zabrano_km2', 'zabrané území v km² (dobyvačný útok)'],
         ['zabrano_budovy', 'zabrané budovy (dobyvačný útok)'],
         ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
+        ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
         ['ztraty_mechove_utocnik', 'zničení útočící mechové'],

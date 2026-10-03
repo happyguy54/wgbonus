@@ -778,4 +778,28 @@ section('the same message under another id is stored once');
     eq('once removed, the message can come back', store.add(Object.assign({}, again, { id: 'y' })), true);
 }
 
+section('our failed attacks (samples/neuspesne.txt)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const { records, skipped } = A.parsePaste(fs.readFileSync(path.join(__dirname, '..', 'samples', 'neuspesne.txt'), 'utf8'));
+    const at = c => records.find(r => r.cas.endsWith(c));
+    eq('all five read', `${records.length}/${skipped}`, '5/0');
+    ok('all attacks, all marked failed', records.every(r => A.isAttack(r) && r.uspech === 0));
+    const c = at('13:28:04');
+    eq('"Země X nebyla poražena": a failed conquest', `${c.typ} ${c.cil_id} ${c.cil_zeme}`, 'dobyvacny 91 4DM1N1 bez M0ZKU');
+    eq('our losses by unit', [c.ztraty_vojaci, c.ztraty_tanky, c.ztraty_stihacky, c.ztraty_mechove].join('/'), '2708/61/0/1565');
+    eq('theirs', [c.zabito_vojaci, c.zabito_tanky, c.zabito_bunkry, c.ztraty_obrance].join('/'), '1579/0/161/0');
+    eq('no land taken', c.zabrano_km2, null);
+    const b = at('09:16:10');
+    eq('"nevnikli … do bunkrů": a failed bunker attack', `${b.typ} ${b.cil_id} ${b.cil_zeme}`, 'bunkry 87 Horší, než zlo.');
+    eq('losses: ours / theirs', `${b.ztraty_utocnik}/${b.ztraty_obrance}`, '1096/767');
+    eq('their soldiers not counted twice', A.scopeFor(b, {}).zabito_prestiz, 767);
+    const n = at('09:22:43');
+    eq('"při nočním tažení": a failed noční tažení', `${n.typ} ${n.cil_id} ${n.cil_zeme}`, 'nocni 49 kamcatka');
+    eq('mechs: ours / theirs', `${n.ztraty_utocnik}/${n.ztraty_obrance}`, '746/471');
+    eq('uspech in formulas: 0 here', A.scopeFor(n, {}).uspech, 0);
+    eq('and 1 for an attack that worked', A.scopeFor({ typ: 'nocni', xp: 1 }, {}).uspech, 1);
+}
+
 process.exit(done() ? 1 : 0);

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS attacks (
   utocnik_zeme     TEXT,
   utocnik_hrac     TEXT,
   druh             TEXT,
+  uspech           INTEGER,
   zabito_vojaci    INTEGER,
   zabito_tanky     INTEGER,
   zabito_stihacky  INTEGER,

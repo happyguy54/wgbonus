@@ -44,13 +44,13 @@
     const TYPES = [
         // "ho?" required the h, so this matched "nočního tažení" in an attack
         // message but not "Noční tažení" as the Konflikty list writes it.
-        { id: 'nocni', label: 'Noční tažení', re: /no[čc]n[ií](?:ho)?\s+ta[žz]en[ií]/i },
+        { id: 'nocni', label: 'Noční tažení', re: /no[čc]n[ií](?:ho|m)?\s+ta[žz]en[ií]/i },
         { id: 'nalet', label: 'Taktický nálet', re: /taktick\S*\s+n[áa]let/i },
         { id: 'bombardovani', label: 'Bombardování', re: /bombardov[áa]n/i },
         { id: 'partyzansky', label: 'Partyzánský útok', re: /partyz[áa]n/i },
         { id: 'tyl', label: 'Útok na týl', re: /(napadnout\s+t[ýy]l|t[ýy]l\s+nep[řr][áa]telsk|na\s+t[ýy]l|tankov[ée]\s+brig[áa]d)/i },
-        { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /(vniknout|vniknut|vnikl).{0,20}bunkr/i },
-        { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n|Obsadili\s+jsme\s+[\d\s]+\s*km/i },
+        { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /vnik(?:nout|nut|l)[\s\S]{0,120}?bunkr/i },
+        { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n|Obsadili\s+jsme\s+[\d\s]+\s*km|nebyla\s+pora[žz]ena/i },
         { id: 'loupezivy', label: 'Loupeživý útok', re: /loupe[žz]iv/i },
         { id: 'vyhlazovaci', label: 'Vyhlazovací útok', re: /vyhlazovac/i },
     ];
@@ -109,6 +109,10 @@
         // came out with our own losses as kills. Leave it out rather than
         // store wrong values; it counts as an unrecognised row.
         if (!type) return null;
+        // Our attack beaten off or failed: "Země X nebyla poražena", "…byl
+        // tanky X odražen", "Naši vojáci nevnikli…", "…se nepodařilo obejít
+        // přesilu…". Probably worth far less experience, so marked.
+        const failed = /nebyla\s+pora[žz]ena|odra[žz]en|nevnikli|nepoda[řr]ilo/i.test(text);
 
         const cas = casOf(text);
 
@@ -123,7 +127,9 @@
         // the rest of the sentence cannot be swallowed into the country name.
         // "…byl tanky X(#96) odražen" is how a beaten-off týl names its target.
         // "Partyzánský útok na X(#79) se zdařil" names it after "útok na".
-        const ANCHORS = 'zem[íiěe]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky|[úu]tok\\s+na';
+        // …and a failed noční tažení after "mechů", a failed bunker attack
+        // after "odporu".
+        const ANCHORS = 'zem[íiěe]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky|[úu]tok\\s+na|mech[ůu]|odporu';
         const cil = first(text, new RegExp('(?:' + ANCHORS + ')\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
                  || first(text, new RegExp('([^\\t(]{1,60}?)' + TARGET, 'i'));
 
@@ -154,6 +160,7 @@
             xp,
             raw: text,
         };
+        if (failed) rec.uspech = 0;
 
         // Total enemy units killed, handy as a single regressor.
         const killed = [rec.zabito_vojaci, rec.zabito_tanky, rec.zabito_stihacky, rec.zabito_bunkry]
@@ -202,6 +209,16 @@
             rec.zakladny = null;
             rec.zabrano_km2 = grab(text, /Obsadili\s+jsme\s+([\d\s]+)\s*km/i);
             rec.zabrano_budovy = grab(text, /km2?\s+a\s+([\d\s]+)\s*budov/i);
+        } else if (rec.typ === 'bunkry') {
+            // "Naši vojáci nevnikli díky silnému odporu X(#87) do bunkrů.
+            //  Zahynulo při tom 1096 našich a 767 nepřátelských vojáků."
+            rec.ztraty_utocnik = grab(text, /zahynulo\s+(?:p[řr]i\s+tom\s+)?([\d\s .]+?)\s*na[šs]ich/i);
+            rec.ztraty_obrance = grab(text, /a\s+([\d\s .]+?)\s*nep[řr][áa]telsk[ýy]ch\s+voj/i);
+            rec.zabito_vojaci = rec.ztraty_obrance;
+            rec.zabito_tanky = null;
+            rec.zabito_stihacky = null;
+            rec.zabito_bunkry = null;
+            rec.zakladny = null;
         } else if (rec.typ === 'partyzansky') {
             // "Partyzánský útok na X(#79) se zdařil. Připravenost nepřátelské
             //  armády byla snížena o 4% , zabito bylo 2 agentů … Při bojích
@@ -1138,7 +1155,7 @@
         // number is already one of the zabito_* fields, so adding it again
         // would count the defender's dead twice - at two different rates.
         const defenderInZabito = rec.typ === 'tyl' || rec.typ === 'nalet' || rec.typ === 'bombardovani'
-            || rec.typ === 'partyzansky';
+            || rec.typ === 'partyzansky' || rec.typ === 'bunkry';
         out.zabito_mechove = defenderInZabito ? 0 : v('ztraty_obrance');
         out.zabito_obrance_kusu = v('ztraty_obrance');
         out.ztraty_mechove_utocnik = v('ztraty_utocnik');   // kept: old name
@@ -1169,6 +1186,9 @@
 
         // Land and buildings a conquest took - 0 for every other attack.
         out.zabrano_prestiz = v('zabrano_km2') * (P.rozloha || 0) + v('zabrano_budovy') * (P.budovy || 0);
+
+        // 1 unless the attack was beaten off or failed.
+        out.uspech = rec.uspech === 0 ? 0 : 1;
 
         // Same, but counting the attacker's own dead as well.
         out.ztraty_prestiz_celkem = out.zabito_prestiz + ourPrestiz;
