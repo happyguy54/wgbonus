@@ -50,7 +50,7 @@
         { id: 'partyzansky', label: 'Partyzánský útok', re: /partyz[áa]n/i },
         { id: 'tyl', label: 'Útok na týl', re: /(napadnout\s+t[ýy]l|t[ýy]l\s+nep[řr][áa]telsk|na\s+t[ýy]l|tankov[ée]\s+brig[áa]d)/i },
         { id: 'bunkry', label: 'Vniknutí do bunkrů', re: /(vniknout|vniknut|vnikl).{0,20}bunkr/i },
-        { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n/i },
+        { id: 'dobyvacny', label: 'Dobyvačný útok', re: /dobyva[čc]n|Obsadili\s+jsme\s+[\d\s]+\s*km/i },
         { id: 'loupezivy', label: 'Loupeživý útok', re: /loupe[žz]iv/i },
         { id: 'vyhlazovaci', label: 'Vyhlazovací útok', re: /vyhlazovac/i },
     ];
@@ -123,7 +123,7 @@
         // the rest of the sentence cannot be swallowed into the country name.
         // "…byl tanky X(#96) odražen" is how a beaten-off týl names its target.
         // "Partyzánský útok na X(#79) se zdařil" names it after "útok na".
-        const ANCHORS = 'zem[íi]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky|[úu]tok\\s+na';
+        const ANCHORS = 'zem[íiěe]?|arm[áa]dy|proti\\s+zemi|byl\\s+tanky|[úu]tok\\s+na';
         const cil = first(text, new RegExp('(?:' + ANCHORS + ')\\s+([^\\t(]{1,60}?)' + TARGET, 'i'))
                  || first(text, new RegExp('([^\\t(]{1,60}?)' + TARGET, 'i'));
 
@@ -179,6 +179,29 @@
             rec.zakladny = null;
             // "snížit tak její připravenost o 3%"
             rec.pripravenost_pokles = pct(text, /p[řr]ipravenost\s+o\s+([\d.,]+)\s*%/i);
+        } else if (rec.typ === 'dobyvacny') {
+            // "Úplné vítězství! Obsadili jsme 430 km2 a 209 budov země X(#49) …
+            //  Naše ztráty byly 4033 vojáků, 25 tanků, 0 stíhaček, 0 mechů.
+            //  Nepřítel ztratil 720 vojáků, 60 tanků, 5 bunkrů a 82 mechů."
+            // Our losses come in four units, so each has its own field; theirs
+            // fill the usual ones, their mechs ztraty_obrance as in a noční
+            // tažení. Land and buildings taken are worth prestiž too.
+            const ours = (text.match(/Na[šs]e\s+ztr[áa]ty\s+byly\s+([^.]*)\./i) || [])[1] || '';
+            const theirs = (text.match(/Nep[řr][íi]tel\s+ztratil\s+([^.]*)\./i) || [])[1] || '';
+            rec.ztraty_vojaci = grab(ours, /([\d\s]+)\s*voj/i);
+            rec.ztraty_tanky = grab(ours, /([\d\s]+)\s*tank/i);
+            rec.ztraty_stihacky = grab(ours, /([\d\s]+)\s*st[íi]ha[čc]/i);
+            rec.ztraty_mechove = grab(ours, /([\d\s]+)\s*mech/i);
+            const lost = [rec.ztraty_vojaci, rec.ztraty_tanky, rec.ztraty_stihacky, rec.ztraty_mechove].filter(x => x !== null);
+            rec.ztraty_utocnik = lost.length ? lost.reduce((a, b) => a + b, 0) : null;
+            rec.zabito_vojaci = grab(theirs, /([\d\s]+)\s*voj/i);
+            rec.zabito_tanky = grab(theirs, /([\d\s]+)\s*tank/i);
+            rec.zabito_stihacky = grab(theirs, /([\d\s]+)\s*st[íi]ha[čc]/i);
+            rec.zabito_bunkry = grab(theirs, /([\d\s]+)\s*bunkr/i);
+            rec.ztraty_obrance = grab(theirs, /([\d\s]+)\s*mech/i);
+            rec.zakladny = null;
+            rec.zabrano_km2 = grab(text, /Obsadili\s+jsme\s+([\d\s]+)\s*km/i);
+            rec.zabrano_budovy = grab(text, /km2?\s+a\s+([\d\s]+)\s*budov/i);
         } else if (rec.typ === 'partyzansky') {
             // "Partyzánský útok na X(#79) se zdařil. Připravenost nepřátelské
             //  armády byla snížena o 4% , zabito bylo 2 agentů … Při bojích
@@ -292,6 +315,42 @@
         return rec;
     }
 
+    /** Our conquest: "Úplné vítězství! Obsadili jsme N km2 …". */
+    const isConquest = rec => rec.typ === 'dobyvacny' && /Obsadili\s+jsme/i.test(rec.raw || '');
+
+    /**
+     * Conquests were first stored unread, as druh "dobyvani" with an id of
+     * their own. Read in full they keep that id - so the worker upgrades the
+     * stored row instead of adding a second one - and become attacks.
+     */
+    function conquestIdentity(rec) {
+        rec.id = ['dobyvani', rec.cas, rec.utocnik_id, rec.cil_id, rec.xp].join('|');
+        rec.druh = 'utok';
+        return rec;
+    }
+
+    /**
+     * Read in full the conquests stored before the parser could ("dobyvani"),
+     * in place. Whose attack it was, and any prestiž or hodnost already on it,
+     * stay; the numbers come from the message text. Returns how many.
+     */
+    function upgradeConquests(records) {
+        const KEEP = ['id', 'utocnik_id', 'utocnik_zeme', 'utocnik_hrac', 'prestiz_utocnik', 'prestiz_obrance',
+            'hodnost_utocnik', 'hodnost_obrance', 'hodnost_utocnik_jiste', 'hodnost_obrance_jiste', 'vlozeno'];
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (rec.druh !== 'dobyvani' || !rec.raw) return;
+            const read = parseLine(rec.raw);
+            if (!read || read.typ !== 'dobyvacny') return;
+            const kept = {};
+            KEEP.forEach(k => { if (rec[k] !== undefined && rec[k] !== null) kept[k] = rec[k]; });
+            Object.keys(rec).forEach(k => { delete rec[k]; });
+            Object.assign(rec, read, kept, { druh: 'utok' });
+            n++;
+        });
+        return n;
+    }
+
     /** True for our attacks - the only records any attack analysis uses. */
     const isAttack = rec => !!rec && (!rec.druh || rec.druh === 'utok');
 
@@ -353,6 +412,7 @@
                 // Not part of the signature, so tagging cannot turn a record
                 // already stored into a "new" one.
                 if (attacker) Object.assign(rec, attacker);
+                if (isConquest(rec)) conquestIdentity(rec);
                 records.push(rec);
             } else if (other) {
                 records.push(other);
@@ -504,6 +564,9 @@
         tanky: 5,
         // Killed in partisan attacks; 15 as in PRESTIGE_TABLE below.
         agenti: 15,
+        // Taken in a conquest, per km² and per building (PRESTIGE_TABLE).
+        rozloha: 15,
+        budovy: 5,
     };
 
     /**
@@ -1033,6 +1096,7 @@
         [
             'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry',
             'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp', 'zabito_agenti',
+            'ztraty_vojaci', 'ztraty_tanky', 'ztraty_stihacky', 'ztraty_mechove', 'zabrano_km2', 'zabrano_budovy',
         ].forEach(k => { if (rec[k] !== null && rec[k] !== undefined) out[k] = rec[k]; });
 
         const P = (s.prestigeValues && typeof s.prestigeValues === 'object')
@@ -1065,8 +1129,20 @@
                            + v('zabito_agenti') * (P.agenti || 0)
                            + out.zabito_mechove * (P.mechove || 0);
 
-        // Same, but counting the attacker's own dead mechs as well.
-        out.ztraty_prestiz_celkem = out.zabito_prestiz + out.ztraty_utocnik_kusu * atkRate;
+        // What we lost, valued the same way. Most attacks lose one kind of
+        // unit (ATTACKER_UNIT); a conquest reports four, each priced on its own.
+        const perUnit = ['ztraty_vojaci', 'ztraty_tanky', 'ztraty_stihacky', 'ztraty_mechove']
+            .some(k => rec[k] !== null && rec[k] !== undefined);
+        const ourPrestiz = perUnit
+            ? v('ztraty_vojaci') * (P.vojaci || 0) + v('ztraty_tanky') * (P.tanky || 0)
+              + v('ztraty_stihacky') * (P.stihacky || 0) + v('ztraty_mechove') * (P.mechove || 0)
+            : out.ztraty_utocnik_kusu * atkRate;
+
+        // Land and buildings a conquest took - 0 for every other attack.
+        out.zabrano_prestiz = v('zabrano_km2') * (P.rozloha || 0) + v('zabrano_budovy') * (P.budovy || 0);
+
+        // Same, but counting the attacker's own dead as well.
+        out.ztraty_prestiz_celkem = out.zabito_prestiz + ourPrestiz;
 
         // Plain attacker_/defender_ names, so an equation reads the way you
         // would say it out loud: attack_mech + defense_mech * 2 + ...
@@ -1083,9 +1159,13 @@
         out.defense_bunkry   = v('zabito_bunkry');
         out.defense_zakladny = v('zakladny');
         out.defense_all    = out.zabito_vse;
-        out.attack_prestiz  = out.ztraty_utocnik_kusu * atkRate;
-        out.attack_jednotka_cena = atkRate;   // prestiž of one unit we lose
-        out.defense_prestiz = out.zabito_prestiz;
+        out.attack_prestiz  = ourPrestiz;
+        // Prestiž of one unit we lose; for a conquest the average of its mix.
+        out.attack_jednotka_cena = perUnit
+            ? (out.ztraty_utocnik_kusu ? ourPrestiz / out.ztraty_utocnik_kusu : 0)
+            : atkRate;
+        // What they lost: units, and in a conquest land and buildings too.
+        out.defense_prestiz = out.zabito_prestiz + out.zabrano_prestiz;
 
         // Prestiž and hodnost are per-attack in the game, but the message log
         // does not carry them. A record may have its own values; otherwise the
@@ -1150,6 +1230,7 @@
         applyHodnost,
         parseOther,
         isAttack,
+        upgradeConquests,
         rankFor,
         RANKS,
         DEFENCE,

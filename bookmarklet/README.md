@@ -56,12 +56,20 @@ Každý útok si nese, **kdo útočil** (`utocnik_id`, země, hráč). Bez toho 
 útoky různých spojenců v jedné databázi nedaly rozlišit — a s nimi ani jejich
 hodnost a prestiž. V grafu je na to filtr **Útočník**.
 
+**Dobyvačné útoky** jsou útoky jako ostatní: naše ztráty po druzích jednotek
+(`ztraty_vojaci`, `ztraty_tanky`, `ztraty_stihacky`, `ztraty_mechove`), ztráty
+obránce, zabrané území a budovy (`zabrano_km2`, `zabrano_budovy`, v prestiži
+15 za km² a 5 za budovu — počítají se do `defense_prestiz`).
+
 Obrany („prolomila naši obranu“, „na nás podnikla partyzánský útok“,
-„Nepřátelským mechům … naší zemí“), pomoc spojenci („byli jsme povoláni na pomoc
-v obraně“) a dobyvačné útoky, které parser zatím neumí přečíst, se **ukládají
-taky**, ale zvlášť (pole `druh`: `obrana`, `pomoc`, `dobyvani`). U obrany je
-útočníkem nepřítel a cílem náš spojenec. Do tabulky útoků, grafu ani fitů se
-nepočítají — stránka jen ukáže, kolik jich je uloženo.
+„Nepřátelským mechům … naší zemí“, „napadnout náš týl“ …) a pomoc spojenci
+(„byli jsme povoláni na pomoc v obraně“) se **ukládají taky**, ale zvlášť (pole
+`druh`: `obrana`, `pomoc`). U obrany je útočníkem nepřítel a cílem náš spojenec.
+Do tabulky útoků, grafu ani fitů se nepočítají — stránka jen ukáže, kolik jich
+je uloženo.
+
+Do grafu a fitů jdou standardně jen útoky **s vlastní prestiží i hodností**
+(přepínač „Jen s prestiží a hodností“) — bez nich by vzorec stál na hádání.
 
 ## Proč jen 72 hodin
 

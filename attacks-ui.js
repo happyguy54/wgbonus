@@ -52,6 +52,13 @@
     const xpLog = [];
     const zebLog = {};
 
+    // Whether plot and fits use only attacks with their own prestiž and
+    // hodnost. Without them the page's defaults stand in, which for an XP
+    // formula is guesswork. Remembered per browser; on unless turned off.
+    const OWN_KEY = 'wgbonus.jenVlastni';
+    const ownOnly = () => !ui.plotOwnOnly || ui.plotOwnOnly.checked;
+    const forAnalysis = rec => !ownOnly() || !!A.scopeFor(rec, settings).vlastni_hodnoty;
+
     let ui = {};
     let fileHandle = null;
 
@@ -79,6 +86,7 @@
         // a file must never silently drop what is already here. Duplicates are
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
+        A.upgradeConquests(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -162,6 +170,13 @@
         ['zabito_stihacky', 'zabité stíhačky obránce'],
         ['zabito_bunkry', 'zabité bunkry obránce'],
         ['zabito_agenti', 'zabití agenti (partyzánský útok), prestiž 15 za kus'],
+        ['ztraty_vojaci', 'naši padlí vojáci (dobyvačný útok)'],
+        ['ztraty_tanky', 'naše ztracené tanky (dobyvačný útok)'],
+        ['ztraty_stihacky', 'naše ztracené stíhačky (dobyvačný útok)'],
+        ['ztraty_mechove', 'naši ztracení mechové (dobyvačný útok)'],
+        ['zabrano_km2', 'zabrané území v km² (dobyvačný útok)'],
+        ['zabrano_budovy', 'zabrané budovy (dobyvačný útok)'],
+        ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
         ['ztraty_mechove_utocnik', 'zničení útočící mechové'],
@@ -178,8 +193,8 @@
         ['defense_bunkry', 'zabité bunkry obránce'],
         ['defense_zakladny', 'zničené základny obránce'],
         ['defense_all', 'všechny zabité jednotky obránce včetně mechů'],
-        ['attack_prestiz', 'padlí útočící mechové vážení prestiží'],
-        ['defense_prestiz', 'zabité jednotky obránce vážené prestiží'],
+        ['attack_prestiz', 'naše padlé jednotky vážené prestiží (u dobyvačného útoku všechny druhy)'],
+        ['defense_prestiz', 'zabité jednotky obránce vážené prestiží + zabrané území a budovy'],
         ['vaha', 'váha záznamu ve fitu (1 = vlastní a jistá prestiž/hodnost, 0,2 = výchozí nebo odhad)'],
         ['hodnost_jista', '1 když hodnost obou stran není jen odhad, jinak 0'],
         ['vlastni_hodnoty', '1 když má záznam vlastní prestiž a hodnost, jinak 0'],
@@ -196,7 +211,7 @@
 
     /** Evaluate one equation over the records of its type. */
     function evaluateEquation(eq) {
-        const rows = store.byType(eq.typ === '*' ? null : eq.typ);
+        const rows = store.byType(eq.typ === '*' ? null : eq.typ).filter(forAnalysis);
         let compiled;
         try { compiled = Engine.compile(eq.expression); }
         catch (err) { return { error: err.message, points: [] }; }
@@ -340,14 +355,19 @@
 
     /** Which unit WE lose in this attack type - the column is otherwise unlabelled. */
     function ourUnit(r) {
+        if (r.ztraty_vojaci !== undefined && r.ztraty_vojaci !== null) {
+            // A conquest loses several kinds at once.
+            return `vojáci ${fmtNum(r.ztraty_vojaci)}, tanky ${fmtNum(r.ztraty_tanky)}, `
+                + `stíhačky ${fmtNum(r.ztraty_stihacky)}, mechové ${fmtNum(r.ztraty_mechove)}`;
+        }
         return ({ nocni: 'mechové', tyl: 'tanky', nalet: 'stíhačky', bombardovani: 'stíhačky',
                   partyzansky: 'vojáci', bunkry: 'vojáci' })[r.typ] || 'jednotky';
     }
 
-    /** The defender's mechs, which only noční tažení reports separately. The
-     *  other types already list their dead under their own unit column. */
+    /** The defender's mechs, which noční tažení and conquests report
+     *  separately. The other types list their dead under their own unit. */
     function defenderMechs(r) {
-        return r.typ === 'nocni' ? r.ztraty_obrance : null;
+        return r.typ === 'nocni' || r.typ === 'dobyvacny' ? r.ztraty_obrance : null;
     }
 
     function renderTable() {
@@ -456,7 +476,8 @@
         const onlyAttacker = ui.plotAttacker ? ui.plotAttacker.value : '*';
         const wanted = rec => (onlyType === '*' || (rec.typ || 'neznámý') === onlyType)
                            && (onlyTarget === '*' || String(rec.cil_id || '?') === onlyTarget)
-                           && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker);
+                           && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker)
+                           && forAnalysis(rec);
 
         const grouped = new Map();
         store.attacks().forEach(rec => {
@@ -616,6 +637,7 @@
         const { records, skipped, xpEvents } = A.parsePaste(text);
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
+        A.upgradeConquests(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -742,6 +764,7 @@
         try {
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
+            A.upgradeConquests(store.records);
 
             let konfNote = '';
             try {
@@ -951,6 +974,8 @@
                 <select id="plotTarget" class="formula-input"></select>
                 <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
                 <label class="plot-check"><input type="checkbox" id="plotFit" checked> Proložit přímku</label>
+                <label class="plot-check" title="Útoky bez vlastní prestiže a hodnosti zůstanou v tabulce, ale do grafu a fitů se nepočítají">
+                    <input type="checkbox" id="plotOwnOnly" checked> Jen s prestiží a hodností</label>
             </div>
             <div class="plot-controls">
                 <label for="plotX">Osa X:</label>
@@ -1063,6 +1088,7 @@
             sbiracInfo: document.getElementById('sbiracInfo'),
             plotByTime: document.getElementById('plotByTime'),
             plotFit: document.getElementById('plotFit'),
+            plotOwnOnly: document.getElementById('plotOwnOnly'),
             plotInsert: document.getElementById('plotInsert'),
             plotPreset: document.getElementById('plotPreset'),
             plotError: document.getElementById('plotError'),
@@ -1169,6 +1195,11 @@
         ui.plotAttacker.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
+        try { if (localStorage.getItem(OWN_KEY) === '0') ui.plotOwnOnly.checked = false; } catch (e) { /* blocked */ }
+        ui.plotOwnOnly.addEventListener('change', () => {
+            try { localStorage.setItem(OWN_KEY, ui.plotOwnOnly.checked ? '1' : '0'); } catch (e) { /* blocked */ }
+            renderAll();
+        });
 
         // insert a variable at the cursor rather than making you type it
         ui.plotInsert.innerHTML = '<option value="">vložit proměnnou…</option>'

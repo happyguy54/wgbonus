@@ -77,7 +77,9 @@ nahrání je vypíše pod `pridane_sloupce`.
 
 Záznamy se spojují podle `id` (podpis nad hodnotami útoku). Co už nahoře je,
 se nepřepisuje — započítá se jako duplicita. **Nikdo tedy nemůže svým nahráním
-smazat data někoho jiného.**
+smazat data někoho jiného.** Jediná výjimka: dobyvačný útok uložený dřív, než ho
+parser uměl přečíst (`druh` = `dobyvani`), nahradí jeho plně přečtená verze se
+stejným `id`; odpověď to hlásí jako `doplneno`.
 
 Zápis probíhá přes `INSERT OR IGNORE` v jedné transakci, takže ani dvě
 současná nahrání se navzájem nepřepíšou ani neztratí.

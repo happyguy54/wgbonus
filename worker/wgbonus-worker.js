@@ -13,8 +13,9 @@
  * Reads are open; writes need the shared password, sent either as
  * `X-WG-Secret: <secret>` or as `secret` in the JSON body.
  *
- * Rows are inserted with INSERT OR IGNORE keyed on `id`, so a record that is
- * already there is left exactly as it is. Nobody's upload can overwrite or
+ * Rows are inserted keyed on `id`, so a record that is already there is left
+ * exactly as it is - except a conquest stored unread (druh "dobyvani"), which
+ * its fully read version replaces. Nobody's upload can overwrite or
  * delete anyone else's data, and because each batch runs as one transaction
  * two people uploading at the same moment cannot lose each other's rows.
  *
@@ -36,6 +37,7 @@ const COLUMNS = {
         'utocnik_id', 'utocnik_zeme', 'utocnik_hrac', 'druh',
         'zabito_vojaci', 'zabito_tanky', 'zabito_stihacky', 'zabito_bunkry', 'zabito_agenti',
         'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp',
+        'ztraty_vojaci', 'ztraty_tanky', 'ztraty_stihacky', 'ztraty_mechove', 'zabrano_km2', 'zabrano_budovy',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
         'hodnost_utocnik_jiste', 'hodnost_obrance_jiste',
         'pripravenost_pokles', 'spokojenost_pokles', 'raw', 'vlozeno',
@@ -62,6 +64,12 @@ const ADDED = {
         utocnik_hrac: 'TEXT',
         druh: 'TEXT',
         zabito_agenti: 'INTEGER',
+        ztraty_vojaci: 'INTEGER',
+        ztraty_tanky: 'INTEGER',
+        ztraty_stihacky: 'INTEGER',
+        ztraty_mechove: 'INTEGER',
+        zabrano_km2: 'INTEGER',
+        zabrano_budovy: 'INTEGER',
         hodnost_utocnik_jiste: 'INTEGER',
         hodnost_obrance_jiste: 'INTEGER',
     },
@@ -217,8 +225,20 @@ export default {
 
             const cols = COLUMNS[table];
             const placeholders = cols.map(() => '?').join(', ');
-            // OR IGNORE: an id already present stays exactly as it is.
-            const sql = `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
+            // An id already present stays exactly as it is - with one
+            // exception: a conquest stored before the parser could read it
+            // (druh "dobyvani") is replaced by its fully read version, which
+            // keeps the same id. Nothing else can be overwritten.
+            const sql = table === 'attacks'
+                ? `INSERT INTO attacks (${cols.join(', ')}) VALUES (${placeholders})`
+                  + ` ON CONFLICT(id) DO UPDATE SET `
+                  + cols.filter(c => c !== 'id' && c !== 'vlozeno').map(c => `${c} = excluded.${c}`).join(', ')
+                  + ` WHERE attacks.druh = 'dobyvani' AND excluded.druh IS NOT 'dobyvani'`
+                : `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
+            const unread = async () => table === 'attacks'
+                ? ((await env.DB.prepare(`SELECT COUNT(*) AS n FROM attacks WHERE druh = 'dobyvani'`).first()) || {}).n || 0
+                : 0;
+            const unreadBefore = await unread();
             const now = new Date().toISOString();
 
             const statements = [];
@@ -237,12 +257,14 @@ export default {
             }
 
             const t = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first();
+            const upgraded = unreadBefore - await unread();
             const reply = {
-                added,
+                added: added - upgraded,
                 duplicates: statements.length - added,
                 skipped,
                 total: (t && t.n) || 0,
             };
+            if (upgraded) reply.doplneno = upgraded;
             if (migrated.length) reply.pridane_sloupce = migrated;
             return json(reply);
         } catch (err) {

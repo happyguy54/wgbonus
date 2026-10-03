@@ -466,9 +466,9 @@ section('Lord Azeroth (#55), 1.10.: defences and conquests stored apart from att
     const path = require('path');
     const text = 'Alianční archiv (#55)\n' + fs.readFileSync(path.join(__dirname, '..', 'samples', 'archiv-utoky-55.txt'), 'utf8');
     const { records, skipped } = A.parsePaste(text);
-    eq('no attacks among them', records.filter(A.isAttack).length, 0);
+    eq('his two conquests are attacks', records.filter(A.isAttack).length, 2);
     eq('10 defences', records.filter(r => r.druh === 'obrana').length, 10);
-    eq('2 conquests, kept for when they can be read', records.filter(r => r.druh === 'dobyvani').length, 2);
+    eq('nothing left unread', records.filter(r => r.druh === 'dobyvani').length, 0);
     eq('nothing unrecognised', skipped, 0);
     const d = records.find(r => r.cas === '2026-10-01 08:00:24');
     eq('a defence: the enemy is the attacker', `${d.utocnik_id} ${d.utocnik_zeme}`, '87 Horší, než zlo.');
@@ -476,10 +476,14 @@ section('Lord Azeroth (#55), 1.10.: defences and conquests stored apart from att
     eq('type of their attack', d.typ, 'partyzansky');
     const c = records.find(r => r.cas === '2026-10-01 06:40:50');
     eq('a conquest: our ally attacks', `${c.utocnik_id} -> ${c.cil_id} ${c.cil_zeme}`, '55 -> 49 kamcatka');
+    eq('read in full: our losses by unit', [c.ztraty_vojaci, c.ztraty_tanky, c.ztraty_stihacky, c.ztraty_mechove].join('/'), '3811/22/0/0');
+    eq('theirs', [c.zabito_vojaci, c.zabito_tanky, c.zabito_bunkry, c.ztraty_obrance].join('/'), '969/80/7/109');
+    eq('land and buildings taken', `${c.zabrano_km2}/${c.zabrano_budovy}`, '547/265');
+    eq('it keeps the id an unread conquest was stored under', c.id, 'dobyvani|2026-10-01 06:40:50|55|49|3599');
     const store = new A.AttackStore(); store.addMany(records);
-    eq('the store\'s attack list leaves them out', store.attacks().length, 0);
-    eq('and so do its types', store.types().length, 0);
-    eq('but counts them', JSON.stringify(store.others()), '{"obrana":10,"dobyvani":2}');
+    eq('the store\'s attack list has the conquests', store.attacks().length, 2);
+    eq('under their own type', store.types().map(t => t.typ).join(','), 'dobyvacny');
+    eq('and counts the defences apart', JSON.stringify(store.others()), '{"obrana":10}');
     ok('enemy partisan attack on us is a defence', A.DEFENCE.test('Země Pošta Horší, než zlo.(#87)[HOLY] - White Dead na nás podnikla partyzánský útok.'));
     ok('our own partisan attack is not', !A.DEFENCE.test('Naši partyzáni podnikli útok na zemi X(#5) a zabili 10 vojáků.'));
 }
@@ -608,9 +612,8 @@ section('a real collector run for XP Piňáta (#47), 2.10. (samples/sber-47.txt)
         !attacks.some(r => /Nepřátelským/.test(r.raw)));
     const enemy = records.find(r => r.cas === '2026-10-01 21:18:57');
     eq('it is stored as a defence: kamcatka attacked #47', `${enemy.druh} ${enemy.utocnik_id}->${enemy.cil_id} ${enemy.typ}`, 'obrana 49->47 nocni');
-    ok('no conquest among the attacks (not read yet)', !attacks.some(r => /Obsadili jsme/.test(r.raw)));
-    eq('conquests kept apart', records.filter(r => r.druh === 'dobyvani').length, 4);
-    eq('our noční tažení and týl', attacks.length, 21);
+    eq('our conquests are attacks, read in full', attacks.filter(r => r.typ === 'dobyvacny' && r.zabrano_km2 > 0).length, 4);
+    eq('our noční tažení, týl and conquests', attacks.length, 25);
     const f = byTime('19:01:34');
     eq('beaten-off týl: type', f && f.typ, 'tyl');
     eq('beaten-off týl: our losses', f && f.ztraty_utocnik, 80);
@@ -691,7 +694,7 @@ section('Lord Azeroth (#55), 2.10.: more wordings (samples/sber-55-tvary.txt)');
     const sc = A.scopeFor(p, {});
     eq('prestiž of what we killed: 1 740 soldiers + 2 agents x 15', sc.zabito_prestiz, 1740 + 30);
     eq('their soldiers not counted twice as mechs', sc.zabito_mechove, 0);
-    eq('attacks among the 12 rows: our 4 partisan attacks', records.filter(A.isAttack).length, 4);
+    eq('attacks among the 12 rows: 4 partisan attacks and a conquest', records.filter(A.isAttack).length, 5);
 
     const d = require('../attacks.default.json');
     const known = (d.records || d).concat(A.parsePaste(fs.readFileSync(path.join(__dirname, '..', 'samples', 'sber-47.txt'), 'utf8')).records.filter(A.isAttack));
@@ -728,6 +731,26 @@ section('several attacks in one minute: each gets its own konflikty row');
     const res2 = A.applyKonflikty(two, rows.slice(0, 3));
     ok('rows that cannot be paired give no prestiž', two.every(x => x.prestiz_utocnik === undefined));
     eq('and are counted as unclear', res2.ambiguous, 2);
+}
+
+section('a conquest valued for analysis, and conquests stored unread upgraded');
+{
+    const r = A.parseLine('1.10.2026\t19:15:19\tÚplné vítězství! Obsadili jsme 563 km2 a 271 budov země Ty Vole Fakt NeKUKám(#38) [TVFN] - Deathlord1 . Sebrali jsme 133968$, 0t jídla, 289MWh energie a 832 technologií. Naše ztráty byly 2017 vojáků, 150 tanků, 237 stíhaček, 452 mechů. Nepřítel ztratil 1774 vojáků, 148 tanků, 0 bunkrů a 0 mechů. Připrav. obránce se po útoku zvýšila o 10%. Získáno 5181 zkušeností.');
+    const sc = A.scopeFor(r, {});
+    eq('our losses priced per unit: 2017 + 150x5 + 237x3,5 + 452x2,7', sc.attack_prestiz, 2017 + 750 + 829.5 + 1220.4, 1e-6);
+    eq('their dead', sc.zabito_prestiz, 1774 + 148 * 5);
+    eq('land and buildings: 563x15 + 271x5', sc.zabrano_prestiz, 563 * 15 + 271 * 5);
+    eq('defense_prestiz counts both', sc.defense_prestiz, 2514 + 9800);
+    eq('our units lost, as a count', sc.attack_lost, 2017 + 150 + 237 + 452);
+    eq('another attack takes no land', A.scopeFor({ typ: 'nocni', ztraty_obrance: 3 }, {}).zabrano_prestiz, 0);
+
+    const stored = { id: 'dobyvani|2026-10-01 19:15:19|47|38|5181', druh: 'dobyvani', cas: '2026-10-01 19:15:19',
+        typ: 'dobyvacny', utocnik_id: 47, utocnik_zeme: 'XP Piňáta', cil_id: 38, xp: 5181, prestiz_utocnik: 202000, raw: r.raw };
+    const n = A.upgradeConquests([stored]);
+    eq('a stored unread conquest is read', n, 1);
+    ok('as an attack', A.isAttack(stored) && stored.druh === 'utok');
+    eq('keeping its id, attacker and prestiž', `${stored.id}|${stored.utocnik_id}|${stored.prestiz_utocnik}`, 'dobyvani|2026-10-01 19:15:19|47|38|5181|47|202000');
+    eq('with the numbers from its text', `${stored.ztraty_mechove}/${stored.zabrano_km2}`, '452/563');
 }
 
 process.exit(done() ? 1 : 0);

@@ -282,5 +282,34 @@ const atk = (id, extra = {}) => Object.assign({
         ok('second upload does not migrate again', !again.pridane_sloupce);
     }
 
+    section('a conquest stored unread is upgraded; nothing else is overwritten');
+    {
+        const env = makeEnv('pw');
+        const id = 'dobyvani|2026-10-01 19:15:19|47|38|5181';
+        await call(env, 'POST', 'attacks', { records: [
+            { id, druh: 'dobyvani', cas: '2026-10-01 19:15:19', typ: 'dobyvacny', utocnik_id: 47, cil_id: 38, xp: 5181, raw: 'Úplné vítězství! …' },
+            atk('plain-1', { zabito_vojaci: 10 }),
+        ] }, 'pw');
+
+        const up = await (await call(env, 'POST', 'attacks', { records: [
+            { id, druh: 'utok', cas: '2026-10-01 19:15:19', typ: 'dobyvacny', utocnik_id: 47, cil_id: 38, xp: 5181,
+              ztraty_vojaci: 2017, ztraty_mechove: 452, zabrano_km2: 563, zabrano_budovy: 271, raw: 'Úplné vítězství! …' },
+            atk('plain-1', { zabito_vojaci: 999 }),
+        ] }, 'pw')).json();
+        eq('reported as filled in, not as new', `${up.doplneno}/${up.added}`, '1/0');
+        const rows = (await (await call(env, 'GET', 'attacks')).json()).records;
+        const c = rows.find(r => r.id === id);
+        eq('the conquest is now an attack', c.druh, 'utok');
+        eq('with its losses and land', `${c.ztraty_vojaci}/${c.ztraty_mechove}/${c.zabrano_km2}/${c.zabrano_budovy}`, '2017/452/563/271');
+        eq('a normal row is never overwritten', rows.find(r => r.id === 'plain-1').zabito_vojaci, 10);
+        eq('still one row each', rows.length, 2);
+
+        await call(env, 'POST', 'attacks', { records: [
+            { id, druh: 'dobyvani', cas: '2026-10-01 19:15:19', typ: 'dobyvacny', xp: 5181 },
+        ] }, 'pw');
+        const again = (await (await call(env, 'GET', 'attacks')).json()).records.find(r => r.id === id);
+        eq('an unread copy cannot turn it back', `${again.druh}/${again.ztraty_vojaci}`, 'utok/2017');
+    }
+
     process.exit(done() ? 1 : 0);
 })();
