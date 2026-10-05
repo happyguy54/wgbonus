@@ -30,10 +30,16 @@
     const dataFile = () => `attacks.${profile}.json`;
     const localKey = () => `wgbonus.attacks.${profile}.v1`;
 
-    /** Who in EJZ has Tajemství mozku (+25 % XP), confirmed 2026-10-05. An
+    /** Who in EJZ has Tajemství mozku (+25 % XP), confirmed 2026-10-05; #44
+     *  between 4.10 11:31 and 5.10 14:04 (týl floor 188). #68 has it by now,
+     *  but not yet in any stored attack (floor 150 on 4.10 23:00). An
      *  empty field means this list - without it every fit splits in two lines.
      *  "-" in the field means nobody. */
-    const MOZEK_EJZ = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15';
+    const MOZEK_EJZ = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00';
+    /** Earlier defaults: a field still holding one of these was never edited
+     *  by hand, so it follows the list above. */
+    const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15'];
+    const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
     let settings = {
@@ -108,7 +114,7 @@
                 .forEach(k => { if (src[k] !== undefined && src[k] !== null) rec[k] = src[k]; });
         });
         if (data.settings) settings = Object.assign(settings, data.settings);
-        if (!settings.mozek) settings.mozek = MOZEK_EJZ;
+        settings.mozek = mozekSetting(settings.mozek);
         if (Array.isArray(data.equations)) equations = data.equations;
         if (Array.isArray(data.konflikty)) {
             const seen = new Set(konfliktRows.map(k => k.id));
@@ -228,7 +234,7 @@
         try { compiled = Engine.compile(eq.expression); }
         catch (err) { return { error: err.message, points: [] }; }
 
-        const points = [];
+        let points = [];
         rows.forEach(rec => {
             const scope = A.scopeFor(rec, settings);
             let predicted = null;
@@ -242,6 +248,11 @@
         });
 
         if (!points.length) return { error: 'Žádný záznam nešlo spočítat.', points: [] };
+        // A failed attack earns by other rules; it stays listed, but the
+        // statistics are over the successful ones.
+        const all = points;
+        points = points.filter(p => p.rec.uspech !== 0);
+        if (!points.length) return { error: 'Jen neúspěšné útoky.', points: all };
 
         // Records whose prestiž/hodnost are page defaults rather than their own
         // count for less, so guessed inputs cannot dominate the fit.
@@ -254,7 +265,7 @@
         const mae = points.reduce((a, p) => a + p.vaha * Math.abs(p.actual - p.predicted), 0) / W;
         const plna = points.filter(p => p.vlastni).length;
 
-        return { points, n, plna, vahaCelkem: W, r2, mae, error: null };
+        return { points: all, n, plna, vahaCelkem: W, r2, mae, error: null };
     }
 
     /* ---------------------------------------------------------------- plot */
@@ -326,8 +337,10 @@
             const n = Math.max(1, ordered.length - 1);
             return ordered.map((p, j) => {
                 const col = s.shaded === false ? c : shade(c, 0.4 + 0.6 * (j / n));
+                // A failed attack is a hollow ring: shown, but not in the fit.
+                const fill = p.failed ? 'fill="none" stroke-width="1.5"' : `fill="${col}" fill-opacity="0.9"`;
                 return `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="4"
-                         fill="${col}" fill-opacity="0.9" stroke="${col}"><title>${esc(p.title)}</title></circle>`;
+                         ${fill} stroke="${col}"><title>${esc(p.title)}</title></circle>`;
             }).join('');
         }).join('');
 
@@ -520,8 +533,9 @@
             if (!inRange(x, rec.xp)) return;
             if (!grouped.has(typ)) grouped.set(typ, []);
             grouped.get(typ).push({
-                x, y: rec.xp, cas: rec.cas, cil_id: rec.cil_id, cil_zeme: rec.cil_zeme,
+                x, y: rec.xp, cas: rec.cas, cil_id: rec.cil_id, cil_zeme: rec.cil_zeme, failed: rec.uspech === 0,
                 title: `${A.typeLabel(typ)}\n${rec.cas || ''}\nx = ${fmtNum(x)}\nxp = ${fmtNum(rec.xp)}`
+                     + (rec.uspech === 0 ? '\nneúspěšný útok - prázdný kroužek, mimo fit' : '')
                      + (scope.vaha < 1
                         ? `\n(${scope.hodnost_jista ? 'výchozí prestiž/hodnost' : 'hodnost jen odhadnutá'}, váha ${scope.vaha})`
                         : ''),
@@ -556,7 +570,7 @@
         const fits = [];
         if (ui.plotFit && ui.plotFit.checked) {
             series.forEach((se, i) => {
-                const pts = se.points;
+                const pts = se.points.filter(p => !p.failed);
                 if (pts.length < 3) return;
                 const n = pts.length;
                 const mx = pts.reduce((a, p) => a + p.x, 0) / n;
@@ -939,7 +953,7 @@
             prestizObrance: parseFloat(ui.prestizO.value) || 0,
             hodnostUtocnik: parseFloat(ui.hodnostU.value) || 0,
             hodnostObrance: parseFloat(ui.hodnostO.value) || 0,
-            mozek: ui.mozek.value.trim() || MOZEK_EJZ,
+            mozek: mozekSetting(ui.mozek.value.trim()),
         };
         writeLocal();
         renderAll();
@@ -1312,9 +1326,10 @@
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
-            ['noční tažení (fit 5.10.)', `0.547 * (zabito_prestiz + 5 * defense_zakladny + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`],
-            ['týl (fit 5.10.)', `max(150, 3.51 * (zabito_tanky + 0.291 * attack_lost) * ${PRES(0.73, 1.13)} * ${HOD}) * mozek`],
-            ['partyzánský (fit 5.10.)', `1.02 * (zabito_vojaci + 6 * zabito_agenti + 0.15 * attack_lost) * ${PRES(0.627, 1.2)} * ${HOD} * mozek`],
+            ['noční tažení (fit 5.10.)', `0.531 * (zabito_prestiz + 5 * defense_zakladny + 0.41 * attack_prestiz) * ${PRES(0.601, 0.982)} * ${HOD} * mozek`],
+            ['noční tažení, volné váhy jednotek', `0.544 * (zabito_vojaci + 4.62 * zabito_tanky + 2.89 * zabito_stihacky + 5.08 * defense_zakladny + 3.24 * zabito_mechove + 1.16 * attack_lost) * ${PRES(0.579, 1.01)} * ${HOD} * mozek`],
+            ['týl (fit 5.10.)', `max(150, 3.49 * (zabito_tanky + 0.293 * attack_lost) * ${PRES(0.711, 1.07)} * ${HOD}) * mozek`],
+            ['partyzánský (fit 5.10.)', `max(150, 0.878 * (zabito_vojaci + 12.1 * zabito_agenti + 0.161 * attack_lost) * ${PRES(0.634, 0.981)} * ${HOD}) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],

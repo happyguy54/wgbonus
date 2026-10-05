@@ -10,16 +10,16 @@ const recs = load('attacks.json');
 A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.applyKonflikty(recs, load('konflikty.json'));
 
 // Tajemství mozku, as confirmed by the user (týl floors agree: 150 without, 188 with).
-const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15';
+const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00';
 const HOD = '(1 + hodnost_bonus / 100)';
 const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocnik / 100000, ${b})`;
-// Noční: bases at 5 like a building. Týl: fitted with the floor built in
-// (analyza/tyl.js). Partisan: an agent counts as 6 soldiers, not its prestiž
-// 15; energy burnt adds nothing (analyza/partyzan.js).
+// Refit 2026-10-05 on 1159 records (analyza/vahy.js, refit.js). Noční: bases
+// at 5 like a building. Týl and partisan have a floor of 150 (188 with the
+// advance). Partisan agents ≈ 12 soldiers; energy burnt adds nothing.
 const VZORCE = {
-    nocni: `0.547 * (zabito_prestiz + 5 * defense_zakladny + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`,
-    tyl: `max(150, 3.51 * (zabito_tanky + 0.291 * attack_lost) * ${PRES(0.73, 1.13)} * ${HOD}) * mozek`,
-    partyzansky: `1.02 * (zabito_vojaci + 6 * zabito_agenti + 0.15 * attack_lost) * ${PRES(0.627, 1.2)} * ${HOD} * mozek`,
+    nocni: `0.531 * (zabito_prestiz + 5 * defense_zakladny + 0.41 * attack_prestiz) * ${PRES(0.601, 0.982)} * ${HOD} * mozek`,
+    tyl: `max(150, 3.49 * (zabito_tanky + 0.293 * attack_lost) * ${PRES(0.711, 1.07)} * ${HOD}) * mozek`,
+    partyzansky: `max(150, 0.878 * (zabito_vojaci + 12.1 * zabito_agenti + 0.161 * attack_lost) * ${PRES(0.634, 0.981)} * ${HOD}) * mozek`,
 };
 module.exports = { VZORCE, MOZEK, recs };
 if (require.main === module) for (const [typ, expr] of Object.entries(VZORCE)) {
