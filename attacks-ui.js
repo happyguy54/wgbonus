@@ -30,13 +30,18 @@
     const dataFile = () => `attacks.${profile}.json`;
     const localKey = () => `wgbonus.attacks.${profile}.v1`;
 
+    /** Who in EJZ has Tajemství mozku (+25 % XP), confirmed 2026-10-05. An
+     *  empty field means this list - without it every fit splits in two lines.
+     *  "-" in the field means nobody. */
+    const MOZEK_EJZ = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15';
+
     /** Player-supplied context the log does not carry. */
     let settings = {
         prestizUtocnik: 0,
         prestizObrance: 0,
         hodnostUtocnik: 0,
         hodnostObrance: 0,
-        mozek: '',
+        mozek: MOZEK_EJZ,
     };
 
     /** User equations, one per attack type (or '*' for all). */
@@ -103,6 +108,7 @@
                 .forEach(k => { if (src[k] !== undefined && src[k] !== null) rec[k] = src[k]; });
         });
         if (data.settings) settings = Object.assign(settings, data.settings);
+        if (!settings.mozek) settings.mozek = MOZEK_EJZ;
         if (Array.isArray(data.equations)) equations = data.equations;
         if (Array.isArray(data.konflikty)) {
             const seen = new Set(konfliktRows.map(k => k.id));
@@ -933,7 +939,7 @@
             prestizObrance: parseFloat(ui.prestizO.value) || 0,
             hodnostUtocnik: parseFloat(ui.hodnostU.value) || 0,
             hodnostObrance: parseFloat(ui.hodnostO.value) || 0,
-            mozek: ui.mozek.value.trim(),
+            mozek: ui.mozek.value.trim() || MOZEK_EJZ,
         };
         writeLocal();
         renderAll();
@@ -1020,13 +1026,14 @@
                             <td class="rdata r"><input id="hodnostO" type="number" class="formula-input"></td></tr>
                         <tr><td class="rname l"><label for="mozek">Tajemství mozku</label></td>
                             <td class="rdata r"><input id="mozek" type="text" class="formula-input"
-                                placeholder="47, 83, 118 od 3.10.2026 13:15"></td></tr>
+                                placeholder="${MOZEK_EJZ}"></td></tr>
                     </table>
                     <p class="formula-hint">
                         Prestiž a hodnost platí pro záznamy, které vlastní nemají.
                         Tajemství mozku: čísla zemí útočníků s tímto pokrokem (+25 % zkušeností),
                         u nově vyzkoumaného s „od datum čas“ — ve vzorci proměnná <code>mozek</code> (1,25 / 1).
                         Poznáte ho podle týlu: nejmenší zisk je 150, s pokrokem 188.
+                        Prázdné pole = známý stav EJZ, „-“ = nikdo.
                     </p>
                 </div>
             </div>
@@ -1301,13 +1308,13 @@
 
         const HF = '(1 + clamp(sign(hodnost_obrance - hodnost_utocnik) * max(0, '
                  + 'abs(hodnost_obrance - hodnost_utocnik) - 1) * 5, -20, 20) / 100)';
-        // Fitted on 2026-10-03 (analyza/vzorce.js): 2.8 %, 3.4 % and 3.3 % median error.
+        // Fitted on 2026-10-05 (analyza/vzorce.js); need Tajemství mozku filled in.
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
-            ['noční tažení (fit 3.10.)', `0.547 * (defense_prestiz + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`],
-            ['týl (fit 3.10.)', `max(150, 3.58 * (zabito_tanky + 0.29 * attack_lost) * ${PRES(0.7, 1.15)} * ${HOD}) * mozek`],
-            ['partyzánský (fit 3.10.)', `0.975 * (defense_prestiz + 0.15 * attack_lost) * ${PRES(0.61, 1.12)} * ${HOD} * mozek`],
+            ['noční tažení (fit 5.10.)', `0.547 * (zabito_prestiz + 5 * defense_zakladny + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`],
+            ['týl (fit 5.10.)', `max(150, 3.51 * (zabito_tanky + 0.291 * attack_lost) * ${PRES(0.73, 1.13)} * ${HOD}) * mozek`],
+            ['partyzánský (fit 5.10.)', `1.02 * (zabito_vojaci + 6 * zabito_agenti + 0.15 * attack_lost) * ${PRES(0.627, 1.2)} * ${HOD} * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],

@@ -13,12 +13,16 @@ A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.applyKon
 const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15';
 const HOD = '(1 + hodnost_bonus / 100)';
 const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocnik / 100000, ${b})`;
+// Noční: bases at 5 like a building. Týl: fitted with the floor built in
+// (analyza/tyl.js). Partisan: an agent counts as 6 soldiers, not its prestiž
+// 15; energy burnt adds nothing (analyza/partyzan.js).
 const VZORCE = {
-    nocni: `0.547 * (defense_prestiz + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`,
-    tyl: `max(150, 3.58 * (zabito_tanky + 0.29 * attack_lost) * ${PRES(0.7, 1.15)} * ${HOD}) * mozek`,
-    partyzansky: `0.975 * (defense_prestiz + 0.15 * attack_lost) * ${PRES(0.61, 1.12)} * ${HOD} * mozek`,
+    nocni: `0.547 * (zabito_prestiz + 5 * defense_zakladny + 0.37 * attack_prestiz) * ${PRES(0.6, 0.99)} * ${HOD} * mozek`,
+    tyl: `max(150, 3.51 * (zabito_tanky + 0.291 * attack_lost) * ${PRES(0.73, 1.13)} * ${HOD}) * mozek`,
+    partyzansky: `1.02 * (zabito_vojaci + 6 * zabito_agenti + 0.15 * attack_lost) * ${PRES(0.627, 1.2)} * ${HOD} * mozek`,
 };
-for (const [typ, expr] of Object.entries(VZORCE)) {
+module.exports = { VZORCE, MOZEK, recs };
+if (require.main === module) for (const [typ, expr] of Object.entries(VZORCE)) {
     const f = E.compile(expr);
     const L = recs.filter(r => A.isAttack(r) && r.typ === typ && r.uspech !== 0)
         .map(r => ({ r, s: A.scopeFor(r, { mozek: MOZEK }) }))
@@ -29,7 +33,7 @@ for (const [typ, expr] of Object.entries(VZORCE)) {
 }
 
 // The worst misses of one type: node analyza/vzorce.js tyl
-if (process.argv[2]) {
+if (require.main === module && process.argv[2]) {
     const typ = process.argv[2], f = E.compile(VZORCE[typ]);
     recs.filter(r => A.isAttack(r) && r.typ === typ && r.uspech !== 0).map(r => ({ r, s: A.scopeFor(r, { mozek: MOZEK }) }))
         .filter(({ s }) => s.vaha === 1 && s.prestiz_utocnik && s.prestiz_obrance && s.hodnost_utocnik)

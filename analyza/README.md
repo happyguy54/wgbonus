@@ -15,14 +15,35 @@ formulas below through the page's own engine.
            × (pd / 100 000)^a / (pa / 100 000)^b
            × hodnost (manual 6.2.6) × Tajemství mozku
 
-| type | k | w | a | b | median error | 90 % within |
-|---|---|---|---|---|---|---|
-| noční tažení | 0.547 | 0.37 of our prestiž (≈ 1 per mech) | 0.60 | 0.99 | 2.8 % | 6.3 % |
-| týl | 3.58 per tank | 0.29 of our tanks | 0.70 | 1.15 | 3.4 % | 16 % * |
-| partyzánský | 0.975 | 0.15 of our soldiers | 0.61 | 1.12 | 3.3 % | 11 % |
+| type | formula (as typed in the page) | median | 90 % within |
+|---|---|---|---|
+| noční | `0.547 × (zabito_prestiz + 5 × defense_zakladny + 0.37 × attack_prestiz) × pd^0.60 / pa^0.99` | 2.8 % | 6.3 % |
+| týl | `max(150, 3.51 × (zabito_tanky + 0.291 × attack_lost) × pd^0.73 / pa^1.13 × hod) × mozek` | 2.5 % | 7.9 % |
+| partyzánský | `1.02 × (zabito_vojaci + 6 × zabito_agenti + 0.15 × attack_lost) × pd^0.627 / pa^1.2` | 4.5 % | 9.0 % |
 
-\* týl's tail is the old age (prestiž 2.5-7.7 M): 15-27 % above the formula,
-or −8 to +2 % if that attacker had the advance.
+(pd, pa in units of 100 000; every formula × hodnost × mozek; certain-rank
+attacks. `node analyza/graf.js <typ>` prints the line the page's plot draws.)
+With Tajemství mozku left out the noční plot reads xp = 1.286·X − 233,
+R² 0.93 - two lines, 25 % apart. Filled in: 1.015·X − 29, R² 0.973, and
+0.991 without failed attacks and estimated ranks.
+
+**Týl** (`analyza/tyl.js`). The 150 is a floor, not an added constant:
+0-24 enemy tanks all give exactly 150 (188 with the advance), and 18 tanks
+give 155, 26 give 230 - with "150 + something" the fit is 11 % median
+instead of 2.5 %. One thing the formula cannot do: #47 at 1.10
+18:57-18:58 got 203, 189, 188 for three identical messages (80 of ours,
+30 of theirs; prestiž 134k → 136k, 123k) while the readiness drop went
+5 → 3 → 2 %. Prestiž rounded to 1 000 allows at most ~2 %, the XP fell 7 %.
+#83's rounds show the same (≈120 tanks each, 934 → 632 XP as the drop goes
+9 → 2 %), but #68's round on 3.10 does not (9 → 5 %, XP per tank flat),
+so the readiness drop is not in the formula; it may stand for something
+not in the message, like the defender's readiness itself.
+
+**Partisan** (`analyza/partyzan.js`). Agents count, but as about 6 soldiers
+each (15 × 0.4), not their prestiž 15 (sum of squares: 0.169 without agents,
+0.157 at 6, 0.180 at 15). Energy burnt is worth 0.02 prestiž per MWh - a few
+points against thousands - and no positive weight helps. The one round that
+seemed to want energy (55 → 45, −15 %) fits no better with it.
 
 What made the difference:
 
@@ -50,6 +71,6 @@ type within about ±0.1, which may be noise.
 
 ## Page
 
-The three formulas are in the plot's presets ("… (fit 3.10.)"). The variable
+The three formulas are in the plot's presets ("… (fit 5.10.)"). The variable
 `mozek` is 1.25 for attackers listed under **Kontext → Tajemství mozku**
-(EJZ: `47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15`), otherwise 1.
+(empty = EJZ's list, `47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15`; "-" = nobody), otherwise 1.
