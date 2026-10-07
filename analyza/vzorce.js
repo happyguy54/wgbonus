@@ -22,7 +22,11 @@ const VZORCE = {
     tyl: `max(150, 37.5 * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
     partyzansky: `max(150, 46.1 * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
 };
-module.exports = { VZORCE, MOZEK, recs };
+// Wars: the shared store's (data.js) and analyza/valky.txt.
+const valky = [];
+if (fs.existsSync(__dirname + '/valky.json')) A.mergeValky(valky, load('valky.json').map(r => ({ ali: r.ali, proti: r.proti, od: r.od, do: r.konec || undefined })));
+A.mergeValky(valky, A.parseValky(fs.readFileSync(__dirname + '/valky.txt', 'utf8'), 2026));
+module.exports = { VZORCE, MOZEK, recs, valky };
 if (require.main === module) for (const [typ, expr] of Object.entries(VZORCE)) {
     const f = E.compile(expr);
     const L = recs.filter(r => A.isAttack(r) && r.typ === typ && r.uspech !== 0)

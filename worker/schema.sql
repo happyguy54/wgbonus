@@ -72,3 +72,16 @@ CREATE INDEX IF NOT EXISTS konflikty_obr ON konflikty (obrance_id);
 -- NOT need ALTER TABLE by
 -- hand: the worker adds whatever is missing on the first upload. GET /health
 -- lists them under "chybi_sloupce" until then.
+
+-- Our alliance's wars (Konflikty → Války aliance, or the alliance page), for
+-- the first hour of war. id = "ali|proti|od"; konec fills in when it ends.
+-- The worker also creates this table itself on its first request.
+CREATE TABLE IF NOT EXISTS valky (
+    id      TEXT PRIMARY KEY,
+    cas     TEXT,
+    ali     TEXT,
+    proti   TEXT,
+    od      TEXT,
+    konec   TEXT,
+    vlozeno TEXT
+);

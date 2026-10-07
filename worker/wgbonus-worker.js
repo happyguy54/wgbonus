@@ -1,14 +1,17 @@
 /**
  * wgbonus shared store - Cloudflare Worker backed by D1 (SQLite)
  *
- * Two tables, "attacks" and "konflikty", so several people can pool what they
- * paste in instead of mailing JSON around.
+ * Three tables, "attacks", "konflikty" and "valky" (our alliance's wars, for
+ * the first hour of war), so several people can pool what they paste in
+ * instead of mailing JSON around.
  *
  *   GET  /attacks[?typ=nocni&since=2026-09-01&limit=5000]
  *   GET  /konflikty[?since=...&limit=...]
+ *   GET  /valky
  *   POST /attacks     body { records: [...] }  -> { added, duplicates, skipped, total }
  *   POST /konflikty   body { records: [...] }
- *   GET  /health      -> { ok, attacks, konflikty }
+ *   POST /valky       body { records: [...] }  (a war's end fills in later)
+ *   GET  /health      -> { ok, attacks, konflikty, valky }
  *
  * Reads are open; writes need the shared password, sent either as
  * `X-WG-Secret: <secret>` or as `secret` in the JSON body.
@@ -20,7 +23,8 @@
  * two people uploading at the same moment cannot lose each other's rows.
  *
  * Columns added to the schema later are created by the worker itself on the
- * first upload (see ADDED), so an existing database never needs ALTER TABLE.
+ * first upload (see ADDED), and tables added later on the first request (see
+ * CREATED), so an existing database never needs SQL by hand.
  *
  * Setup: see worker/README.md. Needs a D1 binding called DB and a secret
  * called WG_SECRET.
@@ -47,7 +51,22 @@ const COLUMNS = {
         'prestiz_utocnik', 'prestiz_obrance', 'zakladny', 'jednotky',
         'rozloha', 'budovy', 'vlozeno',
     ],
+    // cas = od, so the generic read (ORDER BY cas, ?since=) works here too.
+    valky: ['id', 'cas', 'ali', 'proti', 'od', 'konec', 'vlozeno'],
 };
+
+/** Tables added after the first deploy; created on the first request. */
+const CREATED = {
+    valky: `CREATE TABLE IF NOT EXISTS valky (
+        id TEXT PRIMARY KEY, cas TEXT, ali TEXT, proti TEXT, od TEXT, konec TEXT, vlozeno TEXT)`,
+};
+
+let created = false;                     // once per worker instance
+async function createTables(db) {
+    if (created) return;
+    for (const sql of Object.values(CREATED)) await db.prepare(sql).run();
+    created = true;
+}
 
 /**
  * Columns added after the first deploy. A database created from an older
@@ -153,6 +172,7 @@ export default {
         const table = url.pathname.replace(/^\/+|\/+$/g, '');
 
         try {
+            await createTables(env.DB);
             if (table === 'health' || table === '') {
                 const out = { ok: true };
                 const missing = [];
@@ -230,11 +250,16 @@ export default {
             // exception: a conquest stored before the parser could read it
             // (druh "dobyvani") is replaced by its fully read version, which
             // keeps the same id. Nothing else can be overwritten.
+            // A war is stored when it starts; its end, learned later, fills in.
             const sql = table === 'attacks'
                 ? `INSERT INTO attacks (${cols.join(', ')}) VALUES (${placeholders})`
                   + ` ON CONFLICT(id) DO UPDATE SET `
                   + cols.filter(c => c !== 'id' && c !== 'vlozeno').map(c => `${c} = excluded.${c}`).join(', ')
                   + ` WHERE attacks.druh = 'dobyvani' AND excluded.druh IS NOT 'dobyvani'`
+                : table === 'valky'
+                ? `INSERT INTO valky (${cols.join(', ')}) VALUES (${placeholders})`
+                  + ` ON CONFLICT(id) DO UPDATE SET konec = excluded.konec`
+                  + ` WHERE valky.konec IS NULL AND excluded.konec IS NOT NULL`
                 : `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
             const unread = async () => table === 'attacks'
                 ? ((await env.DB.prepare(`SELECT COUNT(*) AS n FROM attacks WHERE druh = 'dobyvani'`).first()) || {}).n || 0

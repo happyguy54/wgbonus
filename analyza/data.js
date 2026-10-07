@@ -17,6 +17,9 @@ const base = (process.argv[2] || 'https://wgbonus.suchy-daniel.workers.dev').rep
     const konf = await get('konflikty');
     fs.writeFileSync(path.join(__dirname, 'attacks.json'), JSON.stringify({ records: recs }));
     fs.writeFileSync(path.join(__dirname, 'konflikty.json'), JSON.stringify({ records: konf }));
+    // Wars, from a worker that has them; analyza/valky.txt is read as well.
+    const valky = await get('valky').catch(() => []);
+    fs.writeFileSync(path.join(__dirname, 'valky.json'), JSON.stringify({ records: valky || [] }));
     A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs);
     const k = A.applyKonflikty(recs, konf);
     const rows = recs.filter(A.isAttack).map(r => { const s = A.scopeFor(r, {}); return {

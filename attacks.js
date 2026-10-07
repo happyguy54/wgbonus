@@ -874,7 +874,9 @@
      * Wars of an alliance (Konflikty → Války aliance,
      * p=konflikty&s=awarstat&getali=<tag>): "Válka TVFN vs. .B.I.S. … Od
      * 30.09. 08:07 … Probíhá už 83 hodin." or, once over, "… Od 30.09. 08:02
-     * do 3.10. 09:01". Returns [{ ali, proti, od, do? }] as "2026-09-30 08:07".
+     * do 3.10. 09:01". Also the alliance page (p=aliance, "Aktuální války"):
+     * "EJZ ---> YOZZEFY VÁLKA 6.10. 08:02", the declaring alliance first.
+     * Returns [{ ali, proti, od, do? }] as "2026-09-30 08:07".
      */
     function parseValky(rawText, year) {
         const text = htmlToText(rawText).replace(/\s+/g, ' ');
@@ -888,7 +890,28 @@
             if (m[8]) v.do = `${m[10] || Y}-${pad(m[9])}-${pad(m[8])} ${pad(m[11])}:${m[12]}`;
             out.push(v);
         }
+        const aliance = /(\S+)\s*-+>\s*(\S+)\s+V[ÁA]LKA\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s+)?(\d{1,2}):(\d{2})/gi;
+        while ((m = aliance.exec(text)) !== null) {
+            out.push({ ali: m[1], proti: m[2], od: `${m[5] || Y}-${pad(m[4])}-${pad(m[3])} ${pad(m[6])}:${m[7]}` });
+        }
         return out;
+    }
+
+    /**
+     * Add wars to a list: one entry per alliance pair and start, and an end
+     * learned later is filled in. Returns how many entries were new or changed.
+     */
+    function mergeValky(list, incoming) {
+        const key = v => `${v.ali}|${v.proti}|${v.od}`;
+        const have = new Map(list.map(v => [key(v), v]));
+        let n = 0;
+        (incoming || []).forEach(v => {
+            if (!v || !v.ali || !v.proti || !v.od) return;
+            const old = have.get(key(v));
+            if (!old) { const c = { ali: v.ali, proti: v.proti, od: v.od }; if (v.do) c.do = v.do; list.push(c); have.set(key(c), c); n++; }
+            else if (v.do && !old.do) { old.do = v.do; n++; }
+        });
+        return n;
     }
 
     /**
@@ -1401,6 +1424,7 @@
         markFailures,
         markDefences,
         parseValky,
+        mergeValky,
         warHours,
         parseMozek,
         mozekFor,

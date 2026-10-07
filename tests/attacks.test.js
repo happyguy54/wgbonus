@@ -861,4 +861,18 @@ section('wars that have ended');
     eq('after it ended: not in war', A.warHours({ cas: '2026-10-03 14:00:00', cil_aliance: 'HOLY' }, v), null);
 }
 
+section('wars from the alliance page (p=aliance, Aktuální války)');
+{
+    const fs = require('fs');
+    const path = require('path');
+    const v = A.parseValky(fs.readFileSync(path.join(__dirname, '..', 'samples', 'aliance-valky.html'), 'utf8'), 2026);
+    eq('three wars, the declaring alliance first', v.map(x => `${x.ali}>${x.proti} ${x.od}`).join(', '),
+        'EJZ>YOZZEFY 2026-10-06 08:02, EJZ>*MAFIE* 2026-10-05 05:50, *MAFIE*>EJZ 2026-10-04 07:30');
+    eq('copied as text reads the same', JSON.stringify(A.parseValky('EJZ ---> YOZZEFY\tVÁLKA\t6.10. 08:02', 2026)), JSON.stringify([v[0]]));
+    eq('an attack on MAFIE counts from their declaration', A.warHours({ cas: '2026-10-04 23:04:04', cil_aliance: '*MAFIE*' }, v), 15 + 34 / 60 + 4 / 3600);
+    const list = [{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01' }];
+    eq('merging: new wars added, a known one gets its end', A.mergeValky(list, v.concat([{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01', do: '2026-10-03 13:33' }])), 4);
+    eq('merging again changes nothing', `${A.mergeValky(list, v)}/${list.length}/${list[0].do}`, '0/4/2026-10-03 13:33');
+}
+
 process.exit(done() ? 1 : 0);

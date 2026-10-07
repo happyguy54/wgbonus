@@ -311,5 +311,31 @@ const atk = (id, extra = {}) => Object.assign({
         eq('an unread copy cannot turn it back', `${again.druh}/${again.ztraty_vojaci}`, 'utok/2017');
     }
 
+    section('wars: a database from before they existed');
+    {
+        // A worker instance creates missing tables once, so this needs its own.
+        const box = { console, Response, Request, URL, JSON, Date, Number, String, Array, Boolean };
+        vm.createContext(box);
+        vm.runInContext(src, box);
+        const fresh = box.__worker;
+        const env = makeEnv('pw');
+        env._db.exec('DROP TABLE valky');
+        const callF = (method, p, body, secret) => fresh.fetch(new Request(`https://w.dev/${p}`, {
+            method, headers: Object.assign({ 'Content-Type': 'application/json' }, secret ? { 'X-WG-Secret': secret } : {}),
+            body: body === undefined ? undefined : JSON.stringify(body) }), env);
+
+        const h = await (await callF('GET', 'health')).json();
+        eq('health creates the table and counts it', `${h.ok}/${h.valky}`, 'true/0');
+        const war = { id: '*MAFIE*|EJZ|2026-10-04 07:30', cas: '2026-10-04 07:30', ali: '*MAFIE*', proti: 'EJZ', od: '2026-10-04 07:30', konec: null };
+        const up = await (await callF('POST', 'valky', { records: [war] }, 'pw')).json();
+        eq('a war is stored', `${up.added}/${up.total}`, '1/1');
+        await callF('POST', 'valky', { records: [Object.assign({}, war, { konec: '2026-10-08 07:30' })] }, 'pw');
+        await callF('POST', 'valky', { records: [Object.assign({}, war, { konec: null, ali: 'nope' })] }, 'pw');
+        const rows = (await (await callF('GET', 'valky')).json()).records;
+        eq('its end fills in later, nothing else changes', rows.map(r => `${r.ali}|${r.proti}|${r.od}|${r.konec}`).join(';'), '*MAFIE*|EJZ|2026-10-04 07:30|2026-10-08 07:30');
+        await callF('POST', 'valky', { records: [Object.assign({}, war, { konec: '2026-10-09 00:00' })] }, 'pw');
+        eq('a known end is not overwritten', (await (await callF('GET', 'valky')).json()).records[0].konec, '2026-10-08 07:30');
+    }
+
     process.exit(done() ? 1 : 0);
 })();

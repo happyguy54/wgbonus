@@ -711,8 +711,8 @@
         // they survive a reload.
         const valky = A.parseValky(text);
         if (valky.length) {
-            const have = new Set((settings.valky || []).map(v => `${v.ali}|${v.proti}|${v.od}`));
-            settings.valky = (settings.valky || []).concat(valky.filter(v => !have.has(`${v.ali}|${v.proti}|${v.od}`)));
+            settings.valky = settings.valky || [];
+            A.mergeValky(settings.valky, valky);
             bits.push(`války: ${valky.length} (${valky.map(v => v.ali + ' × ' + v.proti).join(', ')})`);
         }
 
@@ -853,6 +853,14 @@
                 }
             } catch (e) { konfNote = `, konflikty se nepodařilo načíst (${e.message})`; }
 
+            // Wars, for valka_hodin. An older worker has no such collection.
+            try {
+                const w = await syncCall('valky', 'GET');
+                settings.valky = settings.valky || [];
+                const n = A.mergeValky(settings.valky, (w.records || []).map(r => ({ ali: r.ali, proti: r.proti, od: r.od, do: r.konec || undefined })));
+                if (n) konfNote += `, válek nových ${n}`;
+            } catch (e) { /* worker without wars */ }
+
             writeLocal();
             renderAll();
             ui.syncInfo.textContent =
@@ -900,6 +908,17 @@
                     const k = await syncCall('konflikty', 'POST', konfliktRows);
                     konfNote = `, konfliktů nových ${k.added}`;
                 } catch (e) { konfNote = `, konflikty se nepodařilo nahrát (${e.message})`; }
+            }
+            if ((settings.valky || []).length) {
+                try {
+                    const v = await syncCall('valky', 'POST', settings.valky.map(w => ({
+                        id: `${w.ali}|${w.proti}|${w.od}`, cas: w.od, ali: w.ali, proti: w.proti, od: w.od, konec: w.do || null })));
+                    if (v.added) konfNote += `, válek nových ${v.added}`;
+                } catch (e) {
+                    konfNote += /Neznámá kolekce/.test(e.message)
+                        ? ', války worker ještě nezná — nasaďte nový worker/wgbonus-worker.js'
+                        : `, války se nepodařilo nahrát (${e.message})`;
+                }
             }
             ui.syncInfo.textContent =
                 `Nahráno: nových ${atk.added}`
