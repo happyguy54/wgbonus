@@ -1324,13 +1324,13 @@
 
         const HF = '(1 + clamp(sign(hodnost_obrance - hodnost_utocnik) * max(0, '
                  + 'abs(hodnost_obrance - hodnost_utocnik) - 1) * 5, -20, 20) / 100)';
-        // Round numbers, only k fitted (2026-10-07, analyza/vzorce.js).
+        // The defender's lost prestiž, pd^0.65 / pa, only k fitted (2026-10-07, analyza/vzorce.js).
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
-            ['noční tažení (7.10., kulatá čísla)', `55.2 * (defense_vojaci + 5 * defense_tanky + 3 * defense_stihacky + 5 * defense_zakladny + 3 * zabito_mechove + attack_lost) * pow(prestiz_obrance, 0.6) / prestiz_utocnik * ${HOD} * mozek`],
-            ['týl (7.10., kulatá čísla)', `max(150, 159 * (defense_tanky + 0.3 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`],
-            ['partyzánský (7.10., kulatá čísla)', `max(150, 37.8 * (defense_vojaci + 10 * zabito_agenti + 0.2 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`],
+            ['noční tažení (prestiž, pd^0.65)', `29.8 * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
+            ['týl (prestiž, pd^0.65)', `max(150, 37.5 * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
+            ['partyzánský (prestiž, pd^0.65)', `max(150, 46.1 * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],

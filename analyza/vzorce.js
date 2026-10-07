@@ -13,15 +13,14 @@ A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.applyKon
 const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';
 const HOD = '(1 + hodnost_bonus / 100)';
 const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocnik / 100000, ${b})`;
-// Round numbers (2026-10-07, analyza/kulate.js, spolecne.js): our prestiž to
-// the power 1 exactly, the defender's 0.6 (noční) or 2/3; the manual hodnost
-// rule as written; unit weights 1, 5, 3, 5, 3 and 1 per lost mech (noční),
-// 0.3 per lost tank (týl), 10 per agent and 0.2 per lost soldier (partisan).
-// Only k is fitted. Prestiž in plain points, not in 100 000s.
+// The defender's losses at their prestiž value (the user: XP comes from the
+// prestiž they lost; agent 15, mech 2.7), our losses with their own weight -
+// 1 per mech, ⅓ of a tank's prestiž, 0.2 of a soldier's. Our prestiž ^1, the
+// defender's ^0.65 in all three types (analyza/prestizni.js). Only k fitted.
 const VZORCE = {
-    nocni: `55.2 * (defense_vojaci + 5 * defense_tanky + 3 * defense_stihacky + 5 * defense_zakladny + 3 * zabito_mechove + attack_lost) * pow(prestiz_obrance, 0.6) / prestiz_utocnik * ${HOD} * mozek`,
-    tyl: `max(150, 159 * (defense_tanky + 0.3 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`,
-    partyzansky: `max(150, 37.8 * (defense_vojaci + 10 * zabito_agenti + 0.2 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`,
+    nocni: `29.8 * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`,
+    tyl: `max(150, 37.5 * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
+    partyzansky: `max(150, 46.1 * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
 };
 module.exports = { VZORCE, MOZEK, recs };
 if (require.main === module) for (const [typ, expr] of Object.entries(VZORCE)) {
