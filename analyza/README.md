@@ -6,7 +6,51 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
-## Findings (2026-10-05, 1159 records, 643 attacks)
+## Round numbers (2026-10-07, 1417 records, 780 attacks)
+
+Only k is fitted; every other constant is a round number. Prestiž in plain
+points. Page presets "… (7.10., kulatá čísla)", `analyza/vzorce.js`.
+
+    noční  55.2 × (soldiers + 5 tanks + 3 fighters + 5 bases + 3 their mechs + 1 × our mechs)
+                × pd^0.6 / pa × hodnost × mozek
+    týl    max(150, 159 × (their tanks + 0.3 × ours) × pd^(2/3) / pa × hodnost) × mozek
+    partisan max(150, 37.8 × (soldiers + 10 agents + 0.2 × our soldiers) × pd^(2/3) / pa × hodnost) × mozek
+
+| type | round numbers: sum of squares | free fit | page line |
+|---|---|---|---|
+| noční (183) | 0.526 | 0.493 | 1.040·X − 86, R² 0.988 |
+| týl (152) | 0.556 | 0.548 | 0.998·X + 1, R² 0.984 (this age) |
+| partisan (110) | 0.669 | 0.654 | 1.002·X + 10, R² 0.983 |
+
+What is solid:
+
+- **Our prestiž enters with the power 1.** Free fits: 0.975, 1.03, 0.997.
+  Prestiž at the moment of the attack, not at the start of the round
+  (`start.js`: round-start pa is 75 % worse).
+- **Hodnost exactly as the manual says** - attacker rank ≥ 5, gap above 1,
+  5 % per rank, ±20 % - beats 7 other variants in every type
+  (`spolecne.js --hodnost`).
+- **Tajemství mozku 1.25 and the floor 150** (týl, partisan), multiplied
+  after the floor. Everyone in EJZ has it by 7.10; the dates are in
+  MOZEK_EJZ (attacks-ui.js).
+- **Noční unit weights**: tank 5 and base 5 as in prestiž, but fighters
+  ≈ 2.8 and the defender's mechs ≈ 3.1 (prestiž 3.5 and 2.7); our lost mech
+  ≈ 1. Týl: our tank 0.3. Partisan: agent 10-15 (cannot tell), our soldier
+  0.2.
+
+What is not pinned down:
+
+- **The defender's power**: 0.58 noční, 0.69 týl, 0.66 partisan free; one
+  shared power fits best at 0.65 (`spolecne.js`). The rest of the error
+  does not tell 0.6 from 2/3.
+- **Inside noční rounds** the formula falls faster than the XP when big
+  armies are destroyed (#68 → #40 on 6.10: formula ÷2.0, XP ÷1.78). Half the
+  defender-prestiž effect behaves as if fixed for the round (pd now^0.3 ×
+  pd at round start^0.28, 8 % better), but partisan shows nothing like it.
+  Defender land from the žebříček would test it.
+- Within rounds ±3.7 % (noční), between rounds ±4 % - the leftover.
+
+## Findings (2026-10-05, 1159 records, 643 attacks) - superseded above
 
 `node analyza/refit.js <typ>` refits a type and shows XP / formula per
 attacker and day, `node analyza/vahy.js` the unit-weight and hodnost
@@ -66,8 +110,7 @@ type within about ±0.1, which may be noise.
 
 ## Page
 
-The formulas are in the plot's presets ("… (fit 5.10.)", and noční with free
-unit weights). The variable `mozek` is 1.25 for attackers listed under
+The formulas are in the plot's presets ("… (7.10., kulatá čísla)"). The variable `mozek` is 1.25 for attackers listed under
 **Kontext → Tajemství mozku**, otherwise 1. An empty field means EJZ's list
 (MOZEK_EJZ in attacks-ui.js), "-" means nobody. Failed attacks are hollow
 rings in the plot and are left out of the fitted line and the equation

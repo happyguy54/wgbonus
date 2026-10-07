@@ -34,4 +34,12 @@ if (typ === 'tyl') {
     within('their + w ours + c × readiness drop', (r, p) => v(r, 'zabito_tanky') + p[0] * v(r, 'ztraty_utocnik') + p[1] * v(r, 'pripravenost_pokles'), [0.3, 3]);
     within('(their + w ours) × prestiž ratio^e', (r, p) => (v(r, 'zabito_tanky') + p[0] * v(r, 'ztraty_utocnik')) * (v(r, 'prestiz_obrance') / v(r, 'prestiz_utocnik')) ** p[1], [0.3, 0.8]);
 }
+if (typ === 'nocni') {
+    // prestiž changes inside a round too, so its factor stays in (powers from the global fit)
+    const P = r => Math.pow(v(r, 'prestiz_obrance') / 1e5, 0.6) / Math.pow(v(r, 'prestiz_utocnik') / 1e5, 1);
+    const U = r => ({ voj: v(r, 'zabito_vojaci'), tank: v(r, 'zabito_tanky'), stih: v(r, 'zabito_stihacky'), zak: v(r, 'zakladny'), md: v(r, 'ztraty_obrance'), mu: v(r, 'ztraty_utocnik') });
+    within('prestiž values (1, 5, 3.5, 5, 2.7) + w ours', (r, p) => { const u = U(r); return (u.voj + 5 * u.tank + 3.5 * u.stih + 5 * u.zak + 2.7 * u.md + p[0] * u.mu) * P(r); }, [1]);
+    within('free tank, fighter, base, their mech, ours', (r, p) => { const u = U(r); return (u.voj + p[0] * u.tank + p[1] * u.stih + p[2] * u.zak + p[3] * u.md + p[4] * u.mu) * P(r); }, [5, 3.5, 5, 2.7, 1]);
+    within('same, prestiž powers free too', (r, p) => { const u = U(r); return (u.voj + p[0] * u.tank + p[1] * u.stih + p[2] * u.zak + p[3] * u.md + p[4] * u.mu) * Math.pow(v(r, 'prestiz_obrance') / 1e5, p[5]) / Math.pow(v(r, 'prestiz_utocnik') / 1e5, p[6]); }, [5, 3.5, 5, 2.7, 1, 0.6, 1]);
+}
 module.exports = { RR, within };

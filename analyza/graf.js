@@ -14,7 +14,7 @@ function line(pts) {
 const args = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const typ = args[0] || 'nocni', expr = args[1] || VZORCE[typ], f = E.compile(expr);
 const all = recs.filter(r => A.isAttack(r) && r.typ === typ && (!process.argv.includes('--tento-vek') || r.utocnik_id));
-const pts = (mozek, keep) => all.map(r => ({ r, s: A.scopeFor(r, { mozek }) })).filter(({ s }) => s.vlastni_hodnoty && keep(s)).map(({ r, s }) => ({ r, s, x: f.eval(s), y: r.xp })).filter(p => Number.isFinite(p.x));
+const pts = (mozek, keep) => all.map(r => ({ r, s: A.scopeFor(r, { mozek }) })).filter(({ s }) => s.vlastni_hodnoty && keep(s)).map(({ r, s }) => { let x; try { x = f.eval(s); } catch (e) { x = NaN; } return { r, s, x, y: r.xp }; }).filter(p => Number.isFinite(p.x));
 console.log(expr + '\n');
 console.log('Tajemství mozku empty, as the page filter:   ' + line(pts('', () => true)));
 console.log('Tajemství mozku filled, as the page filter:  ' + line(pts(MOZEK, () => true)));

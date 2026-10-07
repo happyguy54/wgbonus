@@ -30,15 +30,17 @@
     const dataFile = () => `attacks.${profile}.json`;
     const localKey = () => `wgbonus.attacks.${profile}.v1`;
 
-    /** Who in EJZ has Tajemství mozku (+25 % XP), confirmed 2026-10-05; #44
-     *  between 4.10 11:31 and 5.10 14:04 (týl floor 188). #68 has it by now,
-     *  but not yet in any stored attack (floor 150 on 4.10 23:00). An
+    /** Who in EJZ has Tajemství mozku (+25 % XP), from the user and the data:
+     *  #44 between 4.10 11:31 and 5.10 14:04 (týl floor 188), #68 on 5.10
+     *  just before his failed noční at 14:24, #52 between 4.10 06:50 and 7.10
+     *  10:12 - everyone in EJZ by 7.10. An
      *  empty field means this list - without it every fit splits in two lines.
      *  "-" in the field means nobody. */
-    const MOZEK_EJZ = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00';
+    const MOZEK_EJZ = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
-    const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15'];
+    const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
+        '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
@@ -1322,14 +1324,13 @@
 
         const HF = '(1 + clamp(sign(hodnost_obrance - hodnost_utocnik) * max(0, '
                  + 'abs(hodnost_obrance - hodnost_utocnik) - 1) * 5, -20, 20) / 100)';
-        // Fitted on 2026-10-05 (analyza/vzorce.js); need Tajemství mozku filled in.
+        // Round numbers, only k fitted (2026-10-07, analyza/vzorce.js).
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
-            ['noční tažení (fit 5.10.)', `0.531 * (zabito_prestiz + 5 * defense_zakladny + 0.41 * attack_prestiz) * ${PRES(0.601, 0.982)} * ${HOD} * mozek`],
-            ['noční tažení, volné váhy jednotek', `0.544 * (zabito_vojaci + 4.62 * zabito_tanky + 2.89 * zabito_stihacky + 5.08 * defense_zakladny + 3.24 * zabito_mechove + 1.16 * attack_lost) * ${PRES(0.579, 1.01)} * ${HOD} * mozek`],
-            ['týl (fit 5.10.)', `max(150, 3.49 * (zabito_tanky + 0.293 * attack_lost) * ${PRES(0.711, 1.07)} * ${HOD}) * mozek`],
-            ['partyzánský (fit 5.10.)', `max(150, 0.878 * (zabito_vojaci + 12.1 * zabito_agenti + 0.161 * attack_lost) * ${PRES(0.634, 0.981)} * ${HOD}) * mozek`],
+            ['noční tažení (7.10., kulatá čísla)', `55.2 * (defense_vojaci + 5 * defense_tanky + 3 * defense_stihacky + 5 * defense_zakladny + 3 * zabito_mechove + attack_lost) * pow(prestiz_obrance, 0.6) / prestiz_utocnik * ${HOD} * mozek`],
+            ['týl (7.10., kulatá čísla)', `max(150, 159 * (defense_tanky + 0.3 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`],
+            ['partyzánský (7.10., kulatá čísla)', `max(150, 37.8 * (defense_vojaci + 10 * zabito_agenti + 0.2 * attack_lost) * pow(prestiz_obrance, 2 / 3) / prestiz_utocnik * ${HOD}) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],
