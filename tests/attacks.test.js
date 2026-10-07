@@ -873,6 +873,14 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     const list = [{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01' }];
     eq('merging: new wars added, a known one gets its end', A.mergeValky(list, v.concat([{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01', do: '2026-10-03 13:33' }])), 4);
     eq('merging again changes nothing', `${A.mergeValky(list, v)}/${list.length}/${list[0].do}`, '0/4/2026-10-03 13:33');
+    // first hour of full war: 12-13 h after we declared on the target's alliance
+    const at = (cas, ali) => A.scopeFor({ typ: 'nocni', cas, cil_aliance: ali }, { valky: v }).valka_prvni_hodina;
+    eq('YOZZEFY 6.10 20:03 (12 h 1 min after our declaration)', at('2026-10-06 20:03:00', 'YOZZEFY'), 1);
+    eq('11 h 59 min: not yet full war', at('2026-10-06 20:01:00', 'YOZZEFY'), 0);
+    eq('13 h after: the bonus hour is over', at('2026-10-06 21:02:00', 'YOZZEFY'), 0);
+    eq('a war declared on us: no bonus hour', at('2026-10-04 19:45:00', '*MAFIE*'), 0);
+    eq('our declaration on MAFIE counts', at('2026-10-05 18:48:00', '*MAFIE*'), 1);
+    eq('no wars known: 0', A.scopeFor({ typ: 'nocni', cas: '2026-10-06 20:03:00', cil_aliance: 'YOZZEFY' }, {}).valka_prvni_hodina, 0);
 }
 
 process.exit(done() ? 1 : 0);

@@ -195,6 +195,7 @@
         ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
+        ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po našem vyhlášení války aliance cíle), jinak 0 - zkušenosti +10 %'],
         ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
@@ -1347,9 +1348,9 @@
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         const PRESETS = [
-            ['noční tažení (prestiž, pd^0.65)', `29.8 * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
-            ['týl (prestiž, pd^0.65)', `max(150, 37.5 * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
-            ['partyzánský (prestiž, pd^0.65)', `max(150, 46.1 * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
+            ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
+            ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
+            ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],

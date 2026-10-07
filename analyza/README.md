@@ -14,9 +14,11 @@ at prestiž value - soldier 1, tank 5, fighter 3.5, base 5, mech 2.7, agent
 defender's ^0.65 - the best power for all three types with these weights
 (`analyza/prestizni.js`). Only k is fitted. Page presets "… (prestiž, pd^0.65)".
 
-    noční    29.8 × (defense_prestiz + 1 × our lost mechs)            × pd^0.65 / pa × hodnost × mozek
-    týl      max(150, 37.5 × (defense_prestiz + ⅓ × attack_prestiz)   × pd^0.65 / pa × hodnost) × mozek
-    partisan max(150, 46.1 × (defense_prestiz + 0.2 × attack_prestiz) × pd^0.65 / pa × hodnost) × mozek
+    noční    29.7 × war × (defense_prestiz + 1 × our lost mechs)            × pd^0.65 / pa × hodnost × mozek
+    týl      max(150, 37.2 × war × (defense_prestiz + ⅓ × attack_prestiz)   × pd^0.65 / pa × hodnost) × mozek
+    partisan max(150, 45.7 × war × (defense_prestiz + 0.2 × attack_prestiz) × pd^0.65 / pa × hodnost) × mozek
+
+    war = 1.1 in the first hour of full war (12-13 h after we declared), else 1
 
 | type | sum of squares | median | 90 % | page line |
 |---|---|---|---|---|
@@ -29,11 +31,15 @@ k per prestiž point is 29.8 : 37.5 : 46.1 = 1 : 1.26 : 1.55 - close to
 weights noční fits a little better (fighter 2.8, mech 3.1; sum 0.526 at
 pd^0.6), but then the three types disagree on the power.
 
-War: the first hour of a war gives +10 % (the user). None of the stored
-attacks is in the first hour of a war whose start we know (HOLY, TVFN,
-NATO, MaNTiNeL); the starts of the MAFIE and YOZZEFY wars are not stored.
-MAFIE attacks sit about +5 % above the formula throughout, not only at the
-start.
+**War** (`prvni.js`): help says a war is in full force 12 h after it is
+declared, and its first hour of full gains gives more XP. That hour is
+12-13 h after the declaration: 67 stored attacks fall into one (30.9 20:0x
+HOLY/TVFN, 5.10 18:48 MAFIE, 6.10 20:03 YOZZEFY). The bonus that fits is
+**+10 %** (help: +20 %, clearly worse), and only for wars **we declared** -
+the 4 attacks in the first full hour of NATO's war on us show none. With it
+the sum of squares drops in every type (noční 0.603 → 0.575, týl
+0.555 → 0.480, partisan 0.678 → 0.598). Page variable `valka_prvni_hodina`;
+needs the wars, which the page now shares through the worker (`valky`).
 
 What is solid:
 

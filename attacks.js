@@ -964,6 +964,25 @@
         return m && (!m.od || String(rec.cas || '') >= m.od) ? 1.25 : 1;
     }
 
+    /**
+     * 1 when the attack fell into the first hour of full war - 12 to 13 hours
+     * after our alliance declared war on the target's (help: "V první hodině
+     * války (plných zisků) jsou zisky a zkušenosti navýšené"). The data shows
+     * +10 % there, and nothing in the first hour of a war declared on us.
+     */
+    function firstFullWarHour(rec, valky) {
+        if (!rec || !rec.cas || !rec.cil_aliance || !valky || !valky.length) return 0;
+        const t = casDate(rec.cas);
+        if (!t) return 0;
+        return valky.some(v => {
+            if (v.proti !== rec.cil_aliance) return false;
+            const od = casDate(v.od);
+            if (!od || (v.do && casDate(v.do) < t)) return false;
+            const h = (t - od) / 3600e3;
+            return h >= 12 && h < 13;
+        }) ? 1 : 0;
+    }
+
     /** "2026-09-30 20:25:26" -> Date in local time, as the game shows it. */
     function casDate(cas) {
         const m = String(cas || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
@@ -1323,6 +1342,7 @@
         // wars are known (settings.valky, from the collector or a paste).
         const wh = warHours(rec, s.valky);
         if (wh !== null) out.valka_hodin = wh;
+        out.valka_prvni_hodina = firstFullWarHour(rec, s.valky);
 
         // Tajemství mozku: the attacker's XP × 1.25 (settings.mozek).
         out.mozek = mozekFor(rec, s.mozek);
@@ -1426,6 +1446,7 @@
         parseValky,
         mergeValky,
         warHours,
+        firstFullWarHour,
         parseMozek,
         mozekFor,
         rankFor,

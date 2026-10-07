@@ -3,7 +3,7 @@
 // Run: node analyza/graf.js nocni
 const A = require('../attacks.js');
 const E = require('../formula-engine.js');
-const { VZORCE, MOZEK, recs } = require('./vzorce.js');
+const { VZORCE, MOZEK, recs, valky } = require('./vzorce.js');
 function line(pts) {
     const n = pts.length, mx = pts.reduce((a, p) => a + p.x, 0) / n, my = pts.reduce((a, p) => a + p.y, 0) / n;
     let sxy = 0, sxx = 0, syy = 0; pts.forEach(p => { sxy += (p.x - mx) * (p.y - my); sxx += (p.x - mx) ** 2; syy += (p.y - my) ** 2; });
@@ -14,7 +14,7 @@ function line(pts) {
 const args = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const typ = args[0] || 'nocni', expr = args[1] || VZORCE[typ], f = E.compile(expr);
 const all = recs.filter(r => A.isAttack(r) && r.typ === typ && (!process.argv.includes('--tento-vek') || r.utocnik_id));
-const pts = (mozek, keep) => all.map(r => ({ r, s: A.scopeFor(r, { mozek }) })).filter(({ s }) => s.vlastni_hodnoty && keep(s)).map(({ r, s }) => { let x; try { x = f.eval(s); } catch (e) { x = NaN; } return { r, s, x, y: r.xp }; }).filter(p => Number.isFinite(p.x));
+const pts = (mozek, keep) => all.map(r => ({ r, s: A.scopeFor(r, { mozek, valky }) })).filter(({ s }) => s.vlastni_hodnoty && keep(s)).map(({ r, s }) => { let x; try { x = f.eval(s); } catch (e) { x = NaN; } return { r, s, x, y: r.xp }; }).filter(p => Number.isFinite(p.x));
 console.log(expr + '\n');
 console.log('Tajemství mozku empty, as the page filter:   ' + line(pts('', () => true)));
 console.log('Tajemství mozku filled, as the page filter:  ' + line(pts(MOZEK, () => true)));

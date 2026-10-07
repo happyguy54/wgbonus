@@ -17,10 +17,11 @@ const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocni
 // prestiž they lost; agent 15, mech 2.7), our losses with their own weight -
 // 1 per mech, ⅓ of a tank's prestiž, 0.2 of a soldier's. Our prestiž ^1, the
 // defender's ^0.65 in all three types (analyza/prestizni.js). Only k fitted.
+// +10 % in the first hour of full war, 12-13 h after we declared (prvni.js).
 const VZORCE = {
-    nocni: `29.8 * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`,
-    tyl: `max(150, 37.5 * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
-    partyzansky: `max(150, 46.1 * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
+    nocni: `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`,
+    tyl: `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
+    partyzansky: `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`,
 };
 // Wars: the shared store's (data.js) and analyza/valky.txt.
 const valky = [];
