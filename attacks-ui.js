@@ -101,7 +101,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -687,7 +687,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -839,7 +839,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.

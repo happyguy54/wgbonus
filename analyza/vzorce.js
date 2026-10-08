@@ -7,7 +7,7 @@ const E = require('../formula-engine.js');
 const { stats } = require('./lib.js');
 const load = f => JSON.parse(fs.readFileSync(__dirname + '/' + f, 'utf8')).records;
 const recs = load('attacks.json');
-A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.applyKonflikty(recs, load('konflikty.json'));
+A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.fillReadiness(recs); A.applyKonflikty(recs, load('konflikty.json'));
 
 // Tajemství mozku, as confirmed by the user (týl floors agree: 150 without, 188 with).
 const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';

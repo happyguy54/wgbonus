@@ -51,3 +51,25 @@ if (require.main === module && process.argv.includes('--kola')) {
             ' their tanks ' + Math.min(...x.items.map(i => i.T / 5)) + '-' + Math.max(...x.items.map(i => i.T / 5)), ' hu ' + s.hodnost_utocnik + ' hd ' + s.hodnost_obrance, ' war ' + (s.valka_hodin != null ? s.valka_hodin.toFixed(0) + 'h' : '?'));
     });
 }
+
+// Does a readiness term spoil attacks that already fit? Each attack's miss
+// without and with it (both fitted on everything).
+if (require.main === module && process.argv.includes('--kazi')) {
+    const silent = console.log; console.log = () => {};
+    const a = fit('base', (o, q) => o.T + q[0] * o.U, [7, 0.65, 0.33], ['w']);
+    const b = fit('drop', (o, q) => (o.T + q[0] * o.U) * (1 + q[1] * o.d), [7, 0.65, 0.33, 0.03], ['w', 'c']);
+    console.log = silent;
+    const rows = L.filter(o => o.xp > 150 * o.mz + 1).map(o => ({ o, ea: Math.abs(Math.log(o.xp / a.pred(o, a.p))), eb: Math.abs(Math.log(o.xp / b.pred(o, b.p))) }));
+    const good = rows.filter(x => x.ea < 0.03), bad = rows.filter(x => x.ea >= 0.06);
+    const sum = (g, label) => { const worse = g.filter(x => x.eb > x.ea + 0.01).length, better = g.filter(x => x.eb < x.ea - 0.01).length;
+        const med = arr => arr.sort((p, q) => p - q)[arr.length >> 1];
+        console.log('  ' + label.padEnd(36) + 'n ' + String(g.length).padStart(3) + '   miss median ' + (100 * med(g.map(x => x.ea))).toFixed(1) + '% -> ' + (100 * med(g.map(x => x.eb))).toFixed(1) + '%'
+            + '   worse by >1 pt: ' + worse + ', better by >1 pt: ' + better); };
+    console.log('\nadding (1 + c × drop): what happens to each attack (above the floor)');
+    sum(rows, 'all');
+    sum(good, 'fitted within 3 % before');
+    sum(bad, 'missed by 6 % or more before');
+    const spoiled = good.filter(x => x.eb > x.ea + 0.02).sort((p, q) => (q.eb - q.ea) - (p.eb - p.ea)).slice(0, 8);
+    console.log('  well-fitted attacks it spoils most:');
+    spoiled.forEach(x => console.log('    ' + x.o.r.cas.slice(5, 16) + ' #' + String(x.o.r.utocnik_id).padEnd(4) + '-> ' + String(x.o.r.cil_id).padEnd(6) + 'drop ' + x.o.d + '%  miss ' + (100 * x.ea).toFixed(1) + '% -> ' + (100 * x.eb).toFixed(1) + '%'));
+}

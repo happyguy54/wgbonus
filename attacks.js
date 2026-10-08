@@ -403,6 +403,21 @@
         return n;
     }
 
+    /**
+     * The readiness drop of týl and partisan attacks stored by an older
+     * parser, read from their text. Returns how many were filled in.
+     */
+    function fillReadiness(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!rec || (rec.pripravenost_pokles !== null && rec.pripravenost_pokles !== undefined)) return;
+            if (rec.typ !== 'tyl' && rec.typ !== 'partyzansky') return;
+            const m = String(rec.raw || '').match(/p[řr]ipravenost[^.%]{0,40}?\so\s+([\d.,]+)\s*%/i);
+            if (m) { rec.pripravenost_pokles = Number(m[1].replace(',', '.')); n++; }
+        });
+        return n;
+    }
+
     /** True for our attacks - the only records any attack analysis uses. */
     const isAttack = rec => !!rec && (!rec.druh || rec.druh === 'utok');
 
@@ -1445,6 +1460,7 @@
         upgradeConquests,
         markFailures,
         markDefences,
+        fillReadiness,
         parseValky,
         mergeValky,
         warHours,

@@ -20,7 +20,7 @@ const base = (process.argv[2] || 'https://wgbonus.suchy-daniel.workers.dev').rep
     // Wars, from a worker that has them; analyza/valky.txt is read as well.
     const valky = await get('valky').catch(() => []);
     fs.writeFileSync(path.join(__dirname, 'valky.json'), JSON.stringify({ records: valky || [] }));
-    A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs);
+    A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.fillReadiness(recs);
     const k = A.applyKonflikty(recs, konf);
     const rows = recs.filter(A.isAttack).map(r => { const s = A.scopeFor(r, {}); return {
         id: r.id, cas: r.cas, typ: r.typ, uspech: r.uspech === 0 ? 0 : 1, ut: r.utocnik_id || null, cil: r.cil_id, xp: r.xp,

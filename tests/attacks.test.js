@@ -815,6 +815,9 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('a failed attack stored without its mark gets it back', A.markFailures([stored, okRec]), 1);
     eq('marked', stored.uspech, 0);
     eq('a successful one is left alone', okRec.uspech, undefined);
+    const oldTyl = { typ: 'tyl', pripravenost_pokles: null, raw: '18.9.2026 6:43:05 Naší tankové brigádě se podařilo bleskovým úderem napadnout týl nepřátelské armády Form(#124)[SOLO] - formalldehyd a snížit tak její připravenost o 9%. My jsme při tom přišli o 4273 tanků a nepřítel o 1205 tanků. Získáno 6718 zkušeností.' };
+    const oldParty = { typ: 'partyzansky', raw: 'Partyzánský útok na X(#49) [TVFN] - y se zdařil. Připravenost nepřátelské armády byla snížena o 3% , zabito bylo 1 agentů' };
+    eq('an old týl and partisan get their readiness drop from the text', `${A.fillReadiness([oldTyl, oldParty, okRec])}/${oldTyl.pripravenost_pokles}/${oldParty.pripravenost_pokles}`, '2/9/3');
     const def = { id: 'z', typ: 'partyzansky', xp: 2042, utocnik_id: 83, cil_id: 45, cil_zeme: 'Xenofobni humanista',
         raw: '3.10.2026 10:07:32 Naši vojáci odvrátili partyzánský útok Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek . Zahynulo při tom 1471 našich a 3357 nepřátelských vojáků. Získáno 2042 zkušeností.' };
     eq('a defence stored as our attack is marked, once', [A.markDefences([def, okRec]), A.markDefences([def])].join(','), '1,0');
