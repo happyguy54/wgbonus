@@ -880,6 +880,7 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('13 h after: the bonus hour is over', at('2026-10-06 21:02:00', 'YOZZEFY'), 0);
     eq('a war declared on us: no bonus hour', at('2026-10-04 19:45:00', '*MAFIE*'), 0);
     eq('our declaration on MAFIE counts', at('2026-10-05 18:48:00', '*MAFIE*'), 1);
+    eq('readiness drop as a variable', A.scopeFor({ typ: 'tyl', pripravenost_pokles: 7 }, {}).pripravenost_pokles + '/' + A.scopeFor({ typ: 'nocni' }, {}).pripravenost_pokles, '7/0');
     eq('no wars known: 0', A.scopeFor({ typ: 'nocni', cas: '2026-10-06 20:03:00', cil_aliance: 'YOZZEFY' }, {}).valka_prvni_hodina, 0);
 }
 

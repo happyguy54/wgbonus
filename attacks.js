@@ -1292,6 +1292,8 @@
             'zabito_celkem', 'zakladny', 'ztraty_utocnik', 'ztraty_obrance', 'xp', 'zabito_agenti',
             'ztraty_vojaci', 'ztraty_tanky', 'ztraty_stihacky', 'ztraty_mechove', 'zabrano_km2', 'zabrano_budovy',
         ].forEach(k => { if (rec[k] !== null && rec[k] !== undefined) out[k] = rec[k]; });
+        // Readiness taken from the defender (týl, partisan); 0 where the message has none.
+        out.pripravenost_pokles = Number(rec.pripravenost_pokles) || 0;
 
         const P = (s.prestigeValues && typeof s.prestigeValues === 'object')
             ? s.prestigeValues : PRESTIGE_VALUES;

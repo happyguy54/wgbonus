@@ -195,6 +195,7 @@
         ['zabrano_prestiz', 'prestiž zabraného území a budov: km² × 15 + budovy × 5'],
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
+        ['pripravenost_pokles', 'o kolik % útok snížil připravenost nepřítele (týl, partyzánský), jinak 0'],
         ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po našem vyhlášení války aliance cíle), jinak 0 - zkušenosti +10 %'],
         ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
