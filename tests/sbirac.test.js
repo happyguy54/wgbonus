@@ -67,7 +67,7 @@ function konfliktRow(k) {
  */
 const ALLIES = [44, 47, 52, 55, 68, 83, 118];
 function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = false, onFetch = null,
-                    loggedOut = false, openPage = null, menu = MENU }) {
+                    loggedOut = false, openPage = null, menu = MENU, storage = null }) {
     const calls = [];
     const clip = { text: null };
     const extra = [];
@@ -90,7 +90,10 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
         const param = k => { const m = q.match(new RegExp('(?:^|&)' + k + '=([^&]*)')); return m ? m[1] : null; };
         if (/\/attacks\?/.test(url)) {
             if (stored === 'down') throw new Error('connection refused');
-            return JSON.stringify({ records: stored.map(([d, cil]) => ({ cas: casOf(d), cil_id: cil })) });
+            // Stored complete - prestiž and hodnost known - unless the third
+            // item says otherwise.
+            return JSON.stringify({ records: stored.map(([d, cil, extra]) => Object.assign({ cas: casOf(d), cil_id: cil,
+                prestiz_utocnik: 100000, prestiz_obrance: 100000, hodnost_utocnik: 5, hodnost_obrance: 5 }, extra || {})) });
         }
         if (param('p') === 'zebricek') {
             // A search shows the country among its neighbours: here the
@@ -161,6 +164,8 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
             title: 'Webgame',
         },
         TextDecoder: global.TextDecoder,
+        // The game site's local storage; a shared Map keeps it between runs.
+        ...(storage ? { localStorage: { getItem: k => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => { storage.set(k, String(v)); } } } : {}),
         setTimeout: (fn, ms) => { delays.push(ms); return setImmediate(fn); },
         clearTimeout: t => clearImmediate(t),
         async fetch(url, opts) {
@@ -428,6 +433,36 @@ section(`${label}: attacks already in the shared store are skipped`);
         ok('same second but other target is NOT treated as known', recs.some(x => x.xp === 1003));
         eq('new ones collected', recs.length, 2);
     } finally { Date.now = real; }
+}
+
+section(`${label}: a stored attack without hodnost or prestiž is collected again`);
+{
+    const t1 = { h: 1, xp: 1101, cil: 53 }, t2 = { h: 2, xp: 1102, cil: 53 };
+    const fixed = Date.now(), real = Date.now;
+    Date.now = () => fixed;
+    try {
+        const stored = [[new Date(fixed - 1 * 3600 * 1000), 53], [new Date(fixed - 2 * 3600 * 1000), 53, { hodnost_utocnik: null, hodnost_obrance: null }]];
+        const gg = await run(code, makeGame({ attacks: { 47: [t1, t2] }, stored }), { worker: 'https://w.example' });
+        const recs = paste(gg.clip.text).records;
+        ok('the complete one is skipped', !recs.some(x => x.xp === 1101));
+        ok('the one without hodnost is collected again', recs.some(x => x.xp === 1102));
+    } finally { Date.now = real; }
+}
+
+section(`${label}: runs are kept in the browser and offered again`);
+{
+    const storage = new Map();
+    const first = await run(code, makeGame({ attacks: { 47: [{ h: 1, xp: 1201, cil: 53 }] }, storage }));
+    ok('the run is saved', storage.has('wgbonus.sbirac.behy') && /1201/.test(storage.get('wgbonus.sbirac.behy')));
+    const second = makeGame({ attacks: { 47: [{ h: 1, xp: 1202, cil: 53 }] }, storage });
+    const g2 = await run(code, second);
+    const saved = g2.extra.find(e => e.tag === 'button' && /^Zkopírovat uložené sběry/.test(e.textContent || ''));
+    ok('the next run offers the saved one at once', !!saved);
+    if (saved) { await saved.onclick(); ok('copying it needs no collecting', /1201/.test(g2.clip.text) && !/1202/.test(g2.clip.text)); }
+    const both = g2.extra.find(e => e.tag === 'button' && /^Zkopírovat i s uloženými \(2/.test(e.textContent || ''));
+    ok('the end offers this run with the saved ones', !!both);
+    if (both) { await both.onclick(); ok('both runs in it', /1201/.test(g2.clip.text) && /1202/.test(g2.clip.text)); }
+    ok('the first run copied its own attack', paste(first.clip.text).records.length === 1);
 }
 
 section(`${label}: worker unreachable or absent`);

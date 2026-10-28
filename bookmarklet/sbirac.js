@@ -83,6 +83,63 @@
     const status = m => { statusEl.textContent = m; };
     const TITLE = document.title;
 
+    // Finished runs stay in this browser (the game site's local storage) for
+    // HODIN hours, at most five, so a collection can be copied again - after
+    // playing in between, or when it was never pasted - without reading
+    // every page a second time. Nothing leaves the browser.
+    const RUNS_KEY = 'wgbonus.sbirac.behy';
+    const savedRuns = () => {
+        let v = [];
+        try { v = JSON.parse(localStorage.getItem(RUNS_KEY) || '[]'); } catch (e) { v = []; }
+        return (Array.isArray(v) ? v : []).filter(r => r && r.text && Date.now() - r.at < HODIN * 3600 * 1000).slice(-5);
+    };
+    const saveRun = run => {
+        try { localStorage.setItem(RUNS_KEY, JSON.stringify(savedRuns().concat([run]).slice(-5))); return true; }
+        // Storage full or blocked: the run is still on the button.
+        catch (e) { return false; }
+    };
+    const whenOf = at => new Date(at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    // Copying waits for a click. Written on its own, minutes after the
+    // bookmark was clicked, the clipboard needs a site permission that the
+    // browser words as "see text and images copied to the clipboard" - and
+    // that would then hold for the whole game site. A click needs none.
+    function copyButton(label, text) {
+        const b = document.createElement('button');
+        b.textContent = label + ' (' + Math.round(text.length / 1024) + ' kB)';
+        b.style.cssText = 'display:block;margin-top:8px;padding:6px 14px;font:bold 13px verdana,sans-serif;cursor:pointer';
+        b.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(text);
+                b.textContent = 'Zkopírováno ✓';
+                document.title = TITLE;
+            } catch (e) {
+                // Plain http has no clipboard API; the older way works on a click too.
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
+                document.body.appendChild(ta);
+                ta.select();
+                let done = false;
+                try { done = document.execCommand('copy'); } catch (e2) { done = false; }
+                b.textContent = done ? 'Zkopírováno ✓' : 'Nejde — text je označený dole, stiskněte Ctrl+C';
+                if (done) document.title = TITLE;
+            }
+        };
+        box.appendChild(b);
+        return b;
+    }
+
+    // Earlier runs first: copy them without collecting anything.
+    {
+        const runs = savedRuns();
+        if (runs.length) {
+            say('Uložené sběry z posledních ' + HODIN + ' h: ' + runs.map(r => whenOf(r.at) + ' (' + r.n + ' útoků)').join(', ')
+                + '. Můžete je zkopírovat hned a nic nesbírat (pak „Zastavit“).');
+            copyButton('Zkopírovat uložené sběry', runs.map(r => r.text).join('\n\n'));
+        }
+    }
+
     // Stopping ends the current wait at once; what is collected so far is
     // still handed over.
     const STOP = 'zastaveno';
@@ -436,19 +493,29 @@
             } catch (e) { if (e.message === STOP || e.fatal) throw e; }
         }
 
-        // Attacks the shared store already holds, as "cas|target". Reading
-        // needs no password. If the worker is unreachable, everything in the
-        // window is collected and the page drops the duplicates instead.
+        // Attacks the shared store already holds complete, as "cas|target".
+        // One stored without prestiž or hodnost is collected again: pasted
+        // with this run's žebříček it gets them, and the upload fills them in
+        // (2026-10-28: a žebříček missing for days left 160 attacks without
+        // hodnost, and the collector skipped every one of them). Reading needs
+        // no password. If the worker is unreachable, everything in the window
+        // is collected and the page drops the duplicates instead.
         const known = new Set();
         if (WORKER) {
             try {
                 const base = WORKER.replace(/\/+$/, '');
                 const res = await fetch(base + '/attacks?limit=20000&since=' + casKey(cutoff).slice(0, 10));
                 const data = await res.json();
+                const has = v => v !== null && v !== undefined && v !== '';
+                let incomplete = 0;
                 (data.records || []).forEach(r => {
-                    if (r.cas) known.add(String(r.cas).trim() + '|' + (r.cil_id == null ? '' : r.cil_id));
+                    if (!r.cas) return;
+                    const attack = !r.druh || r.druh === 'utok';
+                    if (attack && !(has(r.prestiz_utocnik) && has(r.prestiz_obrance) && has(r.hodnost_utocnik) && has(r.hodnost_obrance))) { incomplete++; return; }
+                    known.add(String(r.cas).trim() + '|' + (r.cil_id == null ? '' : r.cil_id));
                 });
-                say('Databáze už zná ' + known.size + ' útoků z tohoto okna.');
+                say('Databáze už zná ' + known.size + ' útoků z tohoto okna'
+                    + (incomplete ? '; ' + incomplete + ' bez prestiže nebo hodnosti beru znovu' : '') + '.');
             } catch (e) {
                 say('Workeru se nedovolám (' + e.message + '), beru všechno z okna.');
             }
@@ -501,10 +568,12 @@
                     + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
                 if (rows.length) {
                     archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
-                    xpBloky.push('### XP #' + s.id + '\n' + xpRows.join('\n'));
                     utocnici.push(s.id);
                     nove += rows.length;
                 }
+                // Every ally's gains, new attacks or not: with this run's
+                // žebříček they give the hodnost of attacks pasted earlier too.
+                if (xpRows.length) xpBloky.push('### XP #' + s.id + '\n' + xpRows.join('\n'));
             }
             // Konflikty only for allies with something new: at a reader's pace
             // every page costs seconds, and older attacks got theirs last run.
@@ -556,31 +625,10 @@
         + ' · ' + pages + ' stránek za ' + mmss(Date.now() - started) + '.');
     document.title = '✓ wg sběrač — hotovo';
 
-    // Copying waits for a click. Written on its own, minutes after the
-    // bookmark was clicked, the clipboard needs a site permission that the
-    // browser words as "see text and images copied to the clipboard" - and
-    // that would then hold for the whole game site. A click needs none.
-    const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Zkopírovat do schránky (' + Math.round(out.length / 1024) + ' kB)';
-    copyBtn.style.cssText = 'margin-top:8px;padding:6px 14px;font:bold 13px verdana,sans-serif;cursor:pointer';
-    box.appendChild(copyBtn);
-    say('HOTOVO — klikněte na „Zkopírovat do schránky“ a pak vložte do pole „Vložit z herního logu“ na stránce wgbonus.');
-    copyBtn.onclick = async () => {
-        try {
-            await navigator.clipboard.writeText(out);
-            copyBtn.textContent = 'Zkopírováno ✓';
-            document.title = TITLE;
-        } catch (e) {
-            // Plain http has no clipboard API; the older way works on a click too.
-            const ta = document.createElement('textarea');
-            ta.value = out;
-            ta.style.cssText = 'position:fixed;left:2%;top:10%;width:96%;height:60%;z-index:99998';
-            document.body.appendChild(ta);
-            ta.select();
-            let done = false;
-            try { done = document.execCommand('copy'); } catch (e2) { done = false; }
-            copyBtn.textContent = done ? 'Zkopírováno ✓' : 'Nejde — text je označený dole, stiskněte Ctrl+C';
-            if (done) document.title = TITLE;
-        }
-    };
+    const earlier = savedRuns();
+    const kept = saveRun({ at: Date.now(), n: nove, text: out });
+    copyButton('Zkopírovat do schránky', out);
+    if (earlier.length) copyButton('Zkopírovat i s uloženými (' + (earlier.length + 1) + ' sběrů)', earlier.map(r => r.text).concat([out]).join('\n\n'));
+    say('HOTOVO — klikněte na „Zkopírovat do schránky“ a pak vložte do pole „Vložit z herního logu“ na stránce wgbonus.'
+        + (kept ? ' Sběr zůstává uložený v prohlížeči ' + HODIN + ' h, příště ho jde zkopírovat znovu.' : ''));
 })();

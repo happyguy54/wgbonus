@@ -10,7 +10,9 @@ nikam neodchází.**
 ## Instalace (jednou)
 
 1. Na stránce wgbonus dole v **Sdílené úložiště** vyplňte **Adresu** workeru
-   (pokud ji ještě nemáte) — sběrač pak přeskočí útoky, které už v databázi jsou
+   (pokud ji ještě nemáte) — sběrač pak přeskočí útoky, které už v databázi
+   jsou **celé**. Útok uložený bez prestiže nebo hodnosti sebere znovu, aby
+   je po vložení dostal a nahrání je do databáze doplnilo
 2. Nahoře u **Vložit z herního logu** je odkaz **wg sběrač** — **přetáhněte ho
    myší na lištu záložek** (lištu zapnete Ctrl+Shift+B)
 
@@ -38,6 +40,15 @@ záložku znovu stejným způsobem.
 
 **Zastavit a vzít, co už je** běh kdykoli ukončí — co se do té doby načetlo,
 se předá stejně.
+
+### Uložené sběry
+
+Každý dokončený sběr zůstává **v prohlížeči** (úložiště stránky hry) 72 hodin,
+nejvýš posledních pět. Když jste ho nestihli vložit, nebo jste mezitím hráli
+a nový sběr už nic nenašel, panel hned po spuštění nabídne **Zkopírovat
+uložené sběry** — bez načítání jediné stránky; pak **Zastavit**. Na konci
+běhu je vedle **Zkopírovat do schránky** i **Zkopírovat i s uloženými**.
+Stránka wgbonus duplicity sama zahodí. Nic z toho neopouští prohlížeč.
 
 ## Co sebere
 
