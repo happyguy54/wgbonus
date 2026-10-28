@@ -1076,12 +1076,18 @@
         // with "(?)" for hodnost would otherwise take its neighbour's.
         const COUNTRY = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s/.source;
         const NOT_NEXT = '(?:(?!' + COUNTRY.replace('(\\d+)', '\\d+') + ')[\\s\\S])*?';
+        // A number as the game prints it: "846", "1.2", and from a million on
+        // with spaces between the thousands - "1 368k", "1 222 187". Before
+        // 2026-10-28 every row of a country past 1 000k was skipped for it.
+        const NUM = '(?:\\d{1,3}(?:[  ]\\d{3})+|\\d+)(?:[.,]\\d+)?';
         const ROW = new RegExp(COUNTRY + NOT_NEXT
-            + /(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+([\d.,]+)\s*([kM])?\s+([\d.,]+)\s*([kM])?\s+\((\d+|\?)\)/.source, 'g');
+            + /(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+/.source + '(' + NUM + ')' + /\s*([kM])?\s+/.source
+            + '(' + NUM + ')' + /\s*([kM])?\s+\((\d+|\?)\)/.source, 'g');
         // Members table: area, prestiž, hodnost - no experience.
-        const MEMBER = new RegExp(COUNTRY + /.*?\s(\d+)\s*km2?\s+(\d+)\s+\((\d+)\)/.source);
+        const MEMBER = new RegExp(COUNTRY + /.*?\s/.source + '(' + NUM + ')' + /\s*km2?\s+/.source + '(' + NUM + ')' + /\s+\((\d+)\)/.source);
         // "Zkušenosti" table: country, player, then the experience last.
-        const DGEN = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?(?:-\s*.*?)?\s+(\d+)\s*$/;
+        const DGEN = new RegExp(/\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?(?:-\s*.*?)?\s+/.source + '(' + NUM + ')' + /\s*$/.source);
+        const plain = v => Number(String(v).replace(/[\s ]/g, ''));
 
         const rounded = {}, dgen = {}, shown = {};
         let at = null, inDgen = false, inMembers = false;
@@ -1107,7 +1113,7 @@
             }
             if (inDgen && !/km2?\s/.test(line)) {
                 const d = line.match(DGEN);
-                if (d) dgen[d[1]] = { xp: Number(d[2]), at: when };
+                if (d) dgen[d[1]] = { xp: plain(d[2]), at: when };
                 return;
             }
             ROW.lastIndex = 0;

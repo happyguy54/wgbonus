@@ -339,8 +339,9 @@
         // them comes out as one run of text - so take each country from
         // "(#id) [TAG] - player" to its "(hodnost)", one per line. The player's
         // own "(#436276)" is not a country: no " - " follows it.
+        // From a million on the numbers have spaces in them: "1 204k 1 368k (10)".
         const rows = [];
-        const re = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s(?:(?!\(#\d+\)\s*(?:\[[^\]]*\]\s*)?-\s)[\s\S])*?km2?\s+[\d.,]+\s*[kM]?\s+[\d.,]+\s*[kM]?\s+\((?:\d+|\?)\)/g;
+        const re = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s(?:(?!\(#\d+\)\s*(?:\[[^\]]*\]\s*)?-\s)[\s\S])*?km2?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+\((?:\d+|\?)\)/g;
         const text = oneLine(html);
         let m;
         while ((m = re.exec(text)) !== null) {

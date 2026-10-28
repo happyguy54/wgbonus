@@ -311,6 +311,25 @@ const atk = (id, extra = {}) => Object.assign({
         eq('an unread copy cannot turn it back', `${again.druh}/${again.ztraty_vojaci}`, 'utok/2017');
     }
 
+    section('a stored attack gets what it was missing, nothing else');
+    {
+        const env = makeEnv('pw');
+        await call(env, 'POST', 'attacks', { records: [atk('fill-1', { prestiz_utocnik: null, hodnost_utocnik: null, hodnost_obrance: 6, hodnost_obrance_jiste: 0 }),
+            atk('fill-2', { prestiz_utocnik: 500000, hodnost_utocnik: 9, hodnost_utocnik_jiste: 1 })] }, 'pw');
+        const up = await (await call(env, 'POST', 'attacks', { records: [
+            atk('fill-1', { prestiz_utocnik: 1100000, prestiz_obrance: 900000, hodnost_utocnik: 10, hodnost_utocnik_jiste: 1, hodnost_obrance: 7, hodnost_obrance_jiste: 1, zabito_vojaci: 777 }),
+            atk('fill-2', { prestiz_utocnik: 1, hodnost_utocnik: 3, hodnost_utocnik_jiste: 1 }),
+            atk('fill-3'),
+        ] }, 'pw')).json();
+        eq('reported: one new, one filled in, one unchanged', `${up.added}/${up.doplneno}/${up.duplicates}`, '1/1/1');
+        const rows = (await (await call(env, 'GET', 'attacks')).json()).records;
+        const r1 = rows.find(r => r.id === 'fill-1'), r2 = rows.find(r => r.id === 'fill-2');
+        eq('empty prestiž and hodnost filled in', `${r1.prestiz_utocnik}/${r1.prestiz_obrance}/${r1.hodnost_utocnik}/${r1.hodnost_utocnik_jiste}`, '1100000/900000/10/1');
+        eq('an estimate gives way to a certain value', `${r1.hodnost_obrance}/${r1.hodnost_obrance_jiste}`, '7/1');
+        eq('nothing else changes', r1.zabito_vojaci, 10);
+        eq('known values are never overwritten', `${r2.prestiz_utocnik}/${r2.hodnost_utocnik}`, '500000/9');
+    }
+
     section('wars: a database from before they existed');
     {
         // A worker instance creates missing tables once, so this needs its own.

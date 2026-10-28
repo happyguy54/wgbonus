@@ -16,11 +16,14 @@
  * Reads are open; writes need the shared password, sent either as
  * `X-WG-Secret: <secret>` or as `secret` in the JSON body.
  *
- * Rows are inserted keyed on `id`, so a record that is already there is left
- * exactly as it is - except a conquest stored unread (druh "dobyvani"), which
- * its fully read version replaces. Nobody's upload can overwrite or
- * delete anyone else's data, and because each batch runs as one transaction
- * two people uploading at the same moment cannot lose each other's rows.
+ * Rows are inserted keyed on `id`, so a record that is already there keeps
+ * what it has. Two things can still change it: a conquest stored unread
+ * (druh "dobyvani") is replaced by its fully read version, and an attack
+ * stored without some later-found facts - prestiž, hodnost, the failure mark,
+ * the readiness drop - gets them filled in; a hodnost estimate also gives way
+ * to a certain value. A known value is never overwritten, so nobody's upload
+ * can spoil or delete anyone else's data, and because each batch runs as one
+ * transaction two people uploading at the same moment cannot lose rows.
  *
  * Columns added to the schema later are created by the worker itself on the
  * first upload (see ADDED), and tables added later on the first request (see
@@ -54,6 +57,9 @@ const COLUMNS = {
     // cas = od, so the generic read (ORDER BY cas, ?since=) works here too.
     valky: ['id', 'cas', 'ali', 'proti', 'od', 'konec', 'vlozeno'],
 };
+
+/** Attack fields that a later upload may fill in when they are still empty. */
+const FILLED = ['prestiz_utocnik', 'prestiz_obrance', 'uspech', 'pripravenost_pokles', 'spokojenost_pokles'];
 
 /** Tables added after the first deploy; created on the first request. */
 const CREATED = {
@@ -246,25 +252,36 @@ export default {
 
             const cols = COLUMNS[table];
             const placeholders = cols.map(() => '?').join(', ');
-            // An id already present stays exactly as it is - with one
-            // exception: a conquest stored before the parser could read it
-            // (druh "dobyvani") is replaced by its fully read version, which
-            // keeps the same id. Nothing else can be overwritten.
-            // A war is stored when it starts; its end, learned later, fills in.
+            // An id already present keeps what it has. A conquest stored before
+            // the parser could read it (druh "dobyvani") is replaced by its
+            // fully read version, which keeps the same id. Facts found later
+            // fill an attack's empty fields: prestiž (konflikty), hodnost (a
+            // žebříček - 2026-10-28 one went missing for days), the failure
+            // mark and readiness drop; a hodnost estimate gives way to a
+            // certain value. A war is stored when it starts; its end fills in.
+            const upgrade = `attacks.druh = 'dobyvani' AND excluded.druh IS NOT 'dobyvani'`;
+            const better = side => `(attacks.hodnost_${side} IS NULL AND excluded.hodnost_${side} IS NOT NULL)`
+                + ` OR (attacks.hodnost_${side}_jiste = 0 AND excluded.hodnost_${side}_jiste = 1 AND excluded.hodnost_${side} IS NOT NULL)`;
+            const setAttack = c => {
+                const side = (c.match(/^hodnost_(utocnik|obrance)/) || [])[1];
+                if (side) return `${c} = CASE WHEN ${upgrade} OR ${better(side)} THEN excluded.${c} ELSE attacks.${c} END`;
+                if (FILLED.includes(c)) return `${c} = CASE WHEN ${upgrade} THEN excluded.${c} ELSE COALESCE(attacks.${c}, excluded.${c}) END`;
+                return `${c} = CASE WHEN ${upgrade} THEN excluded.${c} ELSE attacks.${c} END`;
+            };
             const sql = table === 'attacks'
                 ? `INSERT INTO attacks (${cols.join(', ')}) VALUES (${placeholders})`
                   + ` ON CONFLICT(id) DO UPDATE SET `
-                  + cols.filter(c => c !== 'id' && c !== 'vlozeno').map(c => `${c} = excluded.${c}`).join(', ')
-                  + ` WHERE attacks.druh = 'dobyvani' AND excluded.druh IS NOT 'dobyvani'`
+                  + cols.filter(c => c !== 'id' && c !== 'vlozeno').map(setAttack).join(', ')
+                  + ` WHERE (${upgrade})`
+                  + FILLED.map(c => ` OR (attacks.${c} IS NULL AND excluded.${c} IS NOT NULL)`).join('')
+                  + ` OR ${better('utocnik')} OR ${better('obrance')}`
                 : table === 'valky'
                 ? `INSERT INTO valky (${cols.join(', ')}) VALUES (${placeholders})`
                   + ` ON CONFLICT(id) DO UPDATE SET konec = excluded.konec`
                   + ` WHERE valky.konec IS NULL AND excluded.konec IS NOT NULL`
                 : `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
-            const unread = async () => table === 'attacks'
-                ? ((await env.DB.prepare(`SELECT COUNT(*) AS n FROM attacks WHERE druh = 'dobyvani'`).first()) || {}).n || 0
-                : 0;
-            const unreadBefore = await unread();
+            const count = async () => ((await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first()) || {}).n || 0;
+            const before = await count();
             const now = new Date().toISOString();
 
             const statements = [];
@@ -275,22 +292,23 @@ export default {
                 statements.push(env.DB.prepare(sql).bind(...values));
             }
 
-            let added = 0;
+            let changed = 0;
             for (let i = 0; i < statements.length; i += MAX_BATCH) {
                 const chunk = statements.slice(i, i + MAX_BATCH);
                 const res = await env.DB.batch(chunk);
-                for (const r of res) added += (r && r.meta && r.meta.changes) || 0;
+                for (const r of res) changed += (r && r.meta && r.meta.changes) || 0;
             }
 
-            const t = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first();
-            const upgraded = unreadBefore - await unread();
+            // New rows add to the count; the other changes filled rows in.
+            const total = await count();
+            const added = total - before;
             const reply = {
-                added: added - upgraded,
-                duplicates: statements.length - added,
+                added,
+                duplicates: statements.length - changed,
                 skipped,
-                total: (t && t.n) || 0,
+                total,
             };
-            if (upgraded) reply.doplneno = upgraded;
+            if (changed - added) reply.doplneno = changed - added;
             if (migrated.length) reply.pridane_sloupce = migrated;
             return json(reply);
         } catch (err) {

@@ -492,6 +492,16 @@ section('Lord Azeroth (#55), 1.10.: defences and conquests stored apart from att
 
 section('žebříček and alliance rows, as copied from the game');
 {
+    // From a million on the game writes spaces between thousands (2026-10-28:
+    // every such row was skipped, so no attack got a hodnost).
+    const big = A.parseZebricek('XP Piňáta(#47)[EJZ] - mazereon (#436276) 14 407km2 1 204k 1 368k (10) EJZ Tech\n'
+        + 'B(#2) - b\t14 407km2\t946k\t1 368k\t(10)\tEJZ\n'
+        + 'Lord Azeroth(#55) - StRRiPes\t14642km2\t1 081 302\t1 370 771\t(10)\tFund', new Date('2026-10-28T12:00'));
+    eq('over a million: "1 204k 1 368k (10)"', JSON.stringify([big[47].xp, big[47].prestiz, big[47].hodnost]), '[1204000,1368000,10]');
+    eq('only prestiž over a million', JSON.stringify([big[2].xp, big[2].prestiz, big[2].hodnost]), '[946000,1368000,10]');
+    eq('an exact figure with spaces is a lower bound', JSON.stringify([big[55].lo, big[55].hodnost]), '[1081302,10]');
+    const bigAli = A.parseZebricek('### ALIANCE EJZ 2026-10-28 12:00:00\nR23(#107) - R23\t14 344km2\t1 222 187\t(10)', new Date());
+    eq('alliance members table with spaced numbers', bigAli[107] && bigAli[107].hodnost, 10);
     const z = A.parseZebricek('on\t85\tPošta Útok Rakety Rozvědka Konflikty XP Piňáta(#47)[EJZ] - mazereon (#436276) (zástupce) Vítěz 94.věku94\t4 407km2\t46k\t167k\t(4)\tEJZ\tTech\t\n'
         + 'Lord Azeroth(#55) - StRRiPes\t4642km2\t81302\t170771\t(5)\tFund');
     eq('žebříček row: country id, not the player id after it', Object.keys(z).sort().join(','), '47,55');
