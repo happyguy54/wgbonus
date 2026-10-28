@@ -925,6 +925,7 @@
             ui.syncInfo.textContent =
                 `Nahráno: nových ${atk.added}`
                 + (atk.duplicates ? `, ${atk.duplicates} už tam bylo` : '')
+                + (atk.doplneno ? `, u ${atk.doplneno} doplněno, co chybělo (prestiž, hodnost…)` : '')
                 + `, celkem nahoře ${atk.total}` + konfNote + '.' + stale;
         } catch (err) {
             ui.syncInfo.textContent = 'Nahrání selhalo: ' + err.message;
