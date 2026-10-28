@@ -823,12 +823,13 @@
         // time. They are told apart by attacker, target, minute and type, and
         // within that paired in order: the earliest attack with the earliest
         // row. The list's own order is lost once rows come back from the
-        // shared store, but prestiž keeps it - over a run of attacks the
-        // attacker's rises and the defender's falls (true of every such group
-        // seen so far).
+        // shared store, but prestiž keeps it: over a run of attacks the
+        // defender's falls - every attack costs them units or land. Ours
+        // usually rises, but not always (8.10: 554k then 545k, after big
+        // losses of our own), so it only breaks ties.
         const inOrder = list => list.slice().sort((a, b) =>
-            (a.prestiz_utocnik || 0) - (b.prestiz_utocnik || 0)
-            || (b.prestiz_obrance || 0) - (a.prestiz_obrance || 0)
+            (b.prestiz_obrance || 0) - (a.prestiz_obrance || 0)
+            || (a.prestiz_utocnik || 0) - (b.prestiz_utocnik || 0)
             || b._i - a._i);
         const group = (map, key, item) => { if (!map.has(key)) map.set(key, []); map.get(key).push(item); };
 
