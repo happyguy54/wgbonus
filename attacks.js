@@ -45,7 +45,10 @@
         // "ho?" required the h, so this matched "nočního tažení" in an attack
         // message but not "Noční tažení" as the Konflikty list writes it.
         { id: 'nocni', label: 'Noční tažení', re: /no[čc]n[ií](?:ho|m)?\s+ta[žz]en[ií]/i },
-        { id: 'nalet', label: 'Taktický nálet', re: /taktick\S*\s+n[áa]let/i },
+        // An enemy's raid on us reads "podnikla (částečný) letecký útok na naše
+        // strategická vojenská zařízení. Nálety nám zničily …" (2026-10-30:
+        // these defences had no type, so konflikty could not pair them).
+        { id: 'nalet', label: 'Taktický nálet', re: /taktick\S*\s+n[áa]let|leteck\S*\s+[úu]tok|N[áa]lety\s+n[áa]m/i },
         { id: 'bombardovani', label: 'Bombardování', re: /bombardov[áa]n/i },
         { id: 'partyzansky', label: 'Partyzánský útok', re: /partyz[áa]n/i },
         { id: 'tyl', label: 'Útok na týl', re: /(napadnout\s+t[ýy]l|t[ýy]l\s+nep[řr][áa]telsk|na\s+t[ýy]l|tankov[ée]\s+brig[áa]d)/i },
@@ -414,6 +417,20 @@
             if (rec.typ !== 'tyl' && rec.typ !== 'partyzansky') return;
             const m = String(rec.raw || '').match(/p[řr]ipravenost[^.%]{0,40}?\so\s+([\d.,]+)\s*%/i);
             if (m) { rec.pripravenost_pokles = Number(m[1].replace(',', '.')); n++; }
+        });
+        return n;
+    }
+
+    /**
+     * Records stored by an older parser without a type it now recognises
+     * (e.g. an enemy air raid on us) get it from their text. Returns how many.
+     */
+    function fillTypes(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!rec || rec.typ || !rec.raw) return;
+            const t = detectType(rec.raw);
+            if (t) { rec.typ = t.id; rec.typLabel = t.label; n++; }
         });
         return n;
     }
@@ -807,6 +824,17 @@
                 rozloha: km ? num(km[1]) : null,
                 budovy: bud ? num(bud[1]) : null,
             });
+        });
+        // An id per row. Two attacks in one minute can leave exactly the same
+        // rounded prestiž, and under one id the second row was dropped as a
+        // duplicate - by the page and by the worker - so the attacks of that
+        // minute no longer paired (2026-10-30). The first keeps the old id,
+        // so rows already stored still match; a repeat gets "|2", "|3"…
+        const times = {};
+        rows.forEach(r => {
+            const base = `${r.cas}|${r.obrance_id}|${r.prestiz_obrance}|${r.prestiz_utocnik}`;
+            times[base] = (times[base] || 0) + 1;
+            r.id = times[base] === 1 ? base : base + '|' + times[base];
         });
         return rows;
     }
@@ -1476,6 +1504,7 @@
         markFailures,
         markDefences,
         fillReadiness,
+        fillTypes,
         parseValky,
         mergeValky,
         warHours,

@@ -248,6 +248,17 @@ section('konflikty parsing (prestiž per attack)');
     eq('defender prestiž', rows[0].prestiz_obrance, 1360000);
     eq('defender without a rank number', rows[1].prestiz_obrance, 1885000);
 
+    // Two attacks in one minute with exactly the same rounded prestiž: both
+    // rows kept, the first under the id rows have always had.
+    const twice = A.parseKonflikty([
+        '07.10.', '10:19\tWorld(#52)[EJZ] - Apo 1 311k pr.', '---> Když(#108)[*MAFIE*] - koljum 569k pr.\tTaktický nálet', '45 voj.z.',
+        '07.10.', '10:19\tWorld(#52)[EJZ] - Apo 1 311k pr.', '---> Když(#108)[*MAFIE*] - koljum 569k pr.\tTaktický nálet', '43 voj.z.',
+    ].join('\n'), 2026);
+    eq('identical rows in one minute keep separate ids', twice.map(r => r.id).join(' ; '),
+        '2026-10-07 10:19|108|569000|311000 ; 2026-10-07 10:19|108|569000|311000|2');
+    const pair = [1, 2].map(i => ({ id: 'n' + i, cas: '2026-10-07 10:19:' + (10 * i), typ: 'nalet', utocnik_id: 52, cil_id: 108, xp: 900 }));
+    eq('so both attacks of that minute get prestiž', A.applyKonflikty(pair, twice).matched, 2);
+
     eq('"94 1254k pr."', A.prestigeNum('94 1254k pr.'), 1254000);
     eq('plain "1 174 618 pr."', A.prestigeNum('1 174 618 pr.'), 1174618);
 
@@ -839,6 +850,9 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('a successful one is left alone', okRec.uspech, undefined);
     const oldTyl = { typ: 'tyl', pripravenost_pokles: null, raw: '18.9.2026 6:43:05 Naší tankové brigádě se podařilo bleskovým úderem napadnout týl nepřátelské armády Form(#124)[SOLO] - formalldehyd a snížit tak její připravenost o 9%. My jsme při tom přišli o 4273 tanků a nepřítel o 1205 tanků. Získáno 6718 zkušeností.' };
     const oldParty = { typ: 'partyzansky', raw: 'Partyzánský útok na X(#49) [TVFN] - y se zdařil. Připravenost nepřátelské armády byla snížena o 3% , zabito bylo 1 agentů' };
+    const raid = { druh: 'obrana', typ: null, raw: '27.10.2026 21:48:47 Země Karl Dönitz(#120) [NATO] - Mastr Kempa podnikla letecký útok na naše strategická vojenská zařízení. Nálety nám zničily 94 vojenských základen. Bylo zničeno 369 našich stíhaček a 0 bunkrů. Získáno 2000 zkušeností.' };
+    eq('an enemy air raid on us is a nálet, read from the text too', `${A.fillTypes([raid])}/${raid.typ}`, '1/nalet');
+    eq('a partial raid as well', A.detectType('podnikla částečný letecký útok na naše strategická vojenská zařízení').id, 'nalet');
     eq('an old týl and partisan get their readiness drop from the text', `${A.fillReadiness([oldTyl, oldParty, okRec])}/${oldTyl.pripravenost_pokles}/${oldParty.pripravenost_pokles}`, '2/9/3');
     const def = { id: 'z', typ: 'partyzansky', xp: 2042, utocnik_id: 83, cil_id: 45, cil_zeme: 'Xenofobni humanista',
         raw: '3.10.2026 10:07:32 Naši vojáci odvrátili partyzánský útok Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek . Zahynulo při tom 1471 našich a 3357 nepřátelských vojáků. Získáno 2042 zkušeností.' };
