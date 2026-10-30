@@ -23,7 +23,11 @@ for (const [k, rs] of groups) {
     const same = all.filter(x => t(x) === typ);
     if (same.length === rs.length) continue;
     const same1 = same.length && same.every(x => x.prestiz_utocnik === same[0].prestiz_utocnik && x.prestiz_obrance === same[0].prestiz_obrance);
-    if (same.length && same1) continue;                    // all rows alike: matched anyway
+    // all rows alike: matched anyway
+    if (same.length && same1) continue;
+    // more rows than records, but the surplus are copies of identical rows:
+    // applyKonflikty drops them and pairs (2026-10-30)
+    if (same.length > rs.length && new Set(same.map(x => x.prestiz_utocnik + '|' + x.prestiz_obrance)).size <= rs.length) continue;
     const window = konf.filter(x => String(x.utocnik_id) === u || String(x.obrance_id) === c);
     const why = !all.length ? (konf.some(x => (String(x.utocnik_id) === u || String(x.obrance_id) === u) && Math.abs(new Date(x.cas.replace(' ', 'T')) - new Date(rs[0].cas.replace(' ', 'T'))) < 6 * 3600e3)
                 ? 'no row that minute, though konflikty around that time were read' : 'no konflikty read for that time at all')

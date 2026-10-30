@@ -780,7 +780,14 @@
             starts.push({ at: m.index, dd: m[1], mm: m[2], after: KONF_DATE.lastIndex });
         }
 
+        // A paste may hold several konflikty pages - the collector's "###"
+        // blocks, from more than one run. A row repeated within one page is a
+        // second attack; the same row in another block is the same attack.
+        const heads = [];
+        const H = /^[ \t]*###/gm;
+        while ((m = H.exec(src)) !== null) heads.push(m.index);
         const rows = [];
+        const rowPage = [];
         starts.forEach((st, i) => {
             const chunk = src.slice(st.after, i + 1 < starts.length ? starts[i + 1].at : src.length);
 
@@ -824,6 +831,7 @@
                 rozloha: km ? num(km[1]) : null,
                 budovy: bud ? num(bud[1]) : null,
             });
+            rowPage.push(heads.filter(h => h < st.at).length);
         });
         // An id per row. Two attacks in one minute can leave exactly the same
         // rounded prestiž, and under one id the second row was dropped as a
@@ -831,10 +839,11 @@
         // minute no longer paired (2026-10-30). The first keeps the old id,
         // so rows already stored still match; a repeat gets "|2", "|3"…
         const times = {};
-        rows.forEach(r => {
+        rows.forEach((r, i) => {
             const base = `${r.cas}|${r.obrance_id}|${r.prestiz_obrance}|${r.prestiz_utocnik}`;
-            times[base] = (times[base] || 0) + 1;
-            r.id = times[base] === 1 ? base : base + '|' + times[base];
+            const k = rowPage[i] + '|' + base;
+            times[k] = (times[k] || 0) + 1;
+            r.id = times[k] === 1 ? base : base + '|' + times[k];
         });
         return rows;
     }
@@ -896,6 +905,25 @@
                 ambiguous += recs.length; unmatched += recs.length; return;
             }
             if (!list.length) { unmatched += recs.length; return; }
+            // More rows than attacks, some of them identical: copies of one row
+            // (from two collector runs pasted together, 2026-10-30) say the same
+            // thing, so surplus copies go until the counts match. Which copy
+            // stays does not matter - they carry the same prestiž.
+            if (list.length > recs.length) {
+                const val = r => r.prestiz_utocnik + '|' + r.prestiz_obrance;
+                const copies = new Map();
+                list.forEach(r => copies.set(val(r), (copies.get(val(r)) || 0) + 1));
+                let surplus = list.length - recs.length;
+                const drop = new Map();
+                while (surplus > 0) {
+                    const most = [...copies.entries()].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1])[0];
+                    if (!most) break;
+                    copies.set(most[0], most[1] - 1);
+                    drop.set(most[0], (drop.get(most[0]) || 0) + 1);
+                    surplus--;
+                }
+                list = list.filter(r => { const d = drop.get(val(r)) || 0; if (!d) return true; drop.set(val(r), d - 1); return false; });
+            }
             list = inOrder(list);
             const same = list.every(r => r.prestiz_utocnik === list[0].prestiz_utocnik
                 && r.prestiz_obrance === list[0].prestiz_obrance);

@@ -258,6 +258,16 @@ section('konflikty parsing (prestiž per attack)');
         '2026-10-07 10:19|108|569000|311000 ; 2026-10-07 10:19|108|569000|311000|2');
     const pair = [1, 2].map(i => ({ id: 'n' + i, cas: '2026-10-07 10:19:' + (10 * i), typ: 'nalet', utocnik_id: 52, cil_id: 108, xp: 900 }));
     eq('so both attacks of that minute get prestiž', A.applyKonflikty(pair, twice).matched, 2);
+    // Two collector runs pasted together: the same page twice. Same ids, so
+    // nothing new to store - and the attacks still pair.
+    const block = ['07.10.', '10:19\tWorld(#52)[EJZ] - Apo 1 312k pr.', '---> Když(#108)[*MAFIE*] - koljum 569k pr.\tTaktický nálet', '41 voj.z.'];
+    const runs = A.parseKonflikty(['### KONFLIKTY #52'].concat(block, ['### KONFLIKTY #52'], block).join('\n'), 2026);
+    eq('one row in two runs: the same id twice', new Set(runs.map(r => r.id)).size, 1);
+    const one = [{ id: 'x1', cas: '2026-10-07 10:19:50', typ: 'nalet', utocnik_id: 52, cil_id: 108, xp: 800 }];
+    eq('and its attack pairs', A.applyKonflikty(one, runs).matched, 1);
+    // False copies already stored (row|2 from such a paste): dropped in pairing.
+    const stored = twice.concat([Object.assign({}, twice[0], { id: twice[0].id + '|3' })]);
+    eq('surplus identical rows do not block the pairing', A.applyKonflikty(pair.map(p => Object.assign({}, p)), stored).matched, 2);
 
     eq('"94 1254k pr."', A.prestigeNum('94 1254k pr.'), 1254000);
     eq('plain "1 174 618 pr."', A.prestigeNum('1 174 618 pr.'), 1174618);
