@@ -595,12 +595,24 @@ section('hodnost of a defender: only when well past its threshold');
     eq('with 800 since the last: still rank 4', round[3].hodnost_obrance, 4);
     ok('all of them only estimates', round.every(r => r.hodnost_obrance_jiste === 0));
 
-    // A newer reading may replace an estimate, never a certain or typed value.
+    // Well past the threshold today, but a big round of ours since: rounds
+    // now give a defender 50-100k (2026-10-30). Today's 1 560k is 60k past
+    // rank 12's 1.5M; ten attacks of 7k each put the first at 1 490k.
+    const zeb3 = A.parseZebricek('### ZEBRICEK 2026-10-28 10:00:00\nE(#5) - e\t100km2\t1 560k\t1 200k\t(12)');
+    const big = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-10-27 21:5' + i + ':00', cil_id: 5, xp: 7000 }));
+    A.applyHodnost(big, [], zeb3);
+    eq('first attack of the big round: the previous rank, as an estimate', `${big[0].hodnost_obrance}/${big[0].hodnost_obrance_jiste}`, '11/0');
+    eq('its last attack: 7k since, 53k past - certain', `${big[9].hodnost_obrance}/${big[9].hodnost_obrance_jiste}`, '12/1');
+
+    // A newer reading works out again whatever this wrote; a typed value stays.
     const est = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 4, hodnost_obrance_jiste: 0 };
     const typed = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 9 };
     A.applyHodnost([est, typed], [], zeb);
     eq('estimate replaced by a certain value', `${est.hodnost_obrance}/${est.hodnost_obrance_jiste}`, '5/1');
     eq('a value without a mark (typed in) stays', typed.hodnost_obrance, 9);
+    const wrongly = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 6, hodnost_obrance_jiste: 1 };
+    A.applyHodnost([wrongly], [], zeb);
+    eq('a certain value of ours is worked out again', `${wrongly.hodnost_obrance}/${wrongly.hodnost_obrance_jiste}`, '5/1');
 }
 
 section('a row copied from the Útoky tab');

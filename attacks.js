@@ -1174,16 +1174,16 @@
      * middle of the range is written as an estimate.
      *
      * Defender (an enemy): their archive is not ours to see, so only today's
-     * rank is known. At least `rezerva` past that rank's threshold, it is
-     * taken as certain. Closer than that, they may have crossed it during
-     * these very attacks: our XP from every attack on them from this one on
-     * stands in for what they gained since, and if today's figure minus that
-     * falls below the threshold, the attack is put at the previous rank. Either
+     * rank is known. Our XP from every attack on them from this one on stands
+     * in for what they gained since. If today's figure minus that is still at
+     * least `rezerva` past the rank's threshold, the rank is certain. Closer,
+     * they may have crossed it during these very attacks: below the threshold
+     * the attack is put at the previous rank, otherwise at today's - either
      * way only as an estimate.
      *
      * Only attacks within `okno` hours of the reading are touched. A value
-     * already on a record is never overwritten - unless it is an estimate of
-     * ours, which a newer reading may replace.
+     * this function wrote (marked certain or estimate) is worked out again by
+     * a newer reading; one typed in by hand (no mark) is never overwritten.
      */
     function applyHodnost(records, xpEvents, zebricek, opts) {
         // Spy operations and rockets add rank experience too, but too little
@@ -1192,7 +1192,11 @@
         // exact; only a rounded žebříček figure leaves a range.
         const o = Object.assign({ okno: 72, rezerva: 5000, neviditelne: 0 }, opts || {});
         const empty = v => v === null || v === undefined || v === '';
-        const writable = (rec, k) => empty(rec[k]) || rec[k + '_jiste'] === 0;
+        // Anything this function worked out (marked 0 or 1) is worked out again
+        // from the newest reading - the rules got better (2026-10-30: a defender
+        // past a threshold today may not have been at the start of a big round).
+        // A value without the mark was typed in by someone and stays.
+        const writable = (rec, k) => empty(rec[k]) || rec[k + '_jiste'] === 0 || rec[k + '_jiste'] === 1;
         const put = (rec, k, value, sure) => { rec[k] = value; rec[k + '_jiste'] = sure ? 1 : 0; };
         const byAlly = new Map();
         (xpEvents || []).forEach(e => {
@@ -1224,13 +1228,17 @@
 
             if (def && writable(rec, 'hodnost_obrance') && inWindow(rec.cas, def.at, o.okno)) {
                 const now = def.hodnost || rankFor(def.lo).n;
-                if (def.lo - rankMin(now) >= o.rezerva) {
+                // What the defender gained from this attack on, judged by our
+                // XP from every attack on them since - a round of ours now
+                // gives a defender 50-100k, so "past the threshold today" no
+                // longer means "past it at the start of the round" (2026-10-30).
+                const gained = attacks
+                    .filter(r => r.cil_id === rec.cil_id && r.cas >= rec.cas && r.cas <= def.at)
+                    .reduce((a, r) => a + (Number(r.xp) || 0), 0);
+                if (def.lo - gained - rankMin(now) >= o.rezerva) {
                     put(rec, 'hodnost_obrance', now, true);
                     res.obrance++;
                 } else {
-                    const gained = attacks
-                        .filter(r => r.cil_id === rec.cil_id && r.cas >= rec.cas && r.cas <= def.at)
-                        .reduce((a, r) => a + (Number(r.xp) || 0), 0);
                     const before = def.xp - gained < rankMin(now) && now > 1 ? now - 1 : now;
                     put(rec, 'hodnost_obrance', before, false);
                     res.odhad++;
