@@ -1353,6 +1353,11 @@
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
+            // Diminishing returns on units, U·ln(1 + units/U), fitted 31.10 on all attacks
+            // (analyza/log-presety.js) - beside the presets above, to compare.
+            ['noční tažení (log, 31.10)', `0.551 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_lost) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100) * mozek`],
+            ['týl (log, 31.10)', `max(150, 0.679 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_prestiz / 3) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek`],
+            ['partyzánský (log, 31.10)', `max(150, 0.845 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + 0.2 * attack_prestiz) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],

@@ -1,0 +1,10 @@
+{
+ "U": 137000,
+ "a": 0.61,
+ "b": 1,
+ "formulas": {
+  "nocni": "0.551 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_lost) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100) * mozek",
+  "tyl": "max(150, 0.679 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_prestiz / 3) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek",
+  "partyzansky": "max(150, 0.845 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + 0.2 * attack_prestiz) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek"
+ }
+}
