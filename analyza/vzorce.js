@@ -10,7 +10,7 @@ const recs = load('attacks.json');
 A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.fillTypes(recs); A.fillReadiness(recs); A.applyKonflikty(recs, load('konflikty.json'));
 
 // Tajemství mozku, as confirmed by the user (týl floors agree: 150 without, 188 with).
-const MOZEK = '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';
+const MOZEK = '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';
 const HOD = '(1 + hodnost_bonus / 100)';
 const PRES = (a, b) => `pow(prestiz_obrance / 100000, ${a}) / pow(prestiz_utocnik / 100000, ${b})`;
 // The defender's losses at their prestiž value (the user: XP comes from the
