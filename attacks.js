@@ -1063,7 +1063,8 @@
 
     /**
      * Hodnost by rank experience, manual 12.4.1: the number is the rank, `min`
-     * the experience it starts at. Defence counts as well as attack.
+     * the experience it starts at. Defence counts as well as attack, but only
+     * below hodnost 12: from there a defence brings nothing (the user, 2026-11-04).
      */
     const RANKS = [
         [1, 'Farmář', 0], [2, 'Rekrut', 10000], [3, 'Velitel bunkrů', 20000],
@@ -1288,9 +1289,15 @@
                 // XP from every attack on them since - a round of ours now
                 // gives a defender 50-100k, so "past the threshold today" no
                 // longer means "past it at the start of the round" (2026-10-30).
-                const gained = attacks
+                const hits = attacks
                     .filter(r => r.cil_id === rec.cil_id && r.cas >= rec.cas && r.cas <= def.at)
-                    .reduce((a, r) => a + (Number(r.xp) || 0), 0);
+                    .map(r => Number(r.xp) || 0);
+                // But from hodnost 12 on a defence brings no experience (the
+                // user, 2026-11-04). One further past 1.5M than any single
+                // attack of ours could carry them was past it before all of
+                // them, and none has moved them since.
+                const gained = def.lo - rankMin(12) >= Math.max(0, ...hits)
+                    ? 0 : hits.reduce((a, x) => a + x, 0);
                 if (def.lo - gained - rankMin(now) >= o.rezerva) {
                     put(rec, 'hodnost_obrance', now, true);
                     res.obrance++;

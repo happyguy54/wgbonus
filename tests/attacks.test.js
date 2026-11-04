@@ -617,13 +617,28 @@ section('hodnost of a defender: only when well past its threshold');
     ok('all of them only estimates', round.every(r => r.hodnost_obrance_jiste === 0));
 
     // Well past the threshold today, but a big round of ours since: rounds
-    // now give a defender 50-100k (2026-10-30). Today's 1 560k is 60k past
-    // rank 12's 1.5M; ten attacks of 7k each put the first at 1 490k.
-    const zeb3 = A.parseZebricek('### ZEBRICEK 2026-10-28 10:00:00\nE(#5) - e\t100km2\t1 560k\t1 200k\t(12)');
+    // now give a defender 50-100k (2026-10-30). Today's 1 160k is 60k past
+    // rank 11's 1.1M; ten attacks of 7k each put the first at 1 090k.
+    const zeb3 = A.parseZebricek('### ZEBRICEK 2026-10-28 10:00:00\nE(#5) - e\t100km2\t1 160k\t1 200k\t(11)');
     const big = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-10-27 21:5' + i + ':00', cil_id: 5, xp: 7000 }));
     A.applyHodnost(big, [], zeb3);
-    eq('first attack of the big round: the previous rank, as an estimate', `${big[0].hodnost_obrance}/${big[0].hodnost_obrance_jiste}`, '11/0');
-    eq('its last attack: 7k since, 53k past - certain', `${big[9].hodnost_obrance}/${big[9].hodnost_obrance_jiste}`, '12/1');
+    eq('first attack of the big round: the previous rank, as an estimate', `${big[0].hodnost_obrance}/${big[0].hodnost_obrance_jiste}`, '10/0');
+    eq('its last attack: 7k since, 53k past - certain', `${big[9].hodnost_obrance}/${big[9].hodnost_obrance_jiste}`, '11/1');
+
+    // From hodnost 12 a defence brings nothing (2026-11-04). Haffik (#85),
+    // 1 520k after .ghost's 21 týl of 3.11 (242k, the biggest 18k): 20k past
+    // 1.5M is more than one attack could carry him, so he was 12 all along.
+    const zeb4 = A.parseZebricek('### ZEBRICEK 2026-11-03 09:50:00\nH(#85) - h\t100km2\t1 520k\t3 250k\t(12)');
+    const ghost = [18069, 16494, 14531, 13116, 13088, 12545, 12311, 11519, 11440, 11003, 10551, 10098, 9635, 9765, 9897, 9578, 9708, 9840, 9812, 9779, 9745]
+        .map((xp, i) => ({ cas: '2026-11-03 09:' + String(1 + Math.floor(i / 2)).padStart(2, '0') + ':' + (i % 2 ? '30' : '00'), cil_id: 85, xp }));
+    A.applyHodnost(ghost, [], zeb4);
+    ok('rank 12 past 1.5M by more than one attack: certain 12 for the whole round',
+        ghost.every(r => r.hodnost_obrance === 12 && r.hodnost_obrance_jiste === 1));
+    // 1 506k with 7k attacks since: the first could have carried him over.
+    const zeb5 = A.parseZebricek('### ZEBRICEK 2026-11-03 09:50:00\nH(#86) - h\t100km2\t1 506k\t3 250k\t(12)');
+    const near = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-11-03 09:0' + i + ':00', cil_id: 86, xp: 7000 }));
+    A.applyHodnost(near, [], zeb5);
+    eq('within one attack of 1.5M: worked out as before, rank 11 as an estimate', `${near[0].hodnost_obrance}/${near[0].hodnost_obrance_jiste}`, '11/0');
 
     // A newer reading works out again whatever this wrote; a typed value stays.
     const est = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 4, hodnost_obrance_jiste: 0 };
