@@ -117,7 +117,11 @@
              'hodnost_utocnik_jiste', 'hodnost_obrance_jiste']
                 .forEach(k => { if (src[k] !== undefined && src[k] !== null) rec[k] = src[k]; });
         });
+        // Wars add up like records: a file's list joins ours, never replaces it.
+        const valky = (settings.valky || []).slice();
         if (data.settings) settings = Object.assign(settings, data.settings);
+        A.mergeValky(valky, [...((data.settings || {}).valky || []), ...(Array.isArray(data.valky) ? data.valky : [])]);
+        settings.valky = valky;
         settings.mozek = mozekSetting(settings.mozek);
         if (Array.isArray(data.equations)) equations = data.equations;
         if (Array.isArray(data.konflikty)) {
