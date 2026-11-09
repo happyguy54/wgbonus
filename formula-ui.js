@@ -1020,6 +1020,7 @@
                         <p><strong>Funkce:</strong> <code>${Engine.functionNames().join('</code>, <code>')}</code></p>
                         <p><strong>Konstanty:</strong> <code>pi</code>, <code>e</code></p>
                         <p><code>log(x)</code> je přirozený logaritmus, <code>log(x, z)</code> o základu z. <code>if(podmínka, a, b)</code> vybírá podle podmínky.</p>
+                        <p><code>strop(x)</code> je strop zkušeností za útok: do 20 000 beze změny, nad 20 000 se počítá jen polovina. <code>strop(x, hranice, sklon)</code> pro jiné hodnoty.</p>
                         <p>Vzorec může používat výsledek jiného vzorce — stačí napsat jeho identifikátor.</p>
                     </details>
                 </div>

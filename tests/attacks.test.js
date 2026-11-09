@@ -879,6 +879,18 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('an enemy air raid on us is a nálet, read from the text too', `${A.fillTypes([raid])}/${raid.typ}`, '1/nalet');
     eq('a partial raid as well', A.detectType('podnikla částečný letecký útok na naše strategická vojenská zařízení').id, 'nalet');
     eq('an old týl and partisan get their readiness drop from the text', `${A.fillReadiness([oldTyl, oldParty, okRec])}/${oldTyl.pripravenost_pokles}/${oldParty.pripravenost_pokles}`, '2/9/3');
+    {
+        // A successful bunker entry: the bunkers are the defender's loss, and the
+        // id is the one a stored record (bunkers unread) already has.
+        const line = '9.11.2026\t12:56:41\tNaší pěchotě se podařilo vniknout do 10771 bunkrů země České Císařství(#180)[ICZ] - ItsCharlesCZ a zneškodnit je. Při tom zahynulo 27011 našich vojáků. Získáno 14825 zkušeností.';
+        const b = A.parsePaste(line).records[0];
+        eq('bunker entry: bunkers, our dead, xp', [b.typ, b.zabito_bunkry, b.ztraty_utocnik, b.zabito_celkem, b.xp].join('/'), 'bunkry/10771/27011/10771/14825');
+        eq('bunker entry: id leaves the bunkers out', b.id, '2026-11-09 12:56:41|bunkry|180||||||27011||14825');
+        const stored = Object.assign({}, b, { zabito_bunkry: null, zabito_celkem: null });
+        eq('stored bunker entry gets its bunkers from the text', `${A.fillBunkers([stored, oldTyl])}/${stored.zabito_bunkry}/${stored.zabito_celkem}/${stored.id === b.id}`, '1/10771/10771/true');
+        const failed = A.parsePaste('3.11.2026\t19:23:49\tNaši vojáci nevnikli díky silnému odporu Horší, než zlo.(#87) [HOLY] - White Dead do bunkrů. Zahynulo při tom 7529 našich a 4216 nepřátelských vojáků. Získáno 553 zkušeností.').records[0];
+        eq('failed bunker entry: no bunkers', [failed.zabito_bunkry, failed.ztraty_utocnik, failed.ztraty_obrance].join('/'), '/7529/4216');
+    }
     const def = { id: 'z', typ: 'partyzansky', xp: 2042, utocnik_id: 83, cil_id: 45, cil_zeme: 'Xenofobni humanista',
         raw: '3.10.2026 10:07:32 Naši vojáci odvrátili partyzánský útok Xenofobni humanista(#45) [HOLY] - DJ.SantusVorisek . Zahynulo při tom 1471 našich a 3357 nepřátelských vojáků. Získáno 2042 zkušeností.' };
     eq('a defence stored as our attack is marked, once', [A.markDefences([def, okRec]), A.markDefences([def])].join(','), '1,0');

@@ -103,7 +103,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -693,7 +693,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -845,7 +845,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
@@ -1364,6 +1364,13 @@
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
+            // The same three under the per-attack XP cap (2026-11-09): strop() leaves
+            // XP up to 20 000 as is and halves what is above it. Found on .ghost's
+            // týl rounds; the 21.9 round (~30k XP, previous age, with mozek) lands
+            // on the same level only with 20 000 + half.
+            ['noční tažení (pd^0.65 + strop 20k)', `strop(29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek)`],
+            ['týl (pd^0.65 + strop 20k)', `strop(max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek)`],
+            ['partyzánský (pd^0.65 + strop 20k)', `strop(max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek)`],
             // Log-ratio presets (2026-11-09, round constants only): the prestiž
             // factor is pd^0.75 / pa damped by exp(-ln(pd/pa)^2 / 4), so XP stops
             // rising once the target is ~2-3x our prestiž; +10 % in the first full

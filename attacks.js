@@ -220,7 +220,10 @@
             rec.zabito_vojaci = rec.ztraty_obrance;
             rec.zabito_tanky = null;
             rec.zabito_stihacky = null;
-            rec.zabito_bunkry = null;
+            // A successful one: "Naší pěchotě se podařilo vniknout do 10771
+            // bunkrů země X … a zneškodnit je. Při tom zahynulo 27011 našich
+            // vojáků." - the bunkers are what the defender lost.
+            rec.zabito_bunkry = bunkersEntered(text);
             rec.zakladny = null;
         } else if (rec.typ === 'partyzansky') {
             // "Partyzánský útok na X(#79) se zdařil. Připravenost nepřátelské
@@ -266,7 +269,9 @@
             rec.cas || '?',
             rec.typ || '?',
             rec.cil_id === null ? '?' : rec.cil_id,
-            rec.zabito_vojaci, rec.zabito_tanky, rec.zabito_stihacky, rec.zabito_bunkry,
+            // Bunker entries were stored before their bunkers were read; leaving
+            // the count out keeps their ids, so a re-paste is no duplicate.
+            rec.zabito_vojaci, rec.zabito_tanky, rec.zabito_stihacky, rec.typ === 'bunkry' ? null : rec.zabito_bunkry,
             rec.zakladny, rec.ztraty_utocnik, rec.ztraty_obrance, rec.xp,
         ].join('|');
     }
@@ -417,6 +422,28 @@
             if (rec.typ !== 'tyl' && rec.typ !== 'partyzansky') return;
             const m = String(rec.raw || '').match(/p[řr]ipravenost[^.%]{0,40}?\so\s+([\d.,]+)\s*%/i);
             if (m) { rec.pripravenost_pokles = Number(m[1].replace(',', '.')); n++; }
+        });
+        return n;
+    }
+
+    /** Bunkers taken in a bunker entry, from its text ("vniknout do 10771 bunkrů"). */
+    function bunkersEntered(text) {
+        return grab(text, /vnik(?:nout|nul[aoi]?)\s+do\s+([\d\s .]+?)\s*(?:na[šs]ich\s+)?bunkr/i);
+    }
+
+    /**
+     * Bunker entries stored before the parser read their bunkers get the count
+     * from their text, along with the body count. The id stays. Returns how many.
+     */
+    function fillBunkers(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!rec || rec.typ !== 'bunkry' || rec.zabito_bunkry != null || !rec.raw) return;
+            const b = bunkersEntered(rec.raw);
+            if (b === null) return;
+            rec.zabito_bunkry = b;
+            rec.zabito_celkem = (rec.zabito_vojaci || 0) + b;
+            n++;
         });
         return n;
     }
@@ -1539,6 +1566,7 @@
         markFailures,
         markDefences,
         fillReadiness,
+        fillBunkers,
         fillTypes,
         parseValky,
         mergeValky,
