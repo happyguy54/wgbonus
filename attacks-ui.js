@@ -1355,15 +1355,26 @@
         // The defender's lost prestiž, pd^0.65 / pa, only k fitted (2026-10-07, analyza/vzorce.js).
         const HOD = '(1 + hodnost_bonus / 100)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
+        // Pieces of the log-ratio presets below.
+        const WAR2 = '(1 + valka_prvni_hodina / 5)';
+        const PR2 = 'pow(prestiz_obrance, 0.75) / prestiz_utocnik * exp(-pow(ln(prestiz_obrance / prestiz_utocnik), 2) / 4)';
+        const HL2 = '(1 - (hodnost_utocnik >= 5) * min(20, max(0, (hodnost_utocnik - hodnost_obrance - 1) * 5)) / 100)';
+        const RK2 = 'pow(0.96, hodnost_utocnik)';
         const PRESETS = [
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
-            // Diminishing returns on units, U·ln(1 + units/U), fitted 31.10 on all attacks
-            // (analyza/log-presety.js) - beside the presets above, to compare.
-            ['noční tažení (log, 31.10)', `0.551 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_lost) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100) * mozek`],
-            ['týl (log, 31.10)', `max(150, 0.679 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + attack_prestiz / 3) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek`],
-            ['partyzánský (log, 31.10)', `max(150, 0.845 * (1 + valka_prvni_hodina / 10) * 137000 * ln(1 + (defense_prestiz + 0.2 * attack_prestiz) / 137000) * pow(prestiz_obrance / 100000, 0.61) / pow(prestiz_utocnik / 100000, 1) * (1 + hodnost_bonus / 100)) * mozek`],
+            // Log-ratio presets (2026-11-09, round constants only): the prestiž
+            // factor is pd^0.75 / pa damped by exp(-ln(pd/pa)^2 / 4), so XP stops
+            // rising once the target is ~2-3x our prestiž; +20 % in the first full
+            // war hour (the help's figure, which fits better than +10 %); a
+            // penalty only when the attacker leads (5 % per rank beyond the first,
+            // at most 20 %, from rank 5) - a higher-ranked defender gives nothing
+            // extra; and 0.96 per attacker rank. Spread per attack 12.4 % against
+            // 18 % for the pd^0.65 presets refitted (1013 attacks).
+            ['noční tažení (log-poměr, 9.11)', `10 * ${WAR2} * (defense_prestiz + attack_lost) * ${PR2} * ${HL2} * ${RK2} * mozek`],
+            ['týl (log-poměr, 9.11)', `max(150, 13.5 * ${WAR2} * (defense_prestiz + attack_prestiz / 3) * ${PR2} * ${HL2} * ${RK2}) * mozek`],
+            ['partyzánský (log-poměr, 9.11)', `max(150, 16 * ${WAR2} * (defense_prestiz + 0.2 * attack_prestiz) * ${PR2} * ${HL2} * ${RK2}) * mozek`],
             ['ztráty v jednotkách', 'defense_lost + 0.25 * attack_lost'],
             ['ztráty v prestiži', 'defense_prestiz + 0.266 * attack_prestiz'],
             ['+ hodnost', '(defense_prestiz + 0.266 * attack_prestiz) * ' + HF],
