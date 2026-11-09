@@ -40,7 +40,7 @@ round min max clamp strop sin cos tan atan atan2 hypot if`
 - `log(x)` is natural; `log(x, b)` is base `b`.
 - `round(x)` to integer; `round(x, 2)` to 2 decimals.
 - `if(condition, a, b)`; constants `pi`, `e`.
-- `strop(x)` is the per-attack XP cap: up to 20 000 unchanged, half of the rest above it;
+- `strop(x)` is the per-attack XP cap: up to 18 000 unchanged, half of the rest above it;
   `strop(x, limit, slope)` for other values.
 
 A formula can reference another formula by its identifier. Circular references

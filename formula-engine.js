@@ -225,11 +225,13 @@
         min:   a => (nargs('min', a, 1, Infinity), Math.min(...a)),
         max:   a => (nargs('max', a, 1, Infinity), Math.max(...a)),
         clamp: a => (nargs('clamp', a, 3, 3), Math.min(Math.max(a[0], a[1]), a[2])),
-        // strop(x) - the per-attack XP cap (2026-11-09): up to 20 000 as is,
-        // above it only half counts. strop(x, hranice, sklon) for other values.
+        // strop(x) - the per-attack XP cap: up to 18 000 as is, above it only
+        // half counts (2026-11-10: the attacks under 18 000 that close .ghost's
+        // uno rounds sit on the same level as the capped ones only at 18 000).
+        // strop(x, hranice, sklon) for other values.
         strop: a => {
             nargs('strop', a, 1, 3);
-            const lim = a.length > 1 ? a[1] : 20000, slope = a.length > 2 ? a[2] : 0.5;
+            const lim = a.length > 1 ? a[1] : 18000, slope = a.length > 2 ? a[2] : 0.5;
             return a[0] <= lim ? a[0] : lim + slope * (a[0] - lim);
         },
         sin:   a => (nargs('sin', a, 1, 1), Math.sin(a[0])),

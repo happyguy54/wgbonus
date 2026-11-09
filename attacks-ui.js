@@ -1366,16 +1366,17 @@
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
-            // The same three under the per-attack XP cap (2026-11-09): strop() leaves
-            // XP up to 20 000 as is and halves what is above it. Found on .ghost's
-            // týl rounds; the 21.9 round (~30k XP, previous age, with mozek) lands
-            // on the same level only with 20 000 + half. Hodnost as in the manual
+            // The same three under the per-attack XP cap: strop() leaves XP up to
+            // 18 000 as is and halves what is above it. Found on .ghost's týl
+            // rounds (2026-11-09, moved from 20 000 to 18 000 on 11-10: within his
+            // four 8.-9.11 rounds the spread falls from 0.9-1.4 % to 0.4-0.6 %);
+            // the 21.9 round (~30k XP, previous age, with mozek) agrees. Hodnost as in the manual
             // but only as a penalty when the attacker leads: a higher-ranked
             // defender gives no bonus in the data (#118 -> #35 on 6.11: 0.77 with
             // the bonus, 0.89 without). Týl spread 16.1 -> 14.8 %, noční the same.
-            ['noční tažení (pd^0.65 + strop 20k)', `strop(29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN} * mozek)`],
-            ['týl (pd^0.65 + strop 20k)', `strop(max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
-            ['partyzánský (pd^0.65 + strop 20k)', `strop(max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
+            ['noční tažení (pd^0.65 + strop 18k)', `strop(29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN} * mozek)`],
+            ['týl (pd^0.65 + strop 18k)', `strop(max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
+            ['partyzánský (pd^0.65 + strop 18k)', `strop(max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
             // Log-ratio presets (2026-11-09, round constants only): the prestiž
             // factor is pd^0.75 / pa damped by exp(-ln(pd/pa)^2 / 4), so XP stops
             // rising once the target is ~2-3x our prestiž; +10 % in the first full
