@@ -203,6 +203,7 @@
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
         ['pripravenost_pokles', 'o kolik % útok snížil připravenost nepřítele (týl, partyzánský), jinak 0'],
         ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po našem vyhlášení války aliance cíle), jinak 0 - zkušenosti +10 %'],
+        ['valka_xp', 'násobek zkušeností podle stavu války: 0,5 v právě vyhlášené válce (prvních 12 h), 1,1 v první hodině plné války, jinak 1'],
         ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
         ['zabito_mechove', 'zničení bránící mechové'],
@@ -1358,6 +1359,8 @@
         const HOD = '(1 + hodnost_bonus / 100)';
         // The manual's hodnost rule as a penalty only (no bonus against a higher rank).
         const HPEN = '(1 + min(0, hodnost_bonus) / 100)';
+        // Prestiž of both countries in millions: (pd/1M)^0.65 / (pa/1M).
+        const PMIL = 'pow(prestiz_obrance / 1000000, 0.65) / (prestiz_utocnik / 1000000)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         // Pieces of the log-ratio presets below.
         const WAR2 = '(1 + valka_prvni_hodina / 10)';
@@ -1365,20 +1368,24 @@
         const HL2 = '(1 - (hodnost_utocnik >= 5) * min(20, max(0, (hodnost_utocnik - hodnost_obrance - 1) * 5)) / 100)';
         const RK2 = 'pow(0.96, hodnost_utocnik)';
         const PRESETS = [
+            // One shape for every tactical attack (2026-11-14, 1 370 attacks):
+            //   c * valka_xp * (their lost prestiž + ours / 3) * (pd/1M)^0.65 / (pa/1M)
+            // with c = 0.24 noční, 0.30 týl and partisan, 0.36 nálet - the same
+            // pd^0.65 / pa as before, written per million so the constants are
+            // round (0.30 is the old 37.2 within 1.5 %). Our losses count a third
+            // of their prestiž in every type (free fits: týl 0.33, noční 0.32,
+            // partisan 0.28-0.37, nálet 0.37-0.42); agents stay 15 (free 15.2).
+            // valka_xp halves a just-declared war. strop() is the 18 000 cap,
+            // hodnost the manual's rule as a penalty only. Attackers whose
+            // country is intact (early EJZ, .ghost, #118) sit at 1.00-1.02 in all
+            // four types, 2.7-4.5 % within rounds and 4-6 % between them.
+            ['noční tažení (14.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN} * mozek)`],
+            ['týl (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
+            ['partyzánský (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
+            ['taktický nálet (14.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
-            // The same three under the per-attack XP cap: strop() leaves XP up to
-            // 18 000 as is and halves what is above it. Found on .ghost's týl
-            // rounds (2026-11-09, moved from 20 000 to 18 000 on 11-10: within his
-            // four 8.-9.11 rounds the spread falls from 0.9-1.4 % to 0.4-0.6 %);
-            // the 21.9 round (~30k XP, previous age, with mozek) agrees. Hodnost as in the manual
-            // but only as a penalty when the attacker leads: a higher-ranked
-            // defender gives no bonus in the data (#118 -> #35 on 6.11: 0.77 with
-            // the bonus, 0.89 without). Týl spread 16.1 -> 14.8 %, noční the same.
-            ['noční tažení (pd^0.65 + strop 18k)', `strop(29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN} * mozek)`],
-            ['týl (pd^0.65 + strop 18k)', `strop(max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
-            ['partyzánský (pd^0.65 + strop 18k)', `strop(max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HPEN}) * mozek)`],
             // Log-ratio presets (2026-11-09, round constants only): the prestiž
             // factor is pd^0.75 / pa damped by exp(-ln(pd/pa)^2 / 4), so XP stops
             // rising once the target is ~2-3x our prestiž; +10 % in the first full

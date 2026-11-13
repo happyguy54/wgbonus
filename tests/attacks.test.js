@@ -968,6 +968,19 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('13 h after: the bonus hour is over', at('2026-10-06 21:02:00', 'YOZZEFY'), 0);
     eq('a war declared on us: no bonus hour', at('2026-10-04 19:45:00', '*MAFIE*'), 0);
     eq('our declaration on MAFIE counts', at('2026-10-05 18:48:00', '*MAFIE*'), 1);
+    // War state as an XP factor: half in a just-declared war, +10 % in the first full hour.
+    const w2 = [{ ali: 'EJZ', proti: '.B.I.S.', od: '2026-11-12 16:50' }];
+    const wx = (cas, valky = w2, ali = '.B.I.S.') => A.scopeFor({ typ: 'partyzansky', cas, cil_aliance: ali }, { valky }).valka_xp;
+    eq('minutes after the declaration: 0.5', wx('2026-11-12 16:54:10'), 0.5);
+    eq('11.9 h in: still 0.5', wx('2026-11-13 04:44:00'), 0.5);
+    eq('first full hour: 1.1', wx('2026-11-13 05:10:00'), 1.1);
+    eq('later: 1', wx('2026-11-13 10:24:00'), 1);
+    eq('another alliance: 1', wx('2026-11-12 17:00:00', w2, 'NATO'), 1);
+    eq('no wars known: 1', A.scopeFor({ typ: 'nocni', cas: '2026-11-12 17:00:00', cil_aliance: '.B.I.S.' }, {}).valka_xp, 1);
+    eq('before the declaration: 1', wx('2026-11-12 16:00:00'), 1);
+    const both = [{ ali: '*MAFIE*', proti: 'EJZ', od: '2026-10-04 07:30', do: '2026-10-07 23:12' }, { ali: 'EJZ', proti: '*MAFIE*', od: '2026-10-05 05:50' }];
+    eq('their older war is in full force: our fresh one does not halve', wx('2026-10-05 11:10:00', both, '*MAFIE*'), 1);
+    eq('a war that ended does not count', wx('2026-10-08 10:00:00', [both[0]], '*MAFIE*'), 1);
     eq('readiness drop as a variable', A.scopeFor({ typ: 'tyl', pripravenost_pokles: 7 }, {}).pripravenost_pokles + '/' + A.scopeFor({ typ: 'nocni' }, {}).pripravenost_pokles, '7/0');
     eq('no wars known: 0', A.scopeFor({ typ: 'nocni', cas: '2026-10-06 20:03:00', cil_aliance: 'YOZZEFY' }, {}).valka_prvni_hodina, 0);
 }

@@ -1095,6 +1095,34 @@
     }
 
     /** "2026-09-30 20:25:26" -> Date in local time, as the game shows it. */
+    /**
+     * XP factor of the war state at the time of the attack:
+     *   0.5  the war with the target's alliance is "právě vyhlášená" - every
+     *        known active war with that alliance is younger than 12 hours
+     *        (#68 -> #152 on 12.11.2026, 21 partisan attacks minutes after the
+     *        declaration: 0.51 of his full-war level);
+     *   1.1  the first hour of full war (12-13 h after we declared);
+     *   1    otherwise, and whenever no war with that alliance is known.
+     * An older war in full force wins: on 5.10. EJZ had declared on *MAFIE*
+     * five hours earlier, but *MAFIE*'s own war on EJZ was a day old.
+     */
+    function warXp(rec, valky) {
+        if (!rec || !rec.cas || !rec.cil_aliance || !valky || !valky.length) return 1;
+        const t = casDate(rec.cas);
+        if (!t) return 1;
+        let oldest = null;
+        valky.forEach(v => {
+            if (v.proti !== rec.cil_aliance && v.ali !== rec.cil_aliance) return;
+            const od = casDate(v.od);
+            if (!od || od > t) return;
+            if (v.do && casDate(v.do) < t) return;
+            const h = (t - od) / 3600e3;
+            if (oldest === null || h > oldest) oldest = h;
+        });
+        if (oldest !== null && oldest < 12) return 0.5;
+        return firstFullWarHour(rec, valky) ? 1.1 : 1;
+    }
+
     function casDate(cas) {
         const m = String(cas || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
         return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null;
@@ -1477,6 +1505,8 @@
         const wh = warHours(rec, s.valky);
         if (wh !== null) out.valka_hodin = wh;
         out.valka_prvni_hodina = firstFullWarHour(rec, s.valky);
+        // 0.5 in a just-declared war, 1.1 in the first full hour, else 1.
+        out.valka_xp = warXp(rec, s.valky);
 
         // Tajemství mozku: the attacker's XP × 1.25 (settings.mozek).
         out.mozek = mozekFor(rec, s.mozek);
@@ -1590,6 +1620,7 @@
         mergeValky,
         warHours,
         firstFullWarHour,
+        warXp,
         parseMozek,
         mozekFor,
         rankFor,

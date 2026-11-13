@@ -6,6 +6,35 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
+## One shape, round constants (2026-11-14, 1 370 attacks)
+
+Page presets "(14.11)":
+
+    XP0 = c * valka_xp * (D + A/3) * (pd/1M)^0.65 / (pa/1M) * hodnost * mozek
+    XP  = strop(XP0)                      18 000 + half of what is above
+
+D is the prestiž the defender lost (units, bases 5, agents 15, burnt energy
+0.02/MWh), A the prestiž of our own dead. c = 0.24 noční, 0.30 týl and
+partisan, 0.36 nálet; týl, partisan and nálet have the floor of 150 before
+mozek. `valka_xp` is 0.5 in a just-declared war (first 12 h), 1.1 in the first
+full hour, else 1. Hodnost is the manual's rule as a penalty only.
+
+- It is the old pd^0.65 / pa written per million: 0.30 is 37.2 within 1.5 %.
+- Our losses at a third fit every type (free: týl 0.33, noční 0.32, partisan
+  0.28-0.37, nálet 0.37-0.42); agents at 15 (free 15.2 on early data).
+- Konflikty give the defender's real prestiž drop per attack: it is 0.998 of
+  what D counts in týl and noční, 0.993 in nálet. Nothing is missing there.
+- Prewar: #68 -> #152 on 12.11., 21 partisan attacks minutes after the
+  declaration, sit at 0.51 of his full-war level.
+- Intact attackers (early EJZ, .ghost, #118) sit at 1.00-1.02 in all four
+  types: 2.7-4.5 % within rounds, 4-6 % between. The destroyed EJZ countries
+  stay at 0.79-0.91 from late October; nothing in the messages follows it
+  (prestiž, ratio, rank, kill ratio, readiness taken by enemy attacks).
+- sqrt(pd) / pa lifts late EJZ to 1.0 in noční and partisan but puts #118's
+  partisans at 1.65 and .ghost's týl at 1.48, so it is not the answer.
+- Open: bobinka's noční on 13.11. (154 374 XP, reported as prewar) fits prewar
+  with no cap (1.008) or full war with the cap (0.95), not prewar with the cap.
+
 ## The defender's lost prestiž (2026-10-07, 1417 records, 780 attacks)
 
 XP comes from the prestiž the defender lost (the user), so their losses count
