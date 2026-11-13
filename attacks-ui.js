@@ -1359,6 +1359,13 @@
         const HOD = '(1 + hodnost_bonus / 100)';
         // The manual's hodnost rule as a penalty only (no bonus against a higher rank).
         const HPEN = '(1 + min(0, hodnost_bonus) / 100)';
+        // The attacker's own rank: -10 % at rank 12, -20 % from 13 on. Without any
+        // rank rule the round level follows the attacker's rank, not the gap to the
+        // defender: ranks 1-11 sit at 1.00-1.03, rank 12 at 0.89, rank 13 at 0.76
+        // (29 of its 31 rounds do not lead the defender, so the manual's rule gives
+        // them nothing), ranks 14-19 at 0.74-0.87. Against the manual's rule as a
+        // penalty: between rounds 12.8 -> 7.4 %, partisan R2 0.951 -> 0.975.
+        const HOWN = '(1 - clamp(hodnost_utocnik - 11, 0, 2) / 10)';
         // Prestiž of both countries in millions: (pd/1M)^0.65 / (pa/1M).
         const PMIL = 'pow(prestiz_obrance / 1000000, 0.65) / (prestiz_utocnik / 1000000)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
@@ -1376,13 +1383,12 @@
             // of their prestiž in every type (free fits: týl 0.33, noční 0.32,
             // partisan 0.28-0.37, nálet 0.37-0.42); agents stay 15 (free 15.2).
             // valka_xp halves a just-declared war. strop() is the 18 000 cap,
-            // hodnost the manual's rule as a penalty only. Attackers whose
-            // country is intact (early EJZ, .ghost, #118) sit at 1.00-1.02 in all
-            // four types, 2.7-4.5 % within rounds and 4-6 % between them.
-            ['noční tažení (14.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN} * mozek)`],
-            ['týl (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
-            ['partyzánský (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
-            ['taktický nálet (14.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
+            // hodnost the attacker's own rank (HOWN above). 172 of 250 rounds sit
+            // within 10 % and 216 within 20 %; what is left is 3.-4.11. (0.80).
+            ['noční tažení (14.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN} * mozek)`],
+            ['týl (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
+            ['partyzánský (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
+            ['taktický nálet (14.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
