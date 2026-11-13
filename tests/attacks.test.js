@@ -756,6 +756,18 @@ section('Lord Azeroth (#55), 2.10.: more wordings (samples/sber-55-tvary.txt)');
     eq('their soldiers not counted twice as mechs', sc.zabito_mechove, 0);
     eq('attacks among the 12 rows: 4 partisan attacks and a conquest', records.filter(A.isAttack).length, 5);
 
+    // Burnt energy, read from the text: 0.02 prestiž per MWh, in defense_prestiz.
+    const fire = { typ: 'partyzansky', ztraty_obrance: 3909, zabito_vojaci: 3909, zabito_agenti: 257, ztraty_utocnik: 8427,
+        raw: '6.11.2026 17:34:47 Partyzánský útok na *=* ___________*=*(#88) [MaNTiNeL] - o.O.oDin se zdařil. Připravenost nepřátelské armády byla snížena o 0% , zabito bylo 257 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 9717 MWh. Při bojích zahynulo 8427 našich a 3909 nepřátelských vojáků. Získáno 5001 zkušeností.' };
+    eq('energy burnt read from the text', A.energyBurnt(fire.raw), 9717);
+    const fs2 = A.scopeFor(fire, {});
+    eq('defense_energie in MWh', fs2.defense_energie, 9717);
+    eq('energie_prestiz at 0.02 per MWh', Math.round(fs2.energie_prestiz * 100) / 100, 194.34);
+    eq('defense_prestiz = soldiers + 15 per agent + energy', Math.round(fs2.defense_prestiz * 100) / 100, 3909 + 257 * 15 + 194.34);
+    eq('the 2.10. sample burnt 201 MWh', A.scopeFor(p, {}).defense_energie, 201);
+    eq('no text, no energy', A.scopeFor({ typ: 'partyzansky', ztraty_obrance: 5 }, {}).defense_energie, 0);
+    eq('other attacks burn none', A.scopeFor({ typ: 'nocni', raw: 'zásoba energie nepřítele o 50 MWh' }, {}).defense_energie, 0);
+
     const d = require('../attacks.default.json');
     const known = (d.records || d).concat(A.parsePaste(fs.readFileSync(path.join(__dirname, '..', 'samples', 'sber-47.txt'), 'utf8')).records.filter(A.isAttack));
     eq('none of the 127 known attacks reads as a defence', known.filter(r => A.DEFENCE.test(r.raw || '')).length, 0);

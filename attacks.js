@@ -426,6 +426,16 @@
         return n;
     }
 
+    /**
+     * Energy a partisan attack burnt, from its text ("zapálením zásob ropy
+     * klesla zásoba energie nepřítele o 9717 MWh"). Read from the text, not
+     * stored, so saved records need no new column.
+     */
+    function energyBurnt(text) {
+        if (!text) return null;
+        return grab(String(text),/z[áa]soba\s+energie\s+nep[řr][íi]tele\s+o\s+([\d\s .]+?)\s*MWh/i);
+    }
+
     /** Bunkers taken in a bunker entry, from its text ("vniknout do 10771 bunkrů"). */
     function bunkersEntered(text) {
         return grab(text, /vnik(?:nout|nul[aoi]?)\s+do\s+([\d\s .]+?)\s*(?:na[šs]ich\s+)?bunkr/i);
@@ -707,6 +717,8 @@
         // Taken in a conquest, per km² and per building (PRESTIGE_TABLE).
         rozloha: 15,
         budovy: 5,
+        // Burnt in partisan attacks, per MWh (PRESTIGE_TABLE).
+        energie: 0.02,
     };
 
     /**
@@ -1496,8 +1508,13 @@
         // within rounds of noční tažení, leaving them out costs ±3.6 % instead
         // of ±1.2 %.
         out.zakladny_prestiz = v('zakladny') * (P.budovy || 0);
-        // What they lost: units, bases, and in a conquest land and buildings.
-        out.defense_prestiz = out.zabito_prestiz + out.zakladny_prestiz + out.zabrano_prestiz;
+        // Energy a partisan attack burnt (MWh), 0.02 prestiž per MWh. Small:
+        // the median partisan burns none, the largest fire is ~6 % of the
+        // prestiž the attack took.
+        out.defense_energie = rec.typ === 'partyzansky' ? (energyBurnt(rec.raw) || 0) : 0;
+        out.energie_prestiz = out.defense_energie * (P.energie || 0);
+        // What they lost: units, bases, burnt energy, and in a conquest land and buildings.
+        out.defense_prestiz = out.zabito_prestiz + out.zakladny_prestiz + out.energie_prestiz + out.zabrano_prestiz;
 
         // Prestiž and hodnost are per-attack in the game, but the message log
         // does not carry them. A record may have its own values; otherwise the
@@ -1567,6 +1584,7 @@
         markDefences,
         fillReadiness,
         fillBunkers,
+        energyBurnt,
         fillTypes,
         parseValky,
         mergeValky,
