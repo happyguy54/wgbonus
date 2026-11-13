@@ -427,6 +427,27 @@
     }
 
     /**
+     * The týl rounds of the previous age (18. and 21.9.2026) were .ghost's
+     * (the user, 2026-11-14), stored before messages carried their attacker.
+     * They get his number, so Tajemství mozku applies to them like to his
+     * other attacks. The id stays; nothing else of the record changes. No
+     * konflikty row or žebříček reading reaches back that far, so pairing and
+     * hodnost are untouched. Returns how many were filled.
+     */
+    const AGE_START = '2026-09-30';
+    function fillPreviousAgeAttacker(records) {
+        let n = 0;
+        (records || []).forEach(rec => {
+            if (!rec || rec.typ !== 'tyl' || rec.utocnik_id || !rec.cas || rec.cas >= AGE_START) return;
+            if (rec.druh === 'obrana' || DEFENCE.test(rec.raw || '')) return;
+            rec.utocnik_id = 48;
+            if (!rec.utocnik_hrac) rec.utocnik_hrac = '.ghost';
+            n++;
+        });
+        return n;
+    }
+
+    /**
      * Energy a partisan attack burnt, from its text ("zapálením zásob ropy
      * klesla zásoba energie nepřítele o 9717 MWh"). Read from the text, not
      * stored, so saved records need no new column.
@@ -1615,6 +1636,7 @@
         fillReadiness,
         fillBunkers,
         energyBurnt,
+        fillPreviousAgeAttacker,
         fillTypes,
         parseValky,
         mergeValky,

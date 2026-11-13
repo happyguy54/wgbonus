@@ -103,7 +103,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -696,7 +696,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -848,7 +848,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
@@ -1359,13 +1359,6 @@
         const HOD = '(1 + hodnost_bonus / 100)';
         // The manual's hodnost rule as a penalty only (no bonus against a higher rank).
         const HPEN = '(1 + min(0, hodnost_bonus) / 100)';
-        // The attacker's own rank: -10 % at rank 12, -20 % from 13 on. Without any
-        // rank rule the round level follows the attacker's rank, not the gap to the
-        // defender: ranks 1-11 sit at 1.00-1.03, rank 12 at 0.89, rank 13 at 0.76
-        // (29 of its 31 rounds do not lead the defender, so the manual's rule gives
-        // them nothing), ranks 14-19 at 0.74-0.87. Against the manual's rule as a
-        // penalty: between rounds 12.8 -> 7.4 %, partisan R2 0.951 -> 0.975.
-        const HOWN = '(1 - clamp(hodnost_utocnik - 11, 0, 2) / 10)';
         // Prestiž of both countries in millions: (pd/1M)^0.65 / (pa/1M).
         const PMIL = 'pow(prestiz_obrance / 1000000, 0.65) / (prestiz_utocnik / 1000000)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
@@ -1383,12 +1376,19 @@
             // of their prestiž in every type (free fits: týl 0.33, noční 0.32,
             // partisan 0.28-0.37, nálet 0.37-0.42); agents stay 15 (free 15.2).
             // valka_xp halves a just-declared war. strop() is the 18 000 cap,
-            // hodnost the attacker's own rank (HOWN above). 172 of 250 rounds sit
-            // within 10 % and 216 within 20 %; what is left is 3.-4.11. (0.80).
-            ['noční tažení (14.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN} * mozek)`],
-            ['týl (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
-            ['partyzánský (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
-            ['taktický nálet (14.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HOWN}) * mozek)`],
+            // hodnost the manual's rule as a penalty only. Attackers whose
+            // country is intact (early EJZ, .ghost, #118) sit at 1.00-1.02 in all
+            // four types, 2.7-4.5 % within rounds and 4-6 % between them.
+            // A penalty by the attacker's own rank (-10 % at 12, -20 % from 13)
+            // was tried on 14.11. and taken out again: it lifts the late EJZ
+            // median from 0.8 to 0.95 but inside one attacker the level does not
+            // follow his rank (#83: 0.82, 0.84, 0.88, 0.79 at ranks 13-16), and
+            // the late spread only goes 19.2 -> 17.6 %. A free level per attacker
+            // and day gives 10.1 %: the level belongs to the attacker on that day.
+            ['noční tažení (14.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN} * mozek)`],
+            ['týl (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
+            ['partyzánský (14.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
+            ['taktický nálet (14.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${HPEN}) * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],

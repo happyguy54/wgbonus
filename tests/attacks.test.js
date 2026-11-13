@@ -968,6 +968,17 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('13 h after: the bonus hour is over', at('2026-10-06 21:02:00', 'YOZZEFY'), 0);
     eq('a war declared on us: no bonus hour', at('2026-10-04 19:45:00', '*MAFIE*'), 0);
     eq('our declaration on MAFIE counts', at('2026-10-05 18:48:00', '*MAFIE*'), 1);
+    // The previous age's týl rounds were .ghost's: they get his number, so mozek applies.
+    const oldTylG = { id: 'x1', typ: 'tyl', cas: '2026-09-21 09:55:59', cil_id: 69, xp: 29972, raw: 'Naší tankové brigádě se podařilo bleskovým úderem napadnout týl' };
+    const oldNoc = { id: 'x2', typ: 'nocni', cas: '2026-09-16 08:35:05', cil_id: 61, xp: 15407 };
+    const newTyl = { id: 'x3', typ: 'tyl', cas: '2026-09-30 20:09:24', cil_id: 91, xp: 150 };
+    const theirs = { id: 'x4', typ: 'tyl', cas: '2026-09-21 10:00:00', druh: 'obrana', cil_id: 47, xp: 10 };
+    const named = { id: 'x5', typ: 'tyl', cas: '2026-09-21 10:00:00', utocnik_id: 83, cil_id: 69, xp: 10 };
+    eq('previous-age týl without an attacker: filled', A.fillPreviousAgeAttacker([oldTylG, oldNoc, newTyl, theirs, named]), 1);
+    eq('…as .ghost (#48), id kept', `${oldTylG.utocnik_id} ${oldTylG.utocnik_hrac} ${oldTylG.id}`, '48 .ghost x1');
+    eq('noční, this age, a defence and a named attacker stay', [oldNoc, newTyl, theirs].map(r => r.utocnik_id || '-').join('') + named.utocnik_id, '---83');
+    eq('mozek now applies to it', A.scopeFor(oldTylG, { mozek: '47, 48' }).mozek, 1.25);
+    eq('a second pass fills nothing', A.fillPreviousAgeAttacker([oldTylG]), 0);
     // War state as an XP factor: half in a just-declared war, +10 % in the first full hour.
     const w2 = [{ ali: 'EJZ', proti: '.B.I.S.', od: '2026-11-12 16:50' }];
     const wx = (cas, valky = w2, ali = '.B.I.S.') => A.scopeFor({ typ: 'partyzansky', cas, cil_aliance: ali }, { valky }).valka_xp;

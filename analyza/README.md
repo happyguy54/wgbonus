@@ -17,18 +17,22 @@ D is the prestiž the defender lost (units, bases 5, agents 15, burnt energy
 0.02/MWh), A the prestiž of our own dead. c = 0.24 noční, 0.30 týl and
 partisan, 0.36 nálet; týl, partisan and nálet have the floor of 150 before
 mozek. `valka_xp` is 0.5 in a just-declared war (first 12 h), 1.1 in the first
-full hour, else 1. Hodnost is the attacker's own rank: -10 % at rank 12, -20 %
-from rank 13 on.
+full hour, else 1. Hodnost is the manual's rule as a penalty only.
 
-- Own rank, not the gap (later on 2026-11-14). With no rank rule the round level
-  is 1.00-1.03 for attacker ranks 1-11, 0.89 at 12, 0.76 at 13, 0.74-0.87 at
-  14-19 - and 29 of the 31 rank-13 rounds do not lead their defender, where the
-  manual's rule gives nothing. Rank is the strongest correlate of the level
-  (Spearman -0.72 overall, -0.62 inside the late period; days into the age
-  -0.48, pd/pa -0.35). Against the manual's rule as a penalty: between rounds
-  12.8 -> 7.4 %, late EJZ 0.79-0.91 -> 0.90-1.01, .ghost stays 1.00. 172 of 250
-  rounds within 10 %, 216 within 20 %. Left over: 3.-4.11. at 0.80, #118's one
-  rank-12 partisan round at 1.17, #68 at ranks 15-16 around 0.75.
+- A penalty by the attacker's own rank (-10 % at 12, -20 % from 13) was in the
+  presets for a few hours on 2026-11-14 and taken out. Across all rounds it
+  looks strong (level 1.00-1.03 at ranks 1-11, 0.89 at 12, 0.76 at 13; the late
+  EJZ median goes 0.8 -> 0.95), but it only re-centres the late rounds: their
+  spread goes 19.2 -> 17.6 %, and inside one attacker the level does not follow
+  his rank (#83: 0.82, 0.84, 0.88, 0.79 at ranks 13-16; #68: 0.75, 0.69, 0.88).
+- The level belongs to the attacker on that day: a free level per attacker and
+  day leaves 10.1 % (per attacker 16.4 %, per day 16.5 %, per rank 16.7 %). One
+  attacker on one day sits at the same level against different defenders
+  (#44 30.10. partisan: 0.86, 0.86, 0.86, 0.82; #83 25.10. noční: 0.82, 0.83,
+  0.80), while different attackers on one defender differ (#152 on 13.11.:
+  1.06, 0.90, 0.71, 0.68). So it is not the defender's side of a bonus ratio.
+- The previous age's týl rounds (18. and 21.9.) were .ghost's:
+  `fillPreviousAgeAttacker` gives them #48, so mozek applies (21.9.: 1.00-1.04).
 
 - It is the old pd^0.65 / pa written per million: 0.30 is 37.2 within 1.5 %.
 - Our losses at a third fit every type (free: týl 0.33, noční 0.32, partisan
