@@ -915,6 +915,24 @@ function calculateBonusForUnits(jednotky) {
                 <td class="sum r needed-value">${up(totalBonus / atkMul)}</td>
             </tr>`;
 
+    // The line under the table has to give the number in the table. The
+    // unit's own multipliers (H6, Robokracie, Protiletecká obrana...) are
+    // part of "S bonusy", so they belong here too: with mechs at ×1.32 the
+    // line used to end "= ×0.8615" while the table needed ×1.1372.
+    const pct = x => { const v = Math.round((x - 1) * 1000) / 10; return `${v >= 0 ? '+' : ''}${v} %`; };
+    const defText = `obrana ×${defMul.toFixed(4)} (${defenderPct >= 0 ? '+' : ''}${defenderPct} %)`;
+    const atkText = `útok ×${atkMul.toFixed(4)} (${attackerPct >= 0 ? '+' : ''}${attackerPct} %)`;
+    let explain;
+    if (single && parts[0].mul !== 1) {
+        const full = defMul * parts[0].mul;
+        explain = `${defText} × ${parts[0].mul} (${parts[0].unit.toLowerCase()}) = ×${full.toFixed(4)} (${pct(full)})`
+                + ` / ${atkText} = ×${(full / atkMul).toFixed(4)}`;
+    } else if (!single && parts.some(p => p.mul !== 1)) {
+        explain = `${defText} / ${atkText} = ×${(defMul / atkMul).toFixed(4)}, k tomu násobky jednotlivých jednotek z tabulky`;
+    } else {
+        explain = `${defText} / ${atkText} = ×${(defMul / atkMul).toFixed(4)}`;
+    }
+
     out.innerHTML = `
         <table class="vis_tbl needed-units">
             <tr>
@@ -925,11 +943,7 @@ function calculateBonusForUnits(jednotky) {
             </tr>
             ${body}
         </table>
-        <div class="formula-note needed-explain">
-            obrana ×${defMul.toFixed(4)} (${defenderPct >= 0 ? '+' : ''}${defenderPct} %)
-            / útok ×${atkMul.toFixed(4)} (${attackerPct >= 0 ? '+' : ''}${attackerPct} %)
-            = ×${(defMul / atkMul).toFixed(4)}
-        </div>
+        <div class="formula-note needed-explain">${explain}</div>
         ${utok.poznamka ? `<div class="formula-note">${utok.poznamka}</div>` : ''}
     `;
 }
