@@ -319,6 +319,12 @@
         if (x1 <= x0) x1 = x0 + 1;
         if (y1 <= y0) y1 = y0 + 1;
 
+        // A long X expression does not fit on the axis (at 11 px about 95
+        // characters fit under the plot): the axis then says where to look,
+        // and the whole expression is printed under the chart, wrapped.
+        const longX = String(xLabel || '').length > 90;
+        const axisX = longX ? 'X = výraz pod grafem' : xLabel;
+
         const sx = v => P.l + (v - x0) / (x1 - x0) * (W - P.l - P.r);
         const sy = v => H - P.b - (v - y0) / (y1 - y0) * (H - P.t - P.b);
         const fmt = v => (Math.abs(v) >= 10000 ? Math.round(v).toLocaleString('cs-CZ')
@@ -389,10 +395,11 @@
                 <line x1="${P.l}" y1="${P.t}" x2="${P.l}" y2="${H - P.b}" stroke="#555"/>
                 <line x1="${P.l}" y1="${H - P.b}" x2="${W - P.r}" y2="${H - P.b}" stroke="#555"/>
                 ${dots}${lines}
-                <text x="${(W + P.l) / 2}" y="${H - 6}" text-anchor="middle" fill="#FF8000" font-size="11">${xLabel}</text>
+                <text x="${(W + P.l) / 2}" y="${H - 6}" text-anchor="middle" fill="#FF8000" font-size="11">${esc(axisX)}</text>
                 <text x="14" y="${(H - P.b) / 2}" text-anchor="middle" fill="#FF8000" font-size="11"
-                      transform="rotate(-90 14 ${(H - P.b) / 2})">${yLabel}</text>
+                      transform="rotate(-90 14 ${(H - P.b) / 2})">${esc(yLabel)}</text>
             </svg>
+            ${longX ? `<div class="plot-xexpr"><span class="plot-xexpr-head">X =</span> <code>${esc(xLabel)}</code></div>` : ''}
             <div class="plot-legend">${legend}</div>`;
     }
 
@@ -813,7 +820,34 @@
         try { localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); } catch (e) { /* blocked */ }
     }
 
-    const syncBase = () => String(readSync().url || '').replace(/\/+$/, '');
+    // The address as typed, tidied: "https://" added when missing, and a path
+    // pasted on the end ("/attacks", "/health", "?limit=1") taken off - the
+    // page adds the collection itself.
+    function normaliseBase(url) {
+        let t = String(url || '').trim();
+        if (!t) return '';
+        if (!/^https?:\/\//i.test(t)) t = 'https://' + t;
+        t = t.replace(/[?#].*$/, '').replace(/\/+$/, '');
+        t = t.replace(/\/(attacks|konflikty|valky|health)$/i, '');
+        return t.replace(/\/+$/, '');
+    }
+    const syncBase = () => normaliseBase(readSync().url);
+
+    // Why an answer that is not JSON came back: the address leads somewhere
+    // else than the Worker. GitHub/Cloudflare Pages - the page itself - answer
+    // 404 with HTML; a mistyped Worker name gets 404 as plain text.
+    function notWorker(base, status) {
+        let host = '';
+        try { host = new URL(base).host; } catch (e) { /* not a URL */ }
+        if (host && (host === location.host || /github\.io$|pages\.dev$/i.test(host))) {
+            return ' — to je adresa této stránky, ne Workeru. Správná adresa končí na .workers.dev.';
+        }
+        if (status === 404) {
+            return ' — na téhle adrese Worker není. Zkontrolujte název před .workers.dev'
+                + ' (správně např. https://wgbonus.<účet>.workers.dev, nic za lomítkem).';
+        }
+        return ' — odpověď nebyla JSON, adresa patrně nevede na Worker.';
+    }
 
     async function syncCall(collection, method, records) {
         const base = syncBase();
@@ -835,7 +869,7 @@
             throw new Error(`HTTP ${res.status} na ${method} ${target}`
                 + (res.status === 405
                     ? ' — tahle adresa nepřijímá zápis. Je to opravdu Worker (…​.workers.dev), ne Pages?'
-                    : ' — odpověď nebyla JSON.'));
+                    : notWorker(base, res.status)));
         }
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status} na ${target}`);
         return data;
@@ -1282,9 +1316,9 @@
                 } else if (j && j.error) {
                     ui.syncInfo.textContent = `Worker běží, ale hlásí: ${j.error}`;
                 } else {
-                    ui.syncInfo.textContent = `HTTP ${res.status}, odpověď není JSON `
-                        + `(prvních 80 znaků: ${txt.slice(0, 80).replace(/\s+/g, ' ')}) `
-                        + '— adresa patrně nevede na Worker.';
+                    ui.syncInfo.textContent = `HTTP ${res.status} na ${base}/health, odpověď není JSON `
+                        + `(prvních 80 znaků: ${txt.slice(0, 80).replace(/\s+/g, ' ')})`
+                        + notWorker(base, res.status);
                 }
             } catch (err) {
                 ui.syncInfo.textContent = 'Spojení selhalo: ' + err.message
@@ -1294,14 +1328,17 @@
         document.getElementById('syncPull').addEventListener('click', pullShared);
         document.getElementById('syncPush').addEventListener('click', pushShared);
         const saveSync = () => {
-            writeSync({ url: ui.syncUrl.value.trim(), secret: ui.syncSecret.value });
+            // Store the tidied address and show it, so what is used is what is seen.
+            const url = normaliseBase(ui.syncUrl.value);
+            ui.syncUrl.value = url;
+            writeSync({ url, secret: ui.syncSecret.value });
             renderSbirac();
         };
         ui.syncUrl.addEventListener('change', saveSync);
         ui.syncSecret.addEventListener('change', saveSync);
         {
             const cfg = readSync();
-            ui.syncUrl.value = cfg.url || '';
+            ui.syncUrl.value = normaliseBase(cfg.url);
             ui.syncSecret.value = cfg.secret || '';
         }
 

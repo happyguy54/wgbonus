@@ -2560,6 +2560,17 @@ svg.attack-plot {
 
 .plot-key { display: flex; align-items: center; gap: 5px; color: #ccc; }
 
+/* The X expression under the chart when it is too long for the axis. */
+.plot-xexpr {
+	margin: 4px 0 0 0;
+	font-size: 12px;
+	color: #FF8000;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+.plot-xexpr code { color: #ddd; font-family: Consolas, 'Courier New', monospace; }
+.plot-xexpr-head { font-weight: bold; }
+
 .plot-dot {
 	display: inline-block;
 	width: 10px; height: 10px;
