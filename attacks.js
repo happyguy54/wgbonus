@@ -1078,22 +1078,34 @@
         const src = String(text || '');
         if (mozekMemo.text === src) return mozekMemo.list;
         const pad = n => String(n).padStart(2, '0');
+        // "D.M.YYYY [H:MM[:SS]]" -> "YYYY-MM-DD HH:MM[:SS]"
+        const DATE = '(\\d{1,2})\\.\\s*(\\d{1,2})\\.\\s*(\\d{4})(?:\\s+(\\d{1,2}):(\\d{2})(?::(\\d{2}))?)?';
+        const when = m => `${m[3]}-${pad(m[2])}-${pad(m[1])} ${pad(m[4] || 0)}:${m[5] || '00'}` + (m[6] ? ':' + m[6] : '');
         const list = [];
         src.split(/[,;\n]+/).forEach(part => {
-            const m = part.match(/#?(\d+)(?:\s*(?:od|@)\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?)?/i);
-            if (!m) return;
-            const v = { id: Number(m[1]) };
-            if (m[2]) v.od = `${m[4]}-${pad(m[3])}-${pad(m[2])} ${pad(m[5] || 0)}:${m[6] || '00'}` + (m[7] ? ':' + m[7] : '');
+            const id = part.match(/^\s*#?(\d+)/);
+            if (!id) return;
+            const v = { id: Number(id[1]) };
+            // "od" = researched from then on; "do" = until then (the end of an
+            // age: country numbers start over with every age, 2026-11-21).
+            const od = part.match(new RegExp('(?:\\bod|@)\\s*' + DATE, 'i'));
+            const until = part.match(new RegExp('\\bdo\\s*' + DATE, 'i'));
+            if (od) v.od = when(od);
+            if (until) v.do = when(until);
             list.push(v);
         });
         mozekMemo = { text: src, list };
         return list;
     }
 
-    /** 1.25 when the attacker had Tajemství mozku at the time of the attack. */
+    /** 1.25 when the attacker had Tajemství mozku at the time, else 1. One
+     *  number may be listed more than once - in different ages it is a
+     *  different country. */
     function mozekFor(rec, text) {
-        const m = parseMozek(text).find(v => v.id === Number(rec.utocnik_id));
-        return m && (!m.od || String(rec.cas || '') >= m.od) ? 1.25 : 1;
+        const cas = String(rec.cas || '');
+        const has = parseMozek(text).some(v => v.id === Number(rec.utocnik_id)
+            && (!v.od || cas >= v.od) && (!v.do || cas < v.do));
+        return has ? 1.25 : 1;
     }
 
     /**

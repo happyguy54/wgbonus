@@ -36,16 +36,22 @@
      *  10:12 - everyone in EJZ by 7.10. #48 is .ghost [?], not ours: his 3.11
      *  týl round was brought in, and everyone has it from the first week. An
      *  empty field means this list - without it every fit splits in two lines.
-     *  "-" in the field means nobody. #36 mazereon and #31 Faber Costell
-     *  [Outlogs] have it too (the user, 20.11.); #31 is a new country on a
-     *  reused number - on 10.11. it was ..Blaze.. at rank 12 - hence the date. */
-    const MOZEK_EJZ = '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00';
+     *  "-" in the field means nobody. New age from 14.-20.11.2026: #36
+     *  mazereon and #31 Faber Costell [Outlogs] have it (the user, 20.11.). */
+    // Each age numbers the countries afresh, so the last age's list ends with
+    // it ("do 14.11.2026": its last stored attack is from 13.11., the new age's
+    // first from 20.11.).
+    const MOZEK_EJZ = '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, '
+        + '118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, '
+        + '44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, '
+        + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00',
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
-        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00'];
+        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
+        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
@@ -1115,7 +1121,9 @@
                     <p class="formula-hint">
                         Prestiž a hodnost platí pro záznamy, které vlastní nemají.
                         Tajemství mozku: čísla zemí útočníků s tímto pokrokem (+25 % zkušeností),
-                        u nově vyzkoumaného s „od datum čas“ — ve vzorci proměnná <code>mozek</code> (1,25 / 1).
+                        u nově vyzkoumaného s „od datum čas“, s „do datum“ do konce věku (čísla zemí
+                        se každý věk mění, jedno číslo tak může být v seznamu víckrát)
+                        — ve vzorci proměnná <code>mozek</code> (1,25 / 1).
                         Poznáte ho podle týlu: nejmenší zisk je 150, s pokrokem 188.
                         Prázdné pole = známý stav EJZ, „-“ = nikdo.
                     </p>

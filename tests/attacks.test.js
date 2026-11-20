@@ -922,6 +922,15 @@ section('Tajemství mozku: who has it, from when');
     eq('after', at(118, '2026-10-03 13:22:09'), 1.25);
     eq('not listed', at(68, '2026-10-03 09:13:00'), 1);
     eq('as a formula variable', A.scopeFor({ typ: 'tyl', utocnik_id: 83, cas: '2026-10-02 15:52:18', xp: 188 }, { mozek: '83' }).mozek, 1.25);
+    // A new age numbers countries afresh: "do" ends an entry, a number may come twice.
+    const ages = '48 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 48 od 22.11.2026';
+    eq('"do" read', JSON.stringify(A.parseMozek(ages)[1]), '{"id":118,"od":"2026-10-03 13:15","do":"2026-11-14 00:00"}');
+    const ag = (id, cas) => A.mozekFor({ utocnik_id: id, cas }, ages);
+    eq('last age, before the end', ag(118, '2026-11-13 19:58:45'), 1.25);
+    eq('new age, same number: not the same country', ag(118, '2026-11-20 22:00:00'), 1);
+    eq('a number listed in both ages: old', ag(48, '2026-11-09 12:50:27'), 1.25);
+    eq('…in between', ag(48, '2026-11-20 22:00:00'), 1);
+    eq('…new', ag(48, '2026-11-23 10:00:00'), 1.25);
     eq('nothing typed: 1', A.scopeFor({ typ: 'tyl', utocnik_id: 83, cas: '2026-10-02 15:52:18', xp: 188 }, {}).mozek, 1);
 }
 
