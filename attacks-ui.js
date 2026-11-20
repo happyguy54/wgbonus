@@ -36,13 +36,16 @@
      *  10:12 - everyone in EJZ by 7.10. #48 is .ghost [?], not ours: his 3.11
      *  týl round was brought in, and everyone has it from the first week. An
      *  empty field means this list - without it every fit splits in two lines.
-     *  "-" in the field means nobody. */
-    const MOZEK_EJZ = '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00';
+     *  "-" in the field means nobody. #36 mazereon and #31 Faber Costell
+     *  [Outlogs] have it too (the user, 20.11.); #31 is a new country on a
+     *  reused number - on 10.11. it was ..Blaze.. at rank 12 - hence the date. */
+    const MOZEK_EJZ = '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00',
-        '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00'];
+        '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
+        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
