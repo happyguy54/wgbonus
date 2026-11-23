@@ -294,9 +294,10 @@ section(`${label}: every ally in the alliance archive`);
     eq('hodnost útočníka worked back from the žebříček', a47.hodnost_utocnik, 6);
     eq('hodnost obránce, well past its threshold', a47.hodnost_obrance, 7);
     eq('the other ally gets its own rank', a118.hodnost_utocnik, 4);
-    // 82k today, only 2 000 past 80 000; our 2 001 since then puts it under.
-    eq('a defender just past a threshold: the previous rank, as an estimate',
-        `${a118.hodnost_obrance}/${a118.hodnost_obrance_jiste}`, '4/0');
+    // 82k today, 2 000 past 80 000; our 2 001 since gave him only ~670
+    // (a third), so he was already 5 - but that close, only as an estimate.
+    eq('a defender just past a threshold: still that rank, as an estimate',
+        `${a118.hodnost_obrance}/${a118.hodnost_obrance_jiste}`, '5/0');
 
     const searches = game.calls.filter(u => /p=zebricek/.test(u)).map(u => Number(u.match(/search_id=(\d+)/)[1]));
     eq('žebříček: one search for the allies, one for 53 (91 is on that page too)', searches.join(','), '44,53');

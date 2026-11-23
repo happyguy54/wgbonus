@@ -622,7 +622,9 @@ section('hodnost of a defender: only when well past its threshold');
     const zeb3 = A.parseZebricek('### ZEBRICEK 2026-10-28 10:00:00\nE(#5) - e\t100km2\t1 160k\t1 200k\t(11)');
     const big = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-10-27 21:5' + i + ':00', cil_id: 5, xp: 7000 }));
     A.applyHodnost(big, [], zeb3);
-    eq('first attack of the big round: the previous rank, as an estimate', `${big[0].hodnost_obrance}/${big[0].hodnost_obrance_jiste}`, '10/0');
+    // A defender gains a third of our XP (DEFENCE_SHARE): 70k of ours since
+    // is ~23k for him, so even the first attack was well inside rank 11.
+    eq('first attack of the big round: a third of 70k since, still past 1.1M - certain', `${big[0].hodnost_obrance}/${big[0].hodnost_obrance_jiste}`, '11/1');
     eq('its last attack: 7k since, 53k past - certain', `${big[9].hodnost_obrance}/${big[9].hodnost_obrance_jiste}`, '11/1');
 
     // From hodnost 12 a defence brings nothing (2026-11-04). Haffik (#85),
@@ -638,7 +640,12 @@ section('hodnost of a defender: only when well past its threshold');
     const zeb5 = A.parseZebricek('### ZEBRICEK 2026-11-03 09:50:00\nH(#86) - h\t100km2\t1 506k\t3 250k\t(12)');
     const near = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-11-03 09:0' + i + ':00', cil_id: 86, xp: 7000 }));
     A.applyHodnost(near, [], zeb5);
-    eq('within one attack of 1.5M: worked out as before, rank 11 as an estimate', `${near[0].hodnost_obrance}/${near[0].hodnost_obrance_jiste}`, '11/0');
+    // 6k past 1.5M is more than a third of any one 7k attack could carry him.
+    eq('6k past 1.5M, more than a defender gains from one attack: 12 all along', `${near[0].hodnost_obrance}/${near[0].hodnost_obrance_jiste}`, '12/1');
+    const zeb6 = A.parseZebricek('### ZEBRICEK 2026-11-03 09:50:00\nH(#87) - h\t100km2\t1 501k\t3 250k\t(12)');
+    const near2 = Array.from({ length: 10 }, (_, i) => ({ cas: '2026-11-03 09:0' + i + ':00', cil_id: 87, xp: 7000 }));
+    A.applyHodnost(near2, [], zeb6);
+    eq('within a third of one attack of 1.5M: rank 11 as an estimate', `${near2[0].hodnost_obrance}/${near2[0].hodnost_obrance_jiste}`, '11/0');
 
     // A newer reading works out again whatever this wrote; a typed value stays.
     const est = { cas: '2026-10-02 08:00:00', cil_id: 3, hodnost_obrance: 4, hodnost_obrance_jiste: 0 };

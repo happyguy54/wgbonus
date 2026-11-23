@@ -1351,6 +1351,14 @@
      * this function wrote (marked certain or estimate) is worked out again by
      * a newer reading; one typed in by hand (no mark) is never overwritten.
      */
+    /**
+     * Share of the attacker's XP the defender gets for the same attack.
+     * Outlogs vs Conopí (20.11.2026, Conopí only defended): 57 206 / 169 568
+     * = 0.337; our own defence messages in the new age, noční: median 0.337
+     * (115 attacks, middle half 0.27-0.43), týl 0.39.
+     */
+    const DEFENCE_SHARE = 1 / 3;
+
     function applyHodnost(records, xpEvents, zebricek, opts) {
         // Spy operations and rockets add rank experience too, but too little
         // to matter - so by default nothing is allowed for gains the Útoky
@@ -1398,9 +1406,12 @@
                 // XP from every attack on them since - a round of ours now
                 // gives a defender 50-100k, so "past the threshold today" no
                 // longer means "past it at the start of the round" (2026-10-30).
+                // A defender gains about a third of what the attacker gets
+                // (DEFENCE_SHARE): counting all of it put defenders a rank or
+                // two too low and made our attackers look further ahead.
                 const hits = attacks
                     .filter(r => r.cil_id === rec.cil_id && r.cas >= rec.cas && r.cas <= def.at)
-                    .map(r => Number(r.xp) || 0);
+                    .map(r => (Number(r.xp) || 0) * DEFENCE_SHARE);
                 // But from hodnost 12 on a defence brings no experience (the
                 // user, 2026-11-04). One further past 1.5M than any single
                 // attack of ours could carry them was past it before all of
