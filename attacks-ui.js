@@ -38,15 +38,15 @@
      *  empty field means this list - without it every fit splits in two lines.
      *  "-" in the field means nobody. New age from 14.-20.11.2026: #36
      *  mazereon and #31 Faber Costell [Outlogs] have it (the user, 20.11.);
-     *  #95 happyguy from between 20.11. 21:25 (his týl still gave the bare 150)
-     *  and 22.11. 22:08 (from then on every attack is 1.25x the formula). */
+     *  #95 happyguy (the user) researched it on 20.11. after that day's last
+     *  attack (21:25:49). */
     // Each age numbers the countries afresh, so the last age's list ends with
     // it ("do 14.11.2026": its last stored attack is from 13.11., the new age's
     // first from 20.11.).
     const MOZEK_EJZ = '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, '
         + '118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, '
         + '44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, '
-        + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 21.11.2026';
+        + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
@@ -54,7 +54,8 @@
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
         '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
         '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00',
-        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026'];
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026',
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 21.11.2026'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
