@@ -2700,6 +2700,8 @@ input.plot-x {
 .sbirac .submit { margin-left: 4px; }
 
 /* Axis range boxes next to the plot. */
+.plot-controls .plot-date { width: auto; flex: 0 0 auto; color-scheme: dark; }
+
 .plot-controls .plot-range {
 	width: 7em;
 }

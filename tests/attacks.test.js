@@ -1001,6 +1001,9 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     const both = [{ ali: '*MAFIE*', proti: 'EJZ', od: '2026-10-04 07:30', do: '2026-10-07 23:12' }, { ali: 'EJZ', proti: '*MAFIE*', od: '2026-10-05 05:50' }];
     eq('their older war is in full force: our fresh one does not halve', wx('2026-10-05 11:10:00', both, '*MAFIE*'), 1);
     eq('a war that ended does not count', wx('2026-10-08 10:00:00', [both[0]], '*MAFIE*'), 1);
+    eq('a target without an alliance: no war possible, a third', A.scopeFor({ typ: 'tyl', cas: '2026-11-20 21:23:52', cil_id: 50, cil_aliance: null }, { valky: w2 }).valka_xp, 1 / 3);
+    eq('…with no wars typed in too', A.scopeFor({ typ: 'tyl', cas: '2026-11-20 21:23:52', cil_id: 50 }, {}).valka_xp, 1 / 3);
+    eq('a record without a target stays at 1', A.scopeFor({ typ: 'tyl', cas: '2026-11-20 21:23:52' }, {}).valka_xp, 1);
     eq('readiness drop as a variable', A.scopeFor({ typ: 'tyl', pripravenost_pokles: 7 }, {}).pripravenost_pokles + '/' + A.scopeFor({ typ: 'nocni' }, {}).pripravenost_pokles, '7/0');
     eq('no wars known: 0', A.scopeFor({ typ: 'nocni', cas: '2026-10-06 20:03:00', cil_aliance: 'YOZZEFY' }, {}).valka_prvni_hodina, 0);
 }

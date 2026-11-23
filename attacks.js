@@ -1138,8 +1138,17 @@
      *   1    otherwise, and whenever no war with that alliance is known.
      * An older war in full force wins: on 5.10. EJZ had declared on *MAFIE*
      * five hours earlier, but *MAFIE*'s own war on EJZ was a day old.
+     *
+     *   1/3  the target has no alliance, so there can be no war with it (the
+     *        help: no war can be declared on a country without one). #95 on
+     *        #50, 20.11.2026: 0.32-0.35 of the full-war formula; the 16.9.
+     *        noční on #108 about 0.29; #83 on Django (no war known), 10.-11.11.:
+     *        0.32-0.46. The help says army experience is 3x higher in a war.
+     *        (An attacker without an alliance on one without gets the
+     *        just-declared level instead - not ours, so not handled.)
      */
     function warXp(rec, valky) {
+        if (rec && rec.cil_id && !rec.cil_aliance) return 1 / 3;
         if (!rec || !rec.cas || !rec.cil_aliance || !valky || !valky.length) return 1;
         const t = casDate(rec.cas);
         if (!t) return 1;

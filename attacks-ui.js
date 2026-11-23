@@ -37,21 +37,24 @@
      *  týl round was brought in, and everyone has it from the first week. An
      *  empty field means this list - without it every fit splits in two lines.
      *  "-" in the field means nobody. New age from 14.-20.11.2026: #36
-     *  mazereon and #31 Faber Costell [Outlogs] have it (the user, 20.11.). */
+     *  mazereon and #31 Faber Costell [Outlogs] have it (the user, 20.11.);
+     *  #95 happyguy from between 20.11. 21:25 (his týl still gave the bare 150)
+     *  and 22.11. 22:08 (from then on every attack is 1.25x the formula). */
     // Each age numbers the countries afresh, so the last age's list ends with
     // it ("do 14.11.2026": its last stored attack is from 13.11., the new age's
     // first from 20.11.).
     const MOZEK_EJZ = '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, '
         + '118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, '
         + '44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, '
-        + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026';
+        + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 21.11.2026';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00',
         '47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
         '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00',
-        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00'];
+        '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00',
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
@@ -538,9 +541,15 @@
 
         const onlyTarget = ui.plotTarget ? ui.plotTarget.value : '*';
         const onlyAttacker = ui.plotAttacker ? ui.plotAttacker.value : '*';
+        // Time window: "YYYY-MM-DDTHH:MM" from the inputs against the record's
+        // "YYYY-MM-DD HH:MM:SS"; "do" takes in the whole of its last minute.
+        const from = ui.plotFrom && ui.plotFrom.value ? ui.plotFrom.value.replace('T', ' ') : '';
+        const to = ui.plotTo && ui.plotTo.value ? ui.plotTo.value.replace('T', ' ') + ':59' : '';
+        const inPeriod = rec => (!from || String(rec.cas || '') >= from) && (!to || String(rec.cas || '') <= to);
         const wanted = rec => (onlyType === '*' || (rec.typ || 'neznámý') === onlyType)
                            && (onlyTarget === '*' || String(rec.cil_id || '?') === onlyTarget)
                            && (onlyAttacker === '*' || String(rec.utocnik_id || '?') === onlyAttacker)
+                           && inPeriod(rec)
                            && forAnalysis(rec);
 
         // Axis ranges typed in; empty means automatic. Points outside are
@@ -1150,6 +1159,20 @@
                 <label>do</label><input type="text" id="plotY1" class="formula-input plot-range" inputmode="decimal">
                 <button type="button" class="submit" id="plotRangeReset">Celý rozsah</button>
             </div>
+            <div class="plot-controls" title="Jen útoky z tohoto období. Prázdné = bez omezení. „Posledních…“ se počítá od nejnovějšího útoku v datech.">
+                <label for="plotPeriod">Období:</label>
+                <select id="plotPeriod" class="formula-input">
+                    <option value="">všechna data</option>
+                    <option value="age:new">tento věk (od 14. 11.)</option>
+                    <option value="age:last">minulý věk (30. 9. – 13. 11.)</option>
+                    <option value="last:1">posledních 24 h</option>
+                    <option value="last:3">poslední 3 dny</option>
+                    <option value="last:7">posledních 7 dní</option>
+                    <option value="custom">vlastní</option>
+                </select>
+                <label for="plotFrom">od</label><input type="datetime-local" id="plotFrom" class="formula-input plot-date">
+                <label for="plotTo">do</label><input type="datetime-local" id="plotTo" class="formula-input plot-date">
+            </div>
             <div class="plot-controls">
                 <label for="plotX">Osa X:</label>
                 <input type="text" id="plotX" class="formula-input formula-expr-input plot-x"
@@ -1256,6 +1279,9 @@
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
+            plotPeriod: document.getElementById('plotPeriod'),
+            plotFrom: document.getElementById('plotFrom'),
+            plotTo: document.getElementById('plotTo'),
             plotAttacker: document.getElementById('plotAttacker'),
             sbiracLink: document.getElementById('sbiracLink'),
             sbiracCopy: document.getElementById('sbiracCopy'),
@@ -1377,6 +1403,31 @@
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
         ['plotX0', 'plotX1', 'plotY0', 'plotY1'].forEach(k => ui[k].addEventListener('input', renderPlot));
+        // Period presets fill the two dates; typing a date makes it "vlastní".
+        // Ages: country numbers start over with each one (see MOZEK_EJZ).
+        const AGES = { last: ['2026-09-30T00:00', '2026-11-13T23:59'], new: ['2026-11-14T00:00', ''] };
+        ui.plotPeriod.addEventListener('change', () => {
+            const v = ui.plotPeriod.value;
+            if (v === 'custom') return;
+            let from = '', to = '';
+            if (v.startsWith('age:')) [from, to] = AGES[v.slice(4)];
+            if (v.startsWith('last:')) {
+                const newest = store.records.filter(A.isAttack).map(r => String(r.cas || '')).sort().pop();
+                if (newest) {
+                    const t = new Date(newest.replace(' ', 'T'));
+                    t.setDate(t.getDate() - Number(v.slice(5)));
+                    const p = n => String(n).padStart(2, '0');
+                    from = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}T${p(t.getHours())}:${p(t.getMinutes())}`;
+                }
+            }
+            ui.plotFrom.value = from;
+            ui.plotTo.value = to;
+            renderPlot();
+        });
+        ['plotFrom', 'plotTo'].forEach(k => ui[k].addEventListener('input', () => {
+            ui.plotPeriod.value = ui.plotFrom.value || ui.plotTo.value ? 'custom' : '';
+            renderPlot();
+        }));
         document.getElementById('plotRangeReset').addEventListener('click', () => {
             ['plotX0', 'plotX1', 'plotY0', 'plotY1'].forEach(k => { ui[k].value = ''; });
             renderPlot();
