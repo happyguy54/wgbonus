@@ -1468,12 +1468,16 @@
         const HPEN = '(1 + min(0, hodnost_bonus) / 100)';
         // Prestiž of both countries in millions: (pd/1M)^0.65 / (pa/1M).
         const PMIL = 'pow(prestiz_obrance / 1000000, 0.65) / (prestiz_utocnik / 1000000)';
-        // A target smaller than the attacker gives less (2026-11-24): x (pd/pa)^(1/4)
-        // below pd = pa. Level by pd/pa, exact ranks: new age 0.88 / 0.91 / 0.96
-        // at 0.6-0.7 / 0.7-0.8 / 0.8-0.9 against 1.03 above; early last age 0.90 /
-        // 0.96 / 0.98 against 1.02. With the factor those attacks sit at 0.98
-        // (new) and 1.03 (early); 1/3 would give 1.00 and 1.04.
-        const PMENSI = 'pow(min(1, prestiz_obrance / prestiz_utocnik), 0.25)';
+        // The prestiž comparison (2026-11-24): one smooth function of r = pd/pa,
+        // the same for smaller and bigger targets, times a weak size term:
+        //   exp(0.8 ln r - 1/2 ln^2 r) * (pa/1M)^(-1/3)
+        // XP rises with r and flattens, peaking near r = 2.2 (data reach 2.34).
+        // On 775 attacks with exact ranks (new age, early last age, .ghost) the
+        // power law pd^0.65/pa left 0.91 for smaller targets and 0.90 above
+        // r = 2; this leaves 0.97-1.02 in every r bin, spread 4.2 % (4.5 %),
+        // within rounds 4.0 %. It replaces the morning's min(1, r)^(1/4) patch.
+        const PPOMER = 'exp(0.8 * ln(prestiz_obrance / prestiz_utocnik) - 0.5 * pow(ln(prestiz_obrance / prestiz_utocnik), 2))'
+                     + ' * pow(prestiz_utocnik / 1000000, -1 / 3)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         // Pieces of the log-ratio presets below.
         const WAR2 = '(1 + valka_prvni_hodina / 10)';
@@ -1498,10 +1502,10 @@
             // follow his rank (#83: 0.82, 0.84, 0.88, 0.79 at ranks 13-16), and
             // the late spread only goes 19.2 -> 17.6 %. A free level per attacker
             // and day gives 10.1 %: the level belongs to the attacker on that day.
-            ['noční tažení (24.11)', `strop(0.24 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${PMENSI} * ${HPEN} * mozek)`],
-            ['týl (24.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${PMENSI} * ${HPEN}) * mozek)`],
-            ['partyzánský (24.11)', `strop(max(150, 0.3 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${PMENSI} * ${HPEN}) * mozek)`],
-            ['taktický nálet (24.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PMIL} * ${PMENSI} * ${HPEN}) * mozek)`],
+            ['noční tažení (24.11)', `strop(0.25 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN} * mozek)`],
+            ['týl (24.11)', `strop(max(150, 0.32 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['partyzánský (24.11)', `strop(max(150, 0.32 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['taktický nálet (24.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
