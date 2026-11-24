@@ -100,20 +100,76 @@
 
     /* ------------------------------------------------------------ storage */
 
-    const serialise = () => JSON.stringify({
+    const serialise = (indent = 2) => JSON.stringify({
         version: 1, profile, settings, equations, records: store.records,
         konflikty: konfliktRows,
-    }, null, 2);
+    }, null, indent);
 
-    function writeLocal() {
-        try { localStorage.setItem(localKey(), serialise()); } catch (e) { /* blocked */ }
+    // The browser copy lives in IndexedDB. localStorage holds only about five
+    // million characters per site, and with the shared store downloaded the
+    // data passed that (2026-11-24: 8.4M with indentation, 6.5M without) - the
+    // save then failed silently and a reload brought back the last copy that
+    // still fitted, without the downloaded attacks. localStorage still gets a
+    // copy while it fits, and is read when IndexedDB has none (older pages).
+    const IDB_NAME = 'wgbonus', IDB_STORE = 'kv';
+    let idbOpen = null;
+    function idb() {
+        if (!idbOpen) {
+            idbOpen = new Promise(resolve => {
+                try {
+                    const req = indexedDB.open(IDB_NAME, 1);
+                    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        }
+        return idbOpen;
+    }
+    async function idbPut(key, value) {
+        const db = await idb();
+        if (!db) return false;
+        return new Promise(resolve => {
+            try {
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                tx.objectStore(IDB_STORE).put(value, key);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = tx.onabort = () => resolve(false);
+            } catch (e) { resolve(false); }
+        });
+    }
+    async function idbGet(key) {
+        const db = await idb();
+        if (!db) return null;
+        return new Promise(resolve => {
+            try {
+                const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+                req.onsuccess = () => resolve(req.result === undefined ? null : req.result);
+                req.onerror = () => resolve(null);
+            } catch (e) { resolve(null); }
+        });
     }
 
-    function readLocal() {
-        try {
-            const raw = localStorage.getItem(localKey());
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) { return null; }
+    function writeLocal() {
+        const key = localKey();
+        const text = serialise(0);   // no indentation in the browser copy
+        let small = false;
+        try { localStorage.setItem(key, text); small = true; } catch (e) { /* too big, or blocked */ }
+        idbPut(key, text).then(ok => {
+            // Too big for localStorage: drop its stale smaller copy, but only
+            // once IndexedDB holds the new one.
+            if (ok && !small) { try { localStorage.removeItem(key); } catch (e) { /* blocked */ } }
+            if (!ok && !small && ui.syncInfo) {
+                ui.syncInfo.textContent = 'Pozor: data se do prohlížeče nevešla a po obnovení stránky '
+                    + 'tu nebudou. Uložte si je do souboru, nebo je znovu stáhněte ze sdíleného úložiště.';
+            }
+        });
+    }
+
+    async function readLocal() {
+        let raw = await idbGet(localKey());
+        if (!raw) { try { raw = localStorage.getItem(localKey()); } catch (e) { /* blocked */ } }
+        try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
     }
 
     function loadFrom(data) {
@@ -1560,7 +1616,7 @@
 
         const fileData = await fetchJSON(dataFile());
         if (fileData) loadFrom(fileData);
-        const local = readLocal();
+        const local = await readLocal();
         if (local && (local.records || []).length >= store.records.length) loadFrom(local);
 
         // Nothing of your own yet - start from the shipped sample log so the
