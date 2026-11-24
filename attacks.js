@@ -1352,6 +1352,29 @@
      * a newer reading; one typed in by hand (no mark) is never overwritten.
      */
     /**
+     * Whether a guessed hodnost could change the attack's XP: some side's rank
+     * is only an estimate, and one rank either way would change the manual's
+     * penalty (5 % per rank the attacker leads beyond the first, from his rank
+     * 5, at most 20 %). Such an attack is left out of fits - guessed ranks were
+     * often a rank or two off (2026-11-24: of the 8 guesses that exact readings
+     * pin down, 7 were wrong; leading by 2-3 on a guessed defender put rounds
+     * at 1.09-1.22).
+     */
+    function rankUnsure(rec) {
+        if (!rec) return false;
+        const hu = Number(rec.hodnost_utocnik), hd = Number(rec.hodnost_obrance);
+        if (!Number.isFinite(hu) || !Number.isFinite(hd)) return false;
+        const pen = (u, d) => (u >= 5 && u - d > 1) ? Math.min(20, (u - d) * 5) : 0;
+        const now = pen(hu, hd);
+        const guessU = rec.hodnost_utocnik_jiste === 0, guessD = rec.hodnost_obrance_jiste === 0;
+        if (!guessU && !guessD) return false;
+        const tries = [];
+        if (guessU) tries.push([hu - 1, hd], [hu + 1, hd]);
+        if (guessD) tries.push([hu, hd - 1], [hu, hd + 1]);
+        return tries.some(([u, d]) => pen(u, d) !== now);
+    }
+
+    /**
      * Share of the attacker's XP the defender gets for the same attack.
      * Outlogs vs Conopí (20.11.2026, Conopí only defended): 57 206 / 169 568
      * = 0.337; our own defence messages in the new age, noční: median 0.337
@@ -1668,6 +1691,7 @@
         fillReadiness,
         fillBunkers,
         energyBurnt,
+        rankUnsure,
         fillPreviousAgeAttacker,
         fillTypes,
         parseValky,

@@ -86,7 +86,9 @@
     // formula is guesswork. Remembered per browser; on unless turned off.
     const OWN_KEY = 'wgbonus.jenVlastni';
     const ownOnly = () => !ui.plotOwnOnly || ui.plotOwnOnly.checked;
-    const forAnalysis = rec => !ownOnly() || !!A.scopeFor(rec, settings).vlastni_hodnoty;
+    // ...and leaves out attacks whose guessed hodnost could change the rank
+    // penalty (A.rankUnsure): those ranks are known to be off too often.
+    const forAnalysis = rec => !ownOnly() || (!!A.scopeFor(rec, settings).vlastni_hodnoty && !A.rankUnsure(rec));
 
     let ui = {};
     let fileHandle = null;
@@ -1150,7 +1152,7 @@
                 <select id="plotTarget" class="formula-input"></select>
                 <label class="plot-check"><input type="checkbox" id="plotByTime"> Dávky, odstín = čas</label>
                 <label class="plot-check"><input type="checkbox" id="plotFit" checked> Proložit přímku</label>
-                <label class="plot-check" title="Útoky bez vlastní prestiže a hodnosti zůstanou v tabulce, ale do grafu a fitů se nepočítají">
+                <label class="plot-check" title="Útoky bez vlastní prestiže a hodnosti zůstanou v tabulce, ale do grafu a fitů se nepočítají. Stejně tak útoky s odhadnutou hodností, u kterých by hodnost o jednu výš nebo níž změnila postih za hodnost.">
                     <input type="checkbox" id="plotOwnOnly" checked> Jen s prestiží a hodností</label>
             </div>
             <div class="plot-controls" title="Prázdné = automaticky. Útoky mimo rozsah se nezobrazí a nepočítají do proložených přímek.">

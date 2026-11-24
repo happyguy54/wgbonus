@@ -995,6 +995,15 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('noční, this age, a defence and a named attacker stay', [oldNoc, newTyl, theirs].map(r => r.utocnik_id || '-').join('') + named.utocnik_id, '---83');
     eq('mozek now applies to it', A.scopeFor(oldTylG, { mozek: '47, 48' }).mozek, 1.25);
     eq('a second pass fills nothing', A.fillPreviousAgeAttacker([oldTylG]), 0);
+    // A guessed rank that could change the penalty keeps the attack out of fits.
+    const ru = (hu, ju, hd, jd) => A.rankUnsure({ hodnost_utocnik: hu, hodnost_utocnik_jiste: ju, hodnost_obrance: hd, hodnost_obrance_jiste: jd });
+    eq('both ranks exact: sure', ru(7, 1, 4, 1), false);
+    eq('guessed defender, leading by 2: one rank higher drops the penalty', ru(7, 1, 5, 0), true);
+    eq('guessed defender, leading by 1: one lower would add it', ru(6, 1, 5, 0), true);
+    eq('guessed defender, defender ahead by 2: no penalty either way', ru(5, 1, 7, 0), false);
+    eq('guessed defender, attacker below rank 5 either way: no penalty', ru(3, 1, 2, 0), false);
+    eq('guessed attacker at the 20 % cap, leading by 6: still 20 % either way', ru(12, 0, 6, 1), false);
+    eq('no ranks: nothing to judge', A.rankUnsure({}), false);
     // War state as an XP factor: half in a just-declared war, +10 % in the first full hour.
     const w2 = [{ ali: 'EJZ', proti: '.B.I.S.', od: '2026-11-12 16:50' }];
     const wx = (cas, valky = w2, ali = '.B.I.S.') => A.scopeFor({ typ: 'partyzansky', cas, cil_aliance: ali }, { valky }).valka_xp;
