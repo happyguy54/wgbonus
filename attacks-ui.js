@@ -96,7 +96,13 @@
     const ownOnly = () => !ui.plotOwnOnly || ui.plotOwnOnly.checked;
     // ...and leaves out attacks whose guessed hodnost could change the rank
     // penalty (A.rankUnsure): those ranks are known to be off too often.
-    const forAnalysis = rec => !ownOnly() || (!!A.scopeFor(rec, settings).vlastni_hodnoty && !A.rankUnsure(rec));
+    const forAnalysis = rec => !ownOnly() || (rec.druh === 'obrana'
+        ? !!(rec.prestiz_utocnik && rec.prestiz_obrance)      // defences: prestiž is enough
+        : (!!A.scopeFor(rec, settings).vlastni_hodnoty && !A.rankUnsure(rec)));
+    // The chart shows our attacks (our XP as the attacker) or our defences
+    // (enemy attacks on us, our XP as the defender).
+    const plotRecords = () => (ui.plotSide && ui.plotSide.value === 'obrana'
+        ? store.records.filter(r => r.druh === 'obrana') : store.attacks());
 
     let ui = {};
     let fileHandle = null;
@@ -282,6 +288,11 @@
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
         ['pripravenost_pokles', 'o kolik % útok snížil připravenost nepřítele (týl, partyzánský), jinak 0'],
         ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po našem vyhlášení války aliance cíle), jinak 0 - zkušenosti +10 %'],
+        ['obrana', '1 u naší obrany (útok nepřítele na nás), jinak 0'],
+        ['obrana_nase_ztraty', 'obrana: prestiž, kterou jsme ztratili (z textu zprávy)'],
+        ['obrana_ztraty_nepritele', 'obrana: prestiž, kterou ztratil útočící nepřítel (z textu zprávy)'],
+        ['odrazeno', 'obrana: 1 když jsme útok odrazili, jinak 0'],
+        ['mozek_obrance', '1,25 když bránící země (u obrany my) měla Tajemství mozku, jinak 1'],
         ['valka_xp', 'násobek zkušeností podle stavu války: 0,5 v právě vyhlášené válce (prvních 12 h), 1,1 v první hodině plné války, jinak 1'],
         ['valka_hodin', 'hodin od začátku války s aliancí cíle (plná válka po 12 h, v její první hodině víc zkušeností)'],
         ['zabito_celkem', 'součet zabitých jednotek (bez mechů)'],
@@ -550,8 +561,11 @@
 
         if (ui.plotType) {
             const keepPlot = ui.plotType.value;
+            const counts = new Map();
+            plotRecords().forEach(r => counts.set(r.typ, (counts.get(r.typ) || 0) + 1));
+            const plotTypes = [...counts.entries()].map(([typ, count]) => ({ typ, label: A.typeLabel(typ), count }));
             ui.plotType.innerHTML = '<option value="*">Všechny typy</option>'
-                + types.map(t => `<option value="${esc(t.typ)}">${esc(t.label)} (${t.count})</option>`).join('');
+                + plotTypes.map(t => `<option value="${esc(t.typ)}">${esc(t.label)} (${t.count})</option>`).join('');
             if ([...ui.plotType.options].some(o => o.value === keepPlot)) ui.plotType.value = keepPlot;
         }
     }
@@ -561,7 +575,7 @@
         if (!ui.plotTarget) return;
         const typ = ui.plotType.value;
         const seen = new Map();
-        store.attacks().forEach(r => {
+        plotRecords().forEach(r => {
             if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
             const key = String(r.cil_id || '?');
             if (!seen.has(key)) seen.set(key, { label: r.cil_zeme || ('#' + key), n: 0 });
@@ -578,7 +592,7 @@
         if (!ui.plotAttacker) return;
         const typ = ui.plotType.value;
         const seen = new Map();
-        store.attacks().forEach(r => {
+        plotRecords().forEach(r => {
             if (typ !== '*' && (r.typ || 'neznámý') !== typ) return;
             const key = r.utocnik_id ? String(r.utocnik_id) : '?';
             if (!seen.has(key)) seen.set(key, { name: null, n: 0 });
@@ -628,7 +642,7 @@
             && (y === null || ((range.y0 === null || y >= range.y0) && (range.y1 === null || y <= range.y1)));
 
         const grouped = new Map();
-        store.attacks().forEach(rec => {
+        plotRecords().forEach(rec => {
             const typ = rec.typ || 'neznámý';
             if (!wanted(rec)) return;
             const scope = A.scopeFor(rec, settings);
@@ -1208,6 +1222,11 @@
 
             <h3>Graf</h3>
             <div class="plot-controls">
+                <label for="plotSide">Zkušenosti:</label>
+                <select id="plotSide" class="formula-input">
+                    <option value="utok">z našich útoků</option>
+                    <option value="obrana">z našich obran</option>
+                </select>
                 <label for="plotType">Typ útoku:</label>
                 <select id="plotType" class="formula-input"></select>
                 <label for="plotAttacker">Útočník:</label>
@@ -1346,6 +1365,7 @@
             plotX: document.getElementById('plotX'),
             plotType: document.getElementById('plotType'),
             plotTarget: document.getElementById('plotTarget'),
+            plotSide: document.getElementById('plotSide'),
             plotPeriod: document.getElementById('plotPeriod'),
             plotFrom: document.getElementById('plotFrom'),
             plotTo: document.getElementById('plotTo'),
@@ -1466,6 +1486,7 @@
         ui.plotX.addEventListener('input', renderPlot);
         ui.plotType.addEventListener('change', () => { renderTargetOptions(); renderAttackerOptions(); renderPlot(); });
         ui.plotTarget.addEventListener('change', renderPlot);
+        ui.plotSide.addEventListener('change', () => { renderTypeOptions(); renderTargetOptions(); renderAttackerOptions(); renderPlot(); });
         ui.plotAttacker.addEventListener('change', renderPlot);
         ui.plotByTime.addEventListener('change', renderPlot);
         ui.plotFit.addEventListener('change', renderPlot);
@@ -1541,6 +1562,9 @@
         // skeptics): failed noční 0.996 (13 attacks, early/new/ghost), týl off
         // the floor 1.003 (4), nálet 0.986 (2); thin for the other types.
         const NEUSPECH = '(uspech + (1 - uspech) / 4)';
+        // Defender side: ratio enemy / us, flatter (0.6), our prestiž^-0.3.
+        const POBRANA = 'exp(0.6 * ln(prestiz_utocnik / prestiz_obrance) - 0.5 * pow(ln(prestiz_utocnik / prestiz_obrance), 2))'
+                      + ' * pow(prestiz_obrance / 1000000, -0.3)';
         // TRIAL ONLY - not in the main presets: the defender's lost prestiž
         // counting in full up to 2.5x our own and a quarter beyond. It fixes
         // lopsided noční (killing 2.5-4x what they lost: 0.86-0.94 -> 0.99-1.00,
@@ -1577,6 +1601,15 @@
             ['partyzánský (25.11)', `strop(max(150, 0.32 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
             ['taktický nálet (25.11)', `strop(max(150, 0.36 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
             ['vniknutí do bunkrů (25.11, předběžné)', `strop(max(150, 0.33 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            // Our XP as the DEFENDER (2026-11-25; chart "z našich obran"): a mirror
+            // of the attacker formula - the enemy's losses count in full and ours
+            // a quarter, the ratio is enemy/us with a flatter slope (0.6), the size
+            // term is our prestiž^-0.3, and only OUR mozek counts; no rank rule,
+            // no first-hour bonus, no cap. 1 682 defences: noční 1.01 (spread 3 %),
+            // týl 0.99 (8 %), partisan 0.99 (9 %), nálet with (A + D)/7 1.00 (6 %).
+            // A repelled attack gives about 2.5x (provisional, 51 defences).
+            ['obrana – noční, týl, partyzáni (25.11, předběžné)', `(obrana_ztraty_nepritele + obrana_nase_ztraty / 4) / 6 * ${POBRANA} * (1 + 1.5 * odrazeno) * mozek_obrance`],
+            ['obrana – nálet (25.11, předběžné)', `(obrana_ztraty_nepritele + obrana_nase_ztraty) / 7 * ${POBRANA} * mozek_obrance`],
             ['noční tažení – zlom ztrát 2,5× (zkušební)', `strop(0.25 * valka_xp * ${NEUSPECH} * ${ZTRATY} * ${PPOMER} * ${HPEN} * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],

@@ -291,6 +291,40 @@
         return done;
     }
 
+    /**
+     * Losses in an enemy attack on us (a defence record), read from its text:
+     * { ours, theirs } in prestiž (ours = what we lost, theirs = what the enemy
+     * lost) and repelled = we beat the attack off. Null when the wording is not
+     * one of the known ones (2026-11-25).
+     */
+    function defenceLosses(rec) {
+        const t = String((rec && rec.raw) || '').replace(/\s+/g, ' ');
+        const n = v => Number(String(v).replace(/\s/g, '')) || 0;
+        let m;
+        if ((m = t.match(/na[šs][íi] zem[íi] zlikvidovat ([\d ]+) nep[řr]ipraven[ýy]ch voj[áa]k[ůu], ([\d ]+) tank[ůu] a ([\d ]+) st[íi]ha[čc]ek\. S nimi bylo zni[čc]eno ([\d ]+) vojensk[ýy]ch z[áa]kladen\. Zni[čc]eno bylo ([\d ]+) [úu]to[čc][íi]c[íi]ch a ([\d ]+) br[áa]n[íi]c[íi]ch mech[ůu]/i))) {
+            return { ours: n(m[1]) + 5 * n(m[2]) + 3.5 * n(m[3]) + 5 * n(m[4]) + 2.7 * n(m[6]), theirs: 2.7 * n(m[5]), repelled: false };
+        }
+        if ((m = t.match(/nepoda[řr]ilo obej[íi]t p[řr]esilu na[šs]ich mech[ůu] p[řr]i no[čc]n[íi]m ta[žz]en[íi]\. Zni[čc]eno bylo ([\d ]+) [úu]to[čc][íi]c[íi]ch a ([\d ]+) br[áa]n[íi]c[íi]ch mech[ůu]/i))) {
+            return { ours: 2.7 * n(m[2]), theirs: 2.7 * n(m[1]), repelled: true };
+        }
+        if ((m = t.match(/My jsme p[řr]i tom p[řr]i[šs]li o ([\d ]+) tank[ůu] a nep[řr][íi]tel o ([\d ]+) tank[ůu]/i))) {
+            return { ours: 5 * n(m[1]), theirs: 5 * n(m[2]), repelled: false };
+        }
+        if ((m = t.match(/Bleskov[ýy] [úu]der tankov[ée] brig[áa]dy .*? byl odra[žz]en\. Ztratili jsme p[řr]i tom ([\d ]+) tank[ůu] a nep[řr][íi]tel ([\d ]+)/i))) {
+            return { ours: 5 * n(m[1]), theirs: 5 * n(m[2]), repelled: true };
+        }
+        if ((m = t.match(/zabito bylo ([\d ]+) agent[ůu] a zap[áa]len[íi]m z[áa]sob ropy klesla z[áa]soba energie o ([\d ]+) MWh\. P[řr]i boj[íi]ch zahynulo ([\d ]+) [úu]to[čc][íi]c[íi]ch a ([\d ]+) na[šs]ich voj[áa]k[ůu]/i))) {
+            return { ours: n(m[4]) + 15 * n(m[1]) + 0.02 * n(m[2]), theirs: n(m[3]), repelled: false };
+        }
+        if ((m = t.match(/odvr[áa]tili partyz[áa]nsk[ýy] [úu]tok .*? Zahynulo p[řr]i tom ([\d ]+) na[šs]ich a ([\d ]+) nep[řr][áa]telsk[ýy]ch voj[áa]k[ůu]/i))) {
+            return { ours: n(m[1]), theirs: n(m[2]), repelled: true };
+        }
+        if ((m = t.match(/N[áa]lety n[áa]m zni[čc]ily ([\d ]+) vojensk[ýy]ch z[áa]kladen\. Bylo zni[čc]eno ([\d ]+) na[šs]ich st[íi]ha[čc]ek a ([\d ]+) bunkr[ůu]\. Nep[řr][íi]tel v boj[íi]ch ztratil ([\d ]+) st[íi]ha[čc]ek/i))) {
+            return { ours: 5 * n(m[1]) + 3.5 * n(m[2]) + 3.5 * n(m[3]), theirs: 3.5 * n(m[4]), repelled: false };
+        }
+        return null;
+    }
+
     /** Stored records of those wordings get their losses from the text; ids stay. */
     function fillFailedLosses(records) {
         let n = 0;
@@ -1623,6 +1657,16 @@
         // 0.5 in a just-declared war, 1.1 in the first full hour, else 1.
         out.valka_xp = warXp(rec, s.valky);
 
+        // Our defences (enemy attacks on us): our XP as the defender. Prestiž
+        // is as stored: prestiz_utocnik = the enemy, prestiz_obrance = us.
+        const dl = rec.druh === 'obrana' ? defenceLosses(rec) : null;
+        out.obrana = rec.druh === 'obrana' ? 1 : 0;
+        out.obrana_nase_ztraty = dl ? dl.ours : 0;
+        out.obrana_ztraty_nepritele = dl ? dl.theirs : 0;
+        out.odrazeno = dl && dl.repelled ? 1 : 0;
+        // Tajemství mozku of the DEFENDING country (us, in a defence).
+        out.mozek_obrance = mozekFor({ utocnik_id: rec.cil_id, cas: rec.cas }, s.mozek);
+
         // Tajemství mozku: the attacker's XP × 1.25 (settings.mozek).
         out.mozek = mozekFor(rec, s.mozek);
 
@@ -1730,6 +1774,7 @@
         fillReadiness,
         fillBunkers,
         fillFailedLosses,
+        defenceLosses,
         energyBurnt,
         rankUnsure,
         fillPreviousAgeAttacker,

@@ -937,6 +937,23 @@ section('failed partisan and nálet: losses read, ids kept (2026-11-25)');
     eq('a successful partisan is unchanged', `${ok.ztraty_utocnik} ${A.fillFailedLosses([ok])}`, '7368 0');
 }
 
+section('our defences: losses read from the text, defender variables (2026-11-25)');
+{
+    const dn = { druh: 'obrana', typ: 'nocni', cil_id: 95, cas: '2026-11-23 10:06:49',
+        raw: '23.11.2026 10:06:49 Nepřátelským mechům Nebudeme smútiť(#97) [HOLY] - Olko se podařilo během nočního tažení naší zemí zlikvidovat 2236 nepřipravených vojáků, 39 tanků a 2 stíhaček. S nimi bylo zničeno 40 vojenských základen. Zničeno bylo 1538 útočících a 0 bránících mechů. Získáno 1479 zkušeností.' };
+    const L = A.defenceLosses(dn);
+    eq('noční on us: what we lost / what they lost', `${L.ours} ${L.theirs} ${L.repelled}`, `${2236 + 39 * 5 + 2 * 3.5 + 40 * 5} ${1538 * 2.7} false`);
+    const sc = A.scopeFor(dn, { mozek: '95 od 20.11.2026 21:26' });
+    eq('as variables, with OUR mozek', `${sc.obrana} ${sc.obrana_nase_ztraty} ${sc.obrana_ztraty_nepritele} ${sc.odrazeno} ${sc.mozek_obrance}`, `1 ${L.ours} ${L.theirs} 0 1.25`);
+    const dt = { druh: 'obrana', typ: 'tyl', raw: '22.11.2026 13:12:02 Bleskový úder tankové brigády Ankh-Morpork(#60) [HOLY] - mikrobbb byl odražen. Ztratili jsme při tom 70 tanků a nepřítel 133. Získáno 396 zkušeností.' };
+    eq('a repelled týl', JSON.stringify(A.defenceLosses(dt)), JSON.stringify({ ours: 350, theirs: 665, repelled: true }));
+    const dp = { druh: 'obrana', typ: 'partyzansky', raw: 'Země TB21(#141) [HOLY] - TB21 na nás podnikla partyzánský útok . Připravenost naší armády byla snížena o 2% , zabito bylo 2 agentů a zapálením zásob ropy klesla zásoba energie o 292 MWh. Při bojích zahynulo 7783 útočících a 3914 našich vojáků. Získáno 2741 zkušeností.' };
+    eq('a partisan on us: soldiers, agents, energy', JSON.stringify(A.defenceLosses(dp)), JSON.stringify({ ours: 3914 + 30 + 0.02 * 292, theirs: 7783, repelled: false }));
+    const dl = { druh: 'obrana', typ: 'nalet', raw: 'Země Trutnov(#173) [S.S.T.] - alksj podnikla letecký útok na naše strategická vojenská zařízení. Nálety nám zničily 57 vojenských základen. Bylo zničeno 260 našich stíhaček a 52 bunkrů. Nepřítel v bojích ztratil 590 stíhaček. Spokojenost v naší zemi poklesla o 0%. Získáno 694 zkušeností.' };
+    eq('a nálet on us', JSON.stringify(A.defenceLosses(dl)), JSON.stringify({ ours: 57 * 5 + 260 * 3.5 + 52 * 3.5, theirs: 590 * 3.5, repelled: false }));
+    eq('our own attack is not a defence', `${A.scopeFor({ typ: 'nocni' }, {}).obrana} ${A.scopeFor({ typ: 'nocni' }, {}).obrana_nase_ztraty}`, '0 0');
+}
+
 section('Tajemství mozku: who has it, from when');
 {
     const L = A.parseMozek('47, #83; 118 od 2.10.2026 13:00');

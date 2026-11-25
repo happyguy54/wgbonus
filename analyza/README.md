@@ -28,13 +28,13 @@ Presets "(25.11)": the "(24.11)" shape plus failed attacks x 1/4.
 | First hour 1.1 | keep (free 1.105, 128 rows); "oldest war" variant refuted; 1.1 for wars the target declared untested |
 | Prewar 0.5 | unverified: no trusted rows; the only data imply ~0.58 |
 | No-alliance 1/3 | thin: 3 trusted rows (free 0.335) |
-| Cap 18k / half | keep (without it sd 3.49 -> 4.29 %) |
+| Cap 18k / half | keep (without it sd 3.49 -> 4.29 %). Smooth declines tested (power on XP or on the losses, K ln(1 + XP/K), XP/(1 + XP/K)): fitted inside the 3 rounds that cross 18k they bend mid-size attacks by 8-38 % (5-8k 1.14, 12-18k 1.38) while the knee keeps every size at 0.99-1.03; only a knee blurred over about ±2k fits as well |
 | Type constants 0.25 / 0.32 / 0.32 / 0.36 | keep; nálet rounds disagree ~2x (sd 11 % within the type) - open |
 | Failed attacks x 1/4 | adopted: noční 0.996 (13), týl 1.003 (4), nálet 0.986 (2) |
 | Bunker entries | provisional c 0.33 (6 early/new entries) |
 | Burst factor (chained attacks) | refuted by both skeptics (one round) |
 | Late last-age drop (~0.82) | unexplained; lead: attacker prestiž relative to his accumulated XP |
-| Defender XP | mirror of the attacker formula, c (A + D/4) exp(0.6 l - l^2/2) (pd/1M)^-0.3 mozek_us, l = ln(pa/pd), c 1/6 (nálet needs A + D): sd ~4.4 % vs ~8 % for the exact mirror; slope 0.45-0.60 depending on the age |
+| Defender XP (page: chart "z našich obran", presets "obrana – …") | mirror of the attacker formula, c (A + D/4) exp(0.6 l - l^2/2) (pd/1M)^-0.3 mozek_us, l = ln(pa/pd), c 1/6 (nálet needs A + D): sd ~4.4 % vs ~8 % for the exact mirror; slope 0.45-0.60 depending on the age. Page engine: noční 1.01 (3 %), týl 0.99 (8 %), partisan 0.99 (9 %), nálet (A + D)/7 1.00 (6 %); repelled x2.5 provisional (51), overshoots giant repelled noční (45-68k XP) |
 
 Parser fixes from the audit: failed partisans ("neuspěli") are failures and
 read our dead; failed nálet read our and their fighters (stored records are
