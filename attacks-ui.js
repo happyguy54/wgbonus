@@ -42,7 +42,9 @@
      *  attack (21:25:49). Everyone in Outlogs has it except perhaps sosy (#34,
      *  1.00-1.08 without it); the later ones from a single x1.25 step in
      *  their rounds: #42 Klimovec after 22.11. 17:42 (1.06 -> 1.33), #37
-     *  Ilydann after 23.11. 7:51 (bare 150 týl on 21.11., 1.07 -> 1.25). */
+     *  Ilydann somewhere between 21.11. 11:09 (bare 150 týl) and 23.11. 7:40
+     *  (his týl fit only with it: 0.99-1.01 with, 1.24-1.26 without); only
+     *  conquests in between, so 21.11. 11:10 is the earliest bound. */
     // Each age numbers the countries afresh, so the last age's list ends with
     // it ("do 14.11.2026": its last stored attack is from 13.11., the new age's
     // first from 20.11.).
@@ -50,7 +52,7 @@
         + '118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, '
         + '44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, '
         + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, '
-        + '42 od 22.11.2026 17:43, 37 od 23.11.2026 7:52';
+        + '42 od 22.11.2026 17:43, 37 od 21.11.2026 11:10';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
@@ -60,7 +62,8 @@
         '47, 48, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15, 44 od 5.10.2026 14:00, 68 od 5.10.2026 14:00, 52 od 7.10.2026 10:00, 36, 31 od 20.11.2026 0:00',
         '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026',
         '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 21.11.2026',
-        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26'];
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26',
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, 42 od 22.11.2026 17:43, 37 od 23.11.2026 7:52'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
@@ -179,7 +182,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -785,7 +788,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -964,7 +967,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
@@ -1534,6 +1537,17 @@
         // within rounds 4.0 %. It replaces the morning's min(1, r)^(1/4) patch.
         const PPOMER = 'exp(0.8 * ln(prestiz_obrance / prestiz_utocnik) - 0.5 * pow(ln(prestiz_obrance / prestiz_utocnik), 2))'
                      + ' * pow(prestiz_utocnik / 1000000, -1 / 3)';
+        // A failed attack gives a quarter (2026-11-25, checked by two independent
+        // skeptics): failed noční 0.996 (13 attacks, early/new/ghost), týl off
+        // the floor 1.003 (4), nálet 0.986 (2); thin for the other types.
+        const NEUSPECH = '(uspech + (1 - uspech) / 4)';
+        // TRIAL ONLY - not in the main presets: the defender's lost prestiž
+        // counting in full up to 2.5x our own and a quarter beyond. It fixes
+        // lopsided noční (killing 2.5-4x what they lost: 0.86-0.94 -> 0.99-1.00,
+        // in-round spread 3.75 -> 3.50 %), but rests on two attackers (#68, #31),
+        // does not improve the spread out of sample when refitted, and in the new
+        // age it only works together with a weaker rank penalty - open.
+        const ZTRATY = '(strop(defense_prestiz, 2.5 * attack_prestiz, 0.25) + attack_prestiz / 3)';
         const PRES = (x, y) => `pow(prestiz_obrance / 100000, ${x}) / pow(prestiz_utocnik / 100000, ${y})`;
         // Pieces of the log-ratio presets below.
         const WAR2 = '(1 + valka_prvni_hodina / 10)';
@@ -1558,10 +1572,12 @@
             // follow his rank (#83: 0.82, 0.84, 0.88, 0.79 at ranks 13-16), and
             // the late spread only goes 19.2 -> 17.6 %. A free level per attacker
             // and day gives 10.1 %: the level belongs to the attacker on that day.
-            ['noční tažení (24.11)', `strop(0.25 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN} * mozek)`],
-            ['týl (24.11)', `strop(max(150, 0.32 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
-            ['partyzánský (24.11)', `strop(max(150, 0.32 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
-            ['taktický nálet (24.11)', `strop(max(150, 0.36 * valka_xp * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['noční tažení (25.11)', `strop(0.25 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN} * mozek)`],
+            ['týl (25.11)', `strop(max(150, 0.32 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['partyzánský (25.11)', `strop(max(150, 0.32 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['taktický nálet (25.11)', `strop(max(150, 0.36 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['vniknutí do bunkrů (25.11, předběžné)', `strop(max(150, 0.33 * valka_xp * ${NEUSPECH} * (defense_prestiz + attack_prestiz / 3) * ${PPOMER} * ${HPEN}) * mozek)`],
+            ['noční tažení – zlom ztrát 2,5× (zkušební)', `strop(0.25 * valka_xp * ${NEUSPECH} * ${ZTRATY} * ${PPOMER} * ${HPEN} * mozek)`],
             ['noční tažení (prestiž, pd^0.65)', `29.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_lost) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD} * mozek`],
             ['týl (prestiž, pd^0.65)', `max(150, 37.2 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + attack_prestiz / 3) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],
             ['partyzánský (prestiž, pd^0.65)', `max(150, 45.7 * (1 + valka_prvni_hodina / 10) * (defense_prestiz + 0.2 * attack_prestiz) * pow(prestiz_obrance, 0.65) / prestiz_utocnik * ${HOD}) * mozek`],

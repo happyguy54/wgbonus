@@ -23,7 +23,7 @@ const ui = fs.readFileSync(path.join(__dirname, '..', 'attacks-ui.js'), 'utf8');
 const MOZEK = eval(ui.match(/const MOZEK_EJZ = ([^;]+);/)[1]);
 
 A.upgradeConquests(recs); A.markDefences(recs); A.markFailures(recs); A.fillTypes(recs);
-A.fillReadiness(recs); A.fillBunkers(recs); A.fillPreviousAgeAttacker(recs);
+A.fillReadiness(recs); A.fillBunkers(recs); A.fillFailedLosses(recs); A.fillPreviousAgeAttacker(recs);
 A.applyKonflikty(recs, konf);
 const settings = { valky, mozek: MOZEK };
 

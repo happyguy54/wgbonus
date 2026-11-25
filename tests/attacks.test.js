@@ -916,6 +916,27 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('the enemy becomes the attacker, the id stays', [def.druh, def.utocnik_id, def.utocnik_zeme, def.cil_id, def.id].join('|'), 'obrana|45|Xenofobni humanista|83|z');
 }
 
+section('failed partisan and nálet: losses read, ids kept (2026-11-25)');
+{
+    const fp = A.parseLine('1.11.2026\t21:14:56\tNaši vojáci neuspěli díky silnému odporu Nebudeme smútiť(#40000) [HOLY] - Olko v partyzánském útoku . Zahynulo při tom 9637 našich a 4669 nepřátelských vojáků. Získáno 782 zkušeností.');
+    eq('failed partisan: our dead read', `${fp.typ} ${fp.ztraty_utocnik} ${fp.ztraty_obrance}`, 'partyzansky 9637 4669');
+    eq('…id as before the fix', fp.id, '2026-11-01 21:14:56|partyzansky|40000|4669||||||4669|782');
+    A.markFailures([fp]);
+    eq('…and it is a failure ("neuspěli")', fp.uspech, 0);
+    eq('…our losses in the formula', A.scopeFor(fp, {}).attack_prestiz, 9637);
+    const fn = A.parseLine('27.10.2026\t21:27:25\tNašim vzdušným silám se nepodařilo obejít nepřátelskou leteckou obranu země Jajdo, dva jumy(#149) [NATO] - blizzard3 a pokus o taktický nálet na vojenská zařízení nepřítele byl neúspěšný. Ztratili jsme při tom 820 stíhaček. Nepřítel přišel o 420 stíhaček a 48 bunkrů. Získáno 159 zkušeností.');
+    eq('failed nálet: our and their fighters read', `${fn.typ} ${fn.ztraty_utocnik} ${fn.zabito_stihacky} ${fn.zabito_bunkry} ${fn.zabito_celkem}`, 'nalet 820 420 48 468');
+    eq('…id as before the fix', fn.id, '2026-10-27 21:27:25|nalet|149||||48||||159');
+    const fsc = A.scopeFor(fn, {});
+    eq('…D = fighters 3.5 + bunkers 3.5, A = our fighters 3.5', `${fsc.defense_prestiz} ${fsc.attack_prestiz}`, `${(420 + 48) * 3.5} ${820 * 3.5}`);
+    // Stored before the fix: filled from the text on load, id unchanged.
+    const old = { id: 'x', typ: 'nalet', uspech: 0, zabito_bunkry: 48, raw: fn.raw };
+    eq('stored failed nálet filled on load', `${A.fillFailedLosses([old])} ${old.ztraty_utocnik} ${old.zabito_stihacky} ${old.id}`, '1 820 420 x');
+    eq('a second pass fills nothing', A.fillFailedLosses([old]), 0);
+    const ok = A.parseLine('2.10.2026\t6:47:23\tPartyzánský útok na Ankh-Morpork(#79) [HOLY] - mikrobbb se zdařil. Připravenost nepřátelské armády byla snížena o 4% , zabito bylo 2 agentů a zapálením zásob ropy klesla zásoba energie nepřítele o 201 MWh. Při bojích zahynulo 7368 našich a 1740 nepřátelských vojáků. Získáno 1895 zkušeností.');
+    eq('a successful partisan is unchanged', `${ok.ztraty_utocnik} ${A.fillFailedLosses([ok])}`, '7368 0');
+}
+
 section('Tajemství mozku: who has it, from when');
 {
     const L = A.parseMozek('47, #83; 118 od 2.10.2026 13:00');

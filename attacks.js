@@ -256,7 +256,46 @@
         rec.zabito_celkem = killed2.length ? killed2.reduce((a, b) => a + b, 0) : null;
 
         rec.id = signature(rec);
+        // Read after the id: records stored before these were read keep their ids.
+        fillFailedLoss(rec, text);
         return rec;
+    }
+
+    /**
+     * Losses in two failure wordings the branches above miss (2026-11-25):
+     *  - failed partisan: "Naši vojáci neuspěli … v partyzánském útoku. Zahynulo
+     *    při tom 9640 našich a 3277 nepřátelských vojáků" - our dead;
+     *  - failed nálet: "… byl neúspěšný. Ztratili jsme při tom 820 stíhaček.
+     *    Nepřítel přišel o 0 stíhaček a 48 bunkrů" - our and their fighters.
+     * Fills only what is still empty. Returns true when it filled something.
+     */
+    function fillFailedLoss(rec, text) {
+        const t = String(text || rec.raw || '');
+        if (!t) return false;
+        let done = false;
+        if (rec.typ === 'partyzansky' && rec.ztraty_utocnik == null) {
+            const ours = grab(t, /zahynulo\s+p[řr]i\s+tom\s+([\d\s .]+?)\s*na[šs]ich/i);
+            if (ours !== null) { rec.ztraty_utocnik = ours; done = true; }
+        }
+        if ((rec.typ === 'nalet' || rec.typ === 'bombardovani') && rec.ztraty_utocnik == null) {
+            const ours = grab(t, /ztratili\s+jsme\s+p[řr]i\s+tom\s+([\d\s .]+?)\s*st[íi]ha[čc]ek/i);
+            const theirs = grab(t, /nep[řr][íi]tel\s+p[řr]i[šs]el\s+o\s+([\d\s .]+?)\s*st[íi]ha[čc]ek/i);
+            if (ours !== null) { rec.ztraty_utocnik = ours; done = true; }
+            if (theirs !== null && rec.ztraty_obrance == null) {
+                rec.ztraty_obrance = theirs;
+                rec.zabito_stihacky = theirs;
+                rec.zabito_celkem = theirs + (Number(rec.zabito_bunkry) || 0);
+                done = true;
+            }
+        }
+        return done;
+    }
+
+    /** Stored records of those wordings get their losses from the text; ids stay. */
+    function fillFailedLosses(records) {
+        let n = 0;
+        (records || []).forEach(rec => { if (rec && rec.raw && isAttack(rec) && fillFailedLoss(rec, rec.raw)) n++; });
+        return n;
     }
 
     /**
@@ -377,7 +416,7 @@
     }
 
     /** Our attack beaten off or failed (see parseLine). */
-    const FAILED = /nebyla\s+pora[žz]ena|odra[žz]en|nevnikli|nepoda[řr]ilo/i;
+    const FAILED = /nebyla\s+pora[žz]ena|odra[žz]en|nevnikli|nepoda[řr]ilo|neusp[ěe]li/i;
 
     /**
      * Mark failed attacks from their text where the mark is missing - an
@@ -1690,6 +1729,7 @@
         markDefences,
         fillReadiness,
         fillBunkers,
+        fillFailedLosses,
         energyBurnt,
         rankUnsure,
         fillPreviousAgeAttacker,

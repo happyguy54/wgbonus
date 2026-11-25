@@ -6,6 +6,40 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
+## Audit of every part (2026-11-25, 825 trusted attacks)
+
+`xp-data.js` + `xp-eval.js`: trusted = exact ranks on both sides, own
+konflikty prestiž, known war state, no floor (new age 263, early last age
+483, .ghost 79). Ten analysts revisited one part each; every proposed change
+went to two independent skeptics (out-of-sample refit + round bootstrap;
+robustness: drop influential rounds/attackers); a critic checked the result.
+Presets "(25.11)": the "(24.11)" shape plus failed attacks x 1/4.
+
+| Part | Verdict |
+|---|---|
+| Unit prestiž weights in D | keep (free weights land on the prestiž values; agents and energy not identifiable) |
+| D vs measured konflikty drop | keep D (dpd/D 0.998; dpd adds 1k-rounding noise) |
+| Loss term linear | keep (free power 1.009) |
+| Own losses /3 | keep (free 0.295; groups 0.29 / 0.37 / 0.38 - a signal, not adopted) |
+| Kill-ratio knee min(D, 2.5A) + (D - 2.5A)/4 | trial preset only: fixes lopsided noční, but two attackers, no refit out-of-sample gain, interacts with the rank rule |
+| Prestiž exp(0.8 ln r - ln^2 r / 2) (pa/1M)^-1/3 | keep (power law 4.17 % vs 3.33 %; piecewise alternative refuted by both skeptics) |
+| Rank rule (help, penalty only) | keep for now; first-rank-free refuted in the last age, but the new age (leads 2-3, 10 rounds) fits it better - open |
+| Mozek 1.25 | keep (free 1.240) |
+| First hour 1.1 | keep (free 1.105, 128 rows); "oldest war" variant refuted; 1.1 for wars the target declared untested |
+| Prewar 0.5 | unverified: no trusted rows; the only data imply ~0.58 |
+| No-alliance 1/3 | thin: 3 trusted rows (free 0.335) |
+| Cap 18k / half | keep (without it sd 3.49 -> 4.29 %) |
+| Type constants 0.25 / 0.32 / 0.32 / 0.36 | keep; nálet rounds disagree ~2x (sd 11 % within the type) - open |
+| Failed attacks x 1/4 | adopted: noční 0.996 (13), týl 1.003 (4), nálet 0.986 (2) |
+| Bunker entries | provisional c 0.33 (6 early/new entries) |
+| Burst factor (chained attacks) | refuted by both skeptics (one round) |
+| Late last-age drop (~0.82) | unexplained; lead: attacker prestiž relative to his accumulated XP |
+| Defender XP | mirror of the attacker formula, c (A + D/4) exp(0.6 l - l^2/2) (pd/1M)^-0.3 mozek_us, l = ln(pa/pd), c 1/6 (nálet needs A + D): sd ~4.4 % vs ~8 % for the exact mirror; slope 0.45-0.60 depending on the age |
+
+Parser fixes from the audit: failed partisans ("neuspěli") are failures and
+read our dead; failed nálet read our and their fighters (stored records are
+filled on load, ids unchanged).
+
 ## One shape, round constants (2026-11-14, 1 370 attacks)
 
 Page presets "(14.11)":
