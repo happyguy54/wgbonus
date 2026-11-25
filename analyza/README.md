@@ -36,6 +36,19 @@ Presets "(25.11)": the "(24.11)" shape plus failed attacks x 1/4.
 | Late last-age drop (~0.82) | unexplained; lead: attacker prestiž relative to his accumulated XP |
 | Defender XP (page: chart "z našich obran", presets "obrana – …") | mirror of the attacker formula, c (A + D/4) exp(0.6 l - l^2/2) (pd/1M)^-0.3 mozek_us, l = ln(pa/pd), c 1/6 (nálet needs A + D): sd ~4.4 % vs ~8 % for the exact mirror; slope 0.45-0.60 depending on the age. Page engine: noční 1.01 (3 %), týl 0.99 (8 %), partisan 0.99 (9 %), nálet (A + D)/7 1.00 (6 %); repelled x2.5 provisional (51), overshoots giant repelled noční (45-68k XP) |
 
+One pool split between attacker and defender? (2026-11-25) Not testable
+directly: no attack is in the data from both sides (0 pairs among 2 036
+defences and 2 164 attacks; defences come only from alliance members).
+Indirectly it fails. (1) The sides share the template, not the numbers: the
+attacker shape mirrored onto 1 626 noční/týl/partisan defences gives sd 8.5 %
+vs 5.2 % (free fit: own losses 0.26, slope 0.62, size 0.31), the defender shape
+onto 764 trusted attacks 6.1 % vs 3.3 % (free: 0.29, 0.81, 0.34); nálet
+defences 18 % vs 6 %. (2) The attack type moves the attacker constant (0.253 /
+0.320 / 0.321) but not the defender one (0.168 / 0.164 / 0.165): a type-sized
+pool would lift týl/partisan defences x1.27, a type-dependent split of a fixed
+pool would cut them. So each side has its own formula; the type bonus is
+attacker-only.
+
 Parser fixes from the audit: failed partisans ("neuspěli") are failures and
 read our dead; failed nálet read our and their fighters (stored records are
 filled on load, ids unchanged).
