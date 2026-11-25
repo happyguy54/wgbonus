@@ -47,7 +47,12 @@ defences 18 % vs 6 %. (2) The attack type moves the attacker constant (0.253 /
 0.320 / 0.321) but not the defender one (0.168 / 0.164 / 0.165): a type-sized
 pool would lift týl/partisan defences x1.27, a type-dependent split of a fixed
 pool would cut them. So each side has its own formula; the type bonus is
-attacker-only.
+attacker-only. (3) A pool from the total prestiž lost, split by relative
+prestiž, would count both sides' losses equally: own losses counted fully give
+attacks 12.6 % vs 3.3 % (ignored 11.5 %), defences 12.5 % vs 5.2 % (ignored
+10.9 %). Nálet defences are the exception: there own losses count fully
+((A + D)/7: 6.0 % vs 9.3 % with D/4). Nálet attacks with own losses counted
+fully: 12.2 % vs 10.7 % - not the fix for the open nálet rounds.
 
 Parser fixes from the audit: failed partisans ("neuspěli") are failures and
 read our dead; failed nálet read our and their fighters (stored records are
