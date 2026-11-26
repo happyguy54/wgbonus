@@ -6,6 +6,25 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
+## Rank rule: the user's (lead - 1) x 5 % in the presets (2026-11-26)
+
+The presets "(26.11)" use `hodnost_postih` = -(lead - 1) x 5 %, at most
+-20 %, from attacker rank 5 (attacks.js rankPenalty), instead of the help's
+literal lead x 5 % (`hodnost_bonus`, kept as a variable). Checked per type on
+clean data (workflow rank-rule-per-type: no late group, no attack whose
+prestiž is certainly below its XP, certain ranks only):
+- noční, the only type with clean rounds at a lead of 2-3 (21 attacks, 7
+  round segments, 4 attacker-days): against the same attacker's lead-1 rounds
+  that day the literal rule sits +5.2 % (t ~ 3), the user's -0.3 %; #83's own
+  rank-up on 8.10 (lead 1 -> 2) steps x0.949 (user x0.95, literal x0.90);
+- týl, partisan, nálet: 1, 1 and 0 such rounds - neutral; týl's one (#36 on
+  25.11, below the line) leans literal by ~4 %, inside a one-round error;
+- .ghost (below the line throughout) leans literal at lead 4, unresolved.
+New-age noční off by more than 5 %: 43 -> 32 of 275. Trusted new noční: sd
+2.78 -> 2.64 %, within 5 % 85 -> 89 %; with fixed constants no type gets
+worse (early partisan 67.5 % -> 67.5 %). `xp-eval.js` scores with
+`presetRank` now (`helpRank` is the literal rule).
+
 ## Sesvačenost collected per attack (2026-11-26)
 
 Some attackers sit at 0.73-0.88 for a stretch and then jump back to 1.00

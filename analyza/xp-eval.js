@@ -18,19 +18,23 @@ const strop = (x, k = 18000, s = 0.5) => (x <= k ? x : k + s * (x - k));
 const unstrop = (y, k = 18000, s = 0.5) => (y <= k ? y : k + (y - k) / s);
 const TACTICAL = ['nocni', 'tyl', 'partyzansky', 'nalet'];
 
-/** The page's "(24.11)" presets, from row fields. */
+/** The page's "(26.11)" presets, from row fields. */
 const C24 = { nocni: 0.25, tyl: 0.32, partyzansky: 0.32, nalet: 0.36 };
 function prestiz24(row) {
     const l = Math.log(row.pd / row.pa);
     return Math.exp(0.8 * l - 0.5 * l * l) * Math.pow(row.pa / 1e6, -1 / 3);
 }
 const helpRank = row => 1 + Math.min(0, row.hb || 0) / 100;
+// The rank rule the presets use since 26.11: the user's reading, (lead - 1) x 5 %,
+// at most 20 %, from attacker rank 5 (attacks.js rankPenalty). helpRank above is
+// the help's literal rule, kept for comparison.
+const presetRank = row => (row.hu >= 5 && row.hu - row.hd > 1) ? 1 - Math.min(20, (row.hu - row.hd - 1) * 5) / 100 : 1;
 function current(row, o = {}) {
     const c = (o.c || C24)[row.typ];
     if (!c) return null;
     // A failed attack gets a quarter, as in the page's presets (NEUSPECH);
     // without it every failure reads ~0.25 in listings that keep them.
-    let x = c * row.war * (row.uspech === 0 ? 0.25 : 1) * (row.D + row.A / 3) * prestiz24(row) * helpRank(row);
+    let x = c * row.war * (row.uspech === 0 ? 0.25 : 1) * (row.D + row.A / 3) * prestiz24(row) * presetRank(row);
     if (row.typ !== 'nocni') x = Math.max(150, x);
     x *= row.mozek;
     return o.noCap ? x : strop(x);
@@ -94,4 +98,4 @@ function fit(set, model, p0, opts = {}) {
     return { p: res.x, m: evaluate(set, r => model(r, res.x), opts) };
 }
 
-module.exports = { rows, trusted, all, evaluate, report, fit, current, prestiz24, helpRank, strop, unstrop, med, mad, C24, TACTICAL };
+module.exports = { rows, trusted, all, evaluate, report, fit, current, prestiz24, helpRank, presetRank, strop, unstrop, med, mad, C24, TACTICAL };

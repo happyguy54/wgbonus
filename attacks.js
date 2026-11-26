@@ -1463,10 +1463,23 @@
      * a newer reading; one typed in by hand (no mark) is never overwritten.
      */
     /**
+     * The rank rule as the presets use it (the user's reading of help 6.2.6,
+     * 2026-11-26): an attacker of rank 5 or more leading the defender by `lead`
+     * ranks loses (lead - 1) * 5 % of the XP, at most 20 %; a lead of one costs
+     * nothing, and a higher-ranked defender gives no bonus. Returns the change
+     * in % (0 or negative).
+     */
+    function rankPenalty(hu, hd) {
+        const u = Number(hu), d = Number(hd);
+        if (!Number.isFinite(u) || !Number.isFinite(d) || u < 5 || u - d < 2) return 0;
+        return -Math.min(20, (u - d - 1) * 5);
+    }
+
+    /**
      * Whether a guessed hodnost could change the attack's XP: some side's rank
-     * is only an estimate, and one rank either way would change the manual's
-     * penalty (5 % per rank the attacker leads beyond the first, from his rank
-     * 5, at most 20 %). Such an attack is left out of fits - guessed ranks were
+     * is only an estimate, and one rank either way would change the presets'
+     * penalty (rankPenalty: 5 % per rank the attacker leads beyond the first,
+     * from his rank 5, at most 20 %). Such an attack is left out of fits - guessed ranks were
      * often a rank or two off (2026-11-24: of the 8 guesses that exact readings
      * pin down, 7 were wrong; leading by 2-3 on a guessed defender put rounds
      * at 1.09-1.22).
@@ -1475,7 +1488,7 @@
         if (!rec) return false;
         const hu = Number(rec.hodnost_utocnik), hd = Number(rec.hodnost_obrance);
         if (!Number.isFinite(hu) || !Number.isFinite(hd)) return false;
-        const pen = (u, d) => (u >= 5 && u - d > 1) ? Math.min(20, (u - d) * 5) : 0;
+        const pen = (u, d) => -rankPenalty(u, d);
         const now = pen(hu, hd);
         const guessU = rec.hodnost_utocnik_jiste === 0, guessD = rec.hodnost_obrance_jiste === 0;
         if (!guessU && !guessD) return false;
@@ -1827,6 +1840,13 @@
         out.hodnost_bonus = (out.hodnost_utocnik >= 5 && Math.abs(gap) > 1)
             ? Math.max(-20, Math.min(20, gap * 5))
             : 0;
+        // The user's reading of the same rule, as a penalty only: the first
+        // rank of the lead never counts - (lead - 1) * 5 %, at most 20 %, from
+        // attacker rank 5. The presets use it since 2026-11-26: noční at a lead
+        // of 2-3 sit flat under it and ~5 % high under the literal rule (same
+        // attacker's lead-1 rounds that day, 4 attacker-days, t ~ 3), and
+        // #83's own rank-up on 8.10 (lead 1 -> 2) steps x0.949 (x0.95 vs x0.90).
+        out.hodnost_postih = rankPenalty(out.hodnost_utocnik, out.hodnost_obrance);
 
         out.prestiz_pomer = out.prestiz_utocnik > 0
             ? out.prestiz_obrance / out.prestiz_utocnik
@@ -1866,6 +1886,7 @@
         defenceLosses,
         energyBurnt,
         rankUnsure,
+        rankPenalty,
         fillPreviousAgeAttacker,
         fillTypes,
         parseValky,

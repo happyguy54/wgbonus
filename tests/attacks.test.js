@@ -1065,6 +1065,14 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('guessed defender, attacker below rank 5 either way: no penalty', ru(3, 1, 2, 0), false);
     eq('guessed attacker at the 20 % cap, leading by 6: still 20 % either way', ru(12, 0, 6, 1), false);
     eq('no ranks: nothing to judge', A.rankUnsure({}), false);
+    // The presets' rank rule since 26.11: the user's (lead - 1) x 5 %, at most 20 %.
+    const pen = (hu, hd) => A.scopeFor({ typ: 'nocni', hodnost_utocnik: hu, hodnost_obrance: hd }, {}).hodnost_postih;
+    eq('lead 1: nothing, lead 2: -5, 3: -10, 4: -15, 5: -20, 6: still -20',
+        [pen(8, 7), pen(8, 6), pen(8, 5), pen(8, 4), pen(8, 3), pen(8, 2)].join(','), '0,-5,-10,-15,-20,-20');
+    eq('below rank 5, or a higher defender: nothing', `${pen(4, 1)}/${pen(6, 9)}`, '0/0');
+    eq('the literal rule stays as its own variable', A.scopeFor({ typ: 'nocni', hodnost_utocnik: 8, hodnost_obrance: 6 }, {}).hodnost_bonus, -10);
+    eq('a guessed defender at lead 4: one rank lower changes it now (15 -> 20 %)', ru(9, 1, 5, 0), true);
+    eq('a guessed defender at lead 6: 20 % either way', ru(11, 1, 5, 0), false);
     // War state as an XP factor: half in a just-declared war, +10 % in the first full hour.
     const w2 = [{ ali: 'EJZ', proti: '.B.I.S.', od: '2026-11-12 16:50' }];
     const wx = (cas, valky = w2, ali = '.B.I.S.') => A.scopeFor({ typ: 'partyzansky', cas, cil_aliance: ali }, { valky }).valka_xp;
