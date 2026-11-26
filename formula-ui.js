@@ -247,11 +247,14 @@
     function idb(mode, fn) {
         return new Promise((resolve, reject) => {
             let req;
-            try { req = indexedDB.open('wgbonus', 1); }
+            // Same database, version and stores as attacks-ui.js (its 'kv'
+            // holds the attack log): creating only 'handles' here left the log
+            // without a place to save.
+            try { req = indexedDB.open('wgbonus', 2); }
             catch (e) { return reject(e); }
-            req.onupgradeneeded = () => {
-                if (!req.result.objectStoreNames.contains('handles')) req.result.createObjectStore('handles');
-            };
+            req.onupgradeneeded = () => ['kv', 'handles'].forEach(n => {
+                if (!req.result.objectStoreNames.contains(n)) req.result.createObjectStore(n);
+            });
             req.onerror = () => reject(req.error);
             req.onsuccess = () => {
                 const db = req.result;

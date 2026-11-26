@@ -120,16 +120,35 @@
     // save then failed silently and a reload brought back the last copy that
     // still fitted, without the downloaded attacks. localStorage still gets a
     // copy while it fits, and is read when IndexedDB has none (older pages).
-    const IDB_NAME = 'wgbonus', IDB_STORE = 'kv';
+    //
+    // formula-ui.js keeps chosen file handles in the same database (store
+    // 'handles'). Version 1 was created by whichever script opened it first,
+    // and when that was formula-ui.js the 'kv' store never existed: every save
+    // here failed with NotFoundError (found 2026-11-26). Version 2 creates
+    // both stores, in both scripts - keep IDB_VERSION and the store list the
+    // same there.
+    const IDB_NAME = 'wgbonus', IDB_VERSION = 2, IDB_STORE = 'kv', IDB_STORES = ['kv', 'handles'];
     let idbOpen = null;
     function idb() {
         if (!idbOpen) {
             idbOpen = new Promise(resolve => {
                 try {
-                    const req = indexedDB.open(IDB_NAME, 1);
-                    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-                    req.onsuccess = () => resolve(req.result);
-                    req.onerror = () => resolve(null);
+                    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+                    req.onupgradeneeded = () => IDB_STORES.forEach(n => {
+                        if (!req.result.objectStoreNames.contains(n)) req.result.createObjectStore(n);
+                    });
+                    req.onsuccess = () => {
+                        const db = req.result;
+                        // Let a newer page in another tab upgrade the database.
+                        db.onversionchange = () => { db.close(); idbOpen = null; };
+                        resolve(db);
+                    };
+                    req.onerror = () => { idbOpen = null; resolve(null); };
+                    // An older copy of the page in another tab holds version 1
+                    // open; the upgrade waits until that tab is closed.
+                    req.onblocked = () => {
+                        if (ui.syncInfo) ui.syncInfo.textContent = 'Data se ukládají, až zavřete ostatní karty s touto stránkou.';
+                    };
                 } catch (e) { resolve(null); }
             });
         }
