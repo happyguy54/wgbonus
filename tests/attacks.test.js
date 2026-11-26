@@ -916,6 +916,23 @@ section('bases count in defense_prestiz; failures re-marked from text');
     eq('the enemy becomes the attacker, the id stays', [def.druh, def.utocnik_id, def.utocnik_zeme, def.cil_id, def.id].join('|'), 'obrana|45|Xenofobni humanista|83|z');
 }
 
+section('enemy infantry entering our bunkers is a defence (2026-11-26)');
+{
+    const text = '25.11.2026\t21:27:33\tPěchotě země Bez nervů a bez plakání..(#99) [NATO] - RamboJohn vyhraj se podařilo vniknout do 885 našich bunkrů a zneškodnit je. Při tom zahynulo 3245 nepřátelských vojáků. Získáno 981 zkušeností.';
+    const ours = '26.11.2026\t10:01:03\tNaší pěchotě se podařilo vniknout do 3044 bunkrů země HALA MADRID(#139) [YOZZEFY] - pračalfíček a zneškodnit je. Při tom zahynulo 10148 našich vojáků. Získáno 6872 zkušeností.';
+    eq('their entry is a defence, ours stays an attack', [A.DEFENCE.test(text), A.DEFENCE.test(ours)].join('/'), 'true/false');
+    const header = '### ARCHIV #65 Země65 - hrac65\n';
+    const pasted = A.parsePaste(header + text).records;
+    eq('pasted: one defence, the enemy attacked our ally', pasted.map(r => [r.druh, r.typ, r.utocnik_id, r.cil_id, r.xp].join('|')).join(','), 'obrana|bunkry|99|65|981');
+    // Stored by the old parser as our attack on #99, with an attack-style id.
+    const old = { id: '2026-11-25 21:27:33|bunkry|99||||||||981', cas: '2026-11-25 21:27:33', typ: 'bunkry', xp: 981, utocnik_id: 65, cil_id: 99, cil_aliance: 'NATO', raw: text };
+    const st = new A.AttackStore([old]);
+    A.markDefences(st.records); st.reindex();
+    eq('stored: marked, roles turned, id kept', [old.druh, old.utocnik_id, old.cil_id, old.id].join('|'), 'obrana|99|65|2026-11-25 21:27:33|bunkry|99||||||||981');
+    const again = st.addMany(pasted);
+    eq('pasting the same message again adds nothing', `${again.added}/${st.records.length}`, '0/1');
+}
+
 section('failed partisan and nálet: losses read, ids kept (2026-11-25)');
 {
     const fp = A.parseLine('1.11.2026\t21:14:56\tNaši vojáci neuspěli díky silnému odporu Nebudeme smútiť(#40000) [HOLY] - Olko v partyzánském útoku . Zahynulo při tom 9637 našich a 4669 nepřátelských vojáků. Získáno 782 zkušeností.');

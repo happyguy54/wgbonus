@@ -28,7 +28,9 @@ const helpRank = row => 1 + Math.min(0, row.hb || 0) / 100;
 function current(row, o = {}) {
     const c = (o.c || C24)[row.typ];
     if (!c) return null;
-    let x = c * row.war * (row.D + row.A / 3) * prestiz24(row) * helpRank(row);
+    // A failed attack gets a quarter, as in the page's presets (NEUSPECH);
+    // without it every failure reads ~0.25 in listings that keep them.
+    let x = c * row.war * (row.uspech === 0 ? 0.25 : 1) * (row.D + row.A / 3) * prestiz24(row) * helpRank(row);
     if (row.typ !== 'nocni') x = Math.max(150, x);
     x *= row.mozek;
     return o.noCap ? x : strop(x);

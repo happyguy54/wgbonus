@@ -64,7 +64,7 @@
     }
 
     /** Messages where we defended rather than attacked; see parseLine. */
-    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov|odvr[áa]til[aiy]?\s/i;
+    const DEFENCE = /na[šs]\S*\s+obran|v\s+obran[ěe]|byli\s+jsme\s+povol[áa]n|na\s+n[áa]s\s+(?:podnikl|za[úu]to[čc]il)|za[úu]to[čc]il[ao]?\s+na\s+n[áa]s|nep[řr][áa]telsk[ýy]m\s|na[šs][íi]\s+zem[íi]\b|n[áa][šs]\s+t[ýy]l|bleskov[ýy]\s+[úu]der\s+tankov|odvr[áa]til[aiy]?\s|na[šs]ich\s+bunkr/i;
 
     /** "10.9.2026 12:12:14" anywhere in a row -> "2026-09-10 12:12:14". */
     function casOf(text) {
@@ -101,7 +101,9 @@
         // "Sebevědomá země X(#38) … Zaútočila na nás dobyvačným útokem, ale
         // nepřemohla nás", "Bleskový úder tankové brigády X(#45) … byl
         // odražen" (ours reads "úder naší tankové brigády"); "Byli jsme povoláni
-        // zemí Y(#118) na pomoc v obraně …" (we helped an ally defend). Read as
+        // zemí Y(#118) na pomoc v obraně …" (we helped an ally defend); "Pěchotě
+        // země X(#99) … se podařilo vniknout do 885 našich bunkrů …" (ours
+        // reads "vniknout do N bunkrů země X"). Read as
         // attacks they would store the enemy, or our own ally, as the target.
         // Skipped until defence gets its own parser.
         if (DEFENCE.test(text)) return null;
@@ -757,6 +759,20 @@
         }
 
         clear() { this.records = []; this.byId = new Set(); this.byMessage = new Map(); this.merged = 0; }
+
+        /**
+         * Rebuilds the message index after records were changed in place
+         * (markDefences turns the roles round, so a stored defence's target
+         * becomes our ally). Without it the same message pasted again is
+         * looked up under the new target, not found, and stored twice.
+         */
+        reindex() {
+            this.byMessage = new Map();
+            this.records.forEach(rec => {
+                const key = messageKey(rec);
+                if (key && !this.byMessage.has(key)) this.byMessage.set(key, rec);
+            });
+        }
 
         /** Our attacks only - defences and unread conquests are kept apart. */
         attacks() {

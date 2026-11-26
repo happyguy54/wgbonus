@@ -44,7 +44,15 @@
      *  their rounds: #42 Klimovec after 22.11. 17:42 (1.06 -> 1.33), #37
      *  Ilydann somewhere between 21.11. 11:09 (bare 150 týl) and 23.11. 7:40
      *  (his týl fit only with it: 0.99-1.01 with, 1.24-1.26 without); only
-     *  conquests in between, so 21.11. 11:10 is the earliest bound. */
+     *  conquests in between, so 21.11. 11:10 is the earliest bound.
+     *  Found from defences (their formula shows no attacker-side steps) and
+     *  týl floors, 26.11.: #65 between 23.11. 23:53:50 and 24.11. 7:11:16
+     *  (noční defences from #38 1.00 -> 1.24 a day apart; týl floor 150 ->
+     *  188 = 150 x 1.25 on 25.11.; no attack of his in between). #70 between
+     *  22.11. 17:04 and 23.11. 10:05 (noční defences 1.03 -> 1.27-1.30 while
+     *  the same enemies give #34 1.01); 8:53 after his last attack that fits
+     *  without it. His partisans then sit at 0.87-0.92 - an unexplained
+     *  dip that #42 shows too after his proven mozek, not a reason to drop it. */
     // Each age numbers the countries afresh, so the last age's list ends with
     // it ("do 14.11.2026": its last stored attack is from 13.11., the new age's
     // first from 20.11.).
@@ -52,7 +60,7 @@
         + '118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, '
         + '44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, '
         + '52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, '
-        + '42 od 22.11.2026 17:43, 37 od 21.11.2026 11:10';
+        + '42 od 22.11.2026 17:43, 37 od 21.11.2026 11:10, 70 od 23.11.2026 8:53, 65 od 24.11.2026 0:01';
     /** Earlier defaults: a field still holding one of these was never edited
      *  by hand, so it follows the list above. */
     const MOZEK_OLD = ['47, 83, 118 od 3.10.2026 13:15, 55 od 2.10.2026 6:47:15',
@@ -63,7 +71,8 @@
         '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026',
         '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 21.11.2026',
         '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26',
-        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, 42 od 22.11.2026 17:43, 37 od 23.11.2026 7:52'];
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, 42 od 22.11.2026 17:43, 37 od 23.11.2026 7:52',
+        '47 do 14.11.2026, 48 do 14.11.2026, 83 do 14.11.2026, 118 od 3.10.2026 13:15 do 14.11.2026, 55 od 2.10.2026 6:47:15 do 14.11.2026, 44 od 5.10.2026 14:00 do 14.11.2026, 68 od 5.10.2026 14:00 do 14.11.2026, 52 od 7.10.2026 10:00 do 14.11.2026, 36 od 20.11.2026, 31 od 20.11.2026, 95 od 20.11.2026 21:26, 42 od 22.11.2026 17:43, 37 od 21.11.2026 11:10'];
     const mozekSetting = v => (!v || MOZEK_OLD.includes(v) ? MOZEK_EJZ : v);
 
     /** Player-supplied context the log does not carry. */
@@ -207,7 +216,7 @@
         // rejected by signature, so merging cannot double anything up either.
         const res = store.addMany(data.records || []);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records); store.reindex();
 
         // The signature covers only the values read off the log, so a record
         // already present is treated as a duplicate even when the file carries
@@ -821,7 +830,7 @@
         const before = store.attacks().length;
         const { added, duplicates } = store.addMany(records);
         A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records); store.reindex();
         const addedAttacks = store.attacks().length - before;
 
         const bits = [];
@@ -1000,7 +1009,7 @@
             const atk = await syncCall('attacks', 'GET');
             const res = store.addMany(atk.records || []);
             A.upgradeConquests(store.records);
-        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records);
+        A.markDefences(store.records); A.markFailures(store.records); A.fillReadiness(store.records); A.fillBunkers(store.records); A.fillFailedLosses(store.records); A.fillTypes(store.records); A.fillPreviousAgeAttacker(store.records); store.reindex();
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
