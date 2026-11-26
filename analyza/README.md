@@ -25,7 +25,7 @@ Presets "(25.11)": the "(24.11)" shape plus failed attacks x 1/4.
 | Prestiž exp(0.8 ln r - ln^2 r / 2) (pa/1M)^-1/3 | keep (power law 4.17 % vs 3.33 %; piecewise alternative refuted by both skeptics) |
 | Rank rule (help, penalty only) | keep for now; first-rank-free refuted in the last age, but the new age (leads 2-3, 10 rounds) fits it better - open |
 | Mozek 1.25 | keep (free 1.240) |
-| First hour 1.1 | keep (free 1.105, 128 rows); "oldest war" variant refuted; 1.1 for wars the target declared untested |
+| First hour 1.1 | keep (free 1.105, 128 rows); "oldest war" variant refuted; 1.1 for wars the target declared untested. A refreshed war counts as a new declaration: #95 on #163, 25.11. 23:02-23:12, 12.5 h after EG refreshed the AxF war (10:28) - 1.14 without it, 1.03 with it. The refresh shows only on the alliance page ("Aktuální války"), not on the war page |
 | Prewar 0.5 | unverified: no trusted rows; the only data imply ~0.58 |
 | No-alliance 1/3 | thin: 3 trusted rows (free 0.335) |
 | Cap 18k / half | keep (without it sd 3.49 -> 4.29 %). Smooth declines tested (power on XP or on the losses, K ln(1 + XP/K), XP/(1 + XP/K)): fitted inside the 3 rounds that cross 18k they bend mid-size attacks by 8-38 % (5-8k 1.14, 12-18k 1.38) while the knee keeps every size at 0.99-1.03; only a knee blurred over about ±2k fits as well |
