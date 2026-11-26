@@ -6,6 +6,38 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
+## New-age noční outliers (2026-11-26, 275 attacks)
+
+Six clusters, each checked by a separate skeptic (aa93955). Off by more
+than 5 %: 59 -> 48 attacks, 11 -> 8 rounds.
+
+- Mozek, from defences (the defence formula shows no attacker-side steps)
+  and týl floors (150 vs 188 = 150 x 1.25). #65 got it between 23.11 23:53
+  and 24.11 7:11 (his 25.11 noční 1.29 / 1.20 -> 1.03 / 0.96). #70 between
+  22.11 17:04 and 23.11 10:05; his partisans then sit at 0.87-0.92. #42
+  shows the same post-floor dips (24.11: týl 152 = 0.81 x 188) after his
+  proven mozek, which is unexplained, not lost mozek. #34 has none.
+- The two "0.26" were failed attacks, scored by `xp-eval.js` without the
+  presets' x1/4 (now added); the page had them at 1.02.
+- Guessed ranks: none of the 74 lies outside the interval set by the same
+  country's exact readings, and no admissible rank fixes an outlier. An
+  "exact" defender rank is only an upper bound: it is read 22-55 h later and
+  the defender's own gains are unknown. The store keeps the first guess
+  (only an exact value replaces it); estimates uploaded 23.11 17:42 were
+  made with the old full-share rule.
+- Still open: the 22.11 YOZZEFY rounds at a rank gap of 2-3 (1.08-1.12),
+  which the user's reading (gap - 1) x 5 % fits (1.02-1.06) and the help
+  literal doesn't. Noční in both ages prefer it (gap 2: 1.05 -> 1.00, n 19);
+  týl at gap 2 (3 attacks) and .ghost's týl at gap 4 (6) prefer the help.
+  #36 -> #143 23.11 19h (1.14): the first hour of NATO's war on Outlogs,
+  which the page doesn't count (only wars on the target's alliance). One
+  session, no control; 6.11 #83 -> #35 goes against it. #36 -> #124 25.11
+  (0.92) depends on #124's rank (5 or 6) and on whether 9:09 was the
+  YOZZEFY declaration's time. #31 -> #88 23.11 (0.74, the conquest too) and
+  #36 -> #82 25.11 22:05:22/45 (1.15 before a x0.84 step) are unexplained.
+- Konflikty pairing: four noční rows (#133 24.11 16:12, #142 22.11 20:33)
+  got each other's prestiž; their unit fields prove it. Cosmetic, not fixed.
+
 ## Audit of every part (2026-11-25, 825 trusted attacks)
 
 `xp-data.js` + `xp-eval.js`: trusted = exact ranks on both sides, own
