@@ -120,6 +120,9 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
                 + pageRows.map(archiveRow).join('') + '</tbody></table>' + more);
         }
         if (param('p') === 'archiv') return menu;
+        // The alliance page lists current wars with the latest (re)declaration
+        // - a refreshed war shows only here.
+        if (param('p') === 'aliance') return '<h3>Aktuální války:</h3><table><tr><td>EJZ ---&gt; HOLY</td><td>VÁLKA</td><td>25.11. 10:28</td></tr></table><p>xp bonus</p>';
         if (param('p') === 'konflikty' && param('s') === 'awarstat') return read('samples/valky-tvfn.html');
         if (param('p') === 'konflikty') {
             const id = Number(param('land_6'));
@@ -370,7 +373,8 @@ section(`${label}: our alliance's page, once, before the archives`);
     const z = A.parseZebricek(game.clip.text);
     eq('the page reads them back as lower bounds', `${z[95].lo}-${z[95].hi}`, '143444-149999');
     ok('our wars fetched once', game.calls.filter(u => /s=awarstat&getali=EJZ/.test(u)).length === 1);
-    eq('and read back by the page', A.parseValky(game.clip.text, 2026).map(v => v.ali + '×' + v.proti + ' ' + v.od).join(), 'TVFN×.B.I.S. 2026-09-30 08:07');
+    eq('and read back by the page, with the refreshed war from the alliance page', A.parseValky(game.clip.text, 2026).map(v => v.ali + '×' + v.proti + ' ' + v.od).join(), 'TVFN×.B.I.S. 2026-09-30 08:07,EJZ×HOLY 2026-11-25 10:28');
+    ok('alliance page fetched once', game.calls.filter(u => /p=aliance(&|$)/.test(u)).length === 1);
 }
 
 section(`${label}: just one ally, to try it out`);

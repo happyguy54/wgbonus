@@ -491,6 +491,15 @@
                 if (lines.length) valky.push('### VALKY ' + casKey(new Date()) + '\n' + lines.map(x => x.trim()).join('\n'));
                 say(lines.length + ' válek aliance.');
             } catch (e) { if (e.message === STOP || e.fatal) throw e; }
+            // A refreshed war shows only on the alliance page ("Aktuální
+            // války: EG ---> AxF VÁLKA 25.11. 10:28"), not on the war page,
+            // and it brings a new first hour with +10 % XP (2026-11-26).
+            try {
+                const a = flatten(await page('p=aliance')).replace(/\s+/g, ' ');
+                const lines = a.match(/\S+\s*-+>\s*\S+\s+V[ÁA]LKA\s+\d{1,2}\.\s*\d{1,2}\.\s*(?:\d{4}\s+)?\d{1,2}:\d{2}/g) || [];
+                if (lines.length) valky.push('### VALKY ' + casKey(new Date()) + ' aliance\n' + lines.map(x => x.trim()).join('\n'));
+                say(lines.length + ' válek na stránce aliance (i obnovené).');
+            } catch (e) { if (e.message === STOP || e.fatal) throw e; }
         }
 
         // Attacks the shared store already holds complete, as "cas|target".

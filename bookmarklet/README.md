@@ -62,6 +62,10 @@ Stránka wgbonus duplicity sama zahodí. Nic z toho neopouští prohlížeč.
 4. **Stránka naší aliance** (`p=najit&s=najittag&tag=…`) — tabulka
    „Zkušenosti“ ukazuje zkušenosti **získané v alianci**, ne celkové; celkové
    nemohou být menší, takže zúží zaokrouhlení ze žebříčku
+5. **Války naší aliance** — kdy která začala, ze stránky válek
+   (`p=konflikty&s=awarstat&getali=…`), a „Aktuální války“ ze stránky aliance
+   (`p=aliance`): jen tam je vidět **obnovená válka** (např. `EG ---> AxF VÁLKA
+   25.11. 10:28`), a ta má znovu první hodinu s +10 % zkušeností
 
 Každý útok si nese, **kdo útočil** (`utocnik_id`, země, hráč). Bez toho by se
 útoky různých spojenců v jedné databázi nedaly rozlišit — a s nimi ani jejich
