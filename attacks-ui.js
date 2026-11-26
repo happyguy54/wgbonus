@@ -97,6 +97,15 @@
      *  the žebříček is a snapshot that goes stale. */
     const xpLog = [];
     const zebLog = {};
+    /** Every sesvačenost reading of the session, per country, with its time
+     *  (zebLog keeps only the newest reading). */
+    const sesLog = {};
+    const logSesvacenost = zeb => Object.entries(zeb).forEach(([id, z]) => {
+        if (!Number.isFinite(z.sesvacenost)) return;
+        const at = z.sesvacenost_at || z.at;
+        const list = (sesLog[id] = sesLog[id] || []);
+        if (!list.some(x => x.at === at)) list.push({ sesvacenost: z.sesvacenost, at });
+    });
 
     // Whether plot and fits use only attacks with their own prestiž and
     // hodnost. Without them the page's defaults stand in, which for an XP
@@ -315,6 +324,10 @@
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
         ['pripravenost_pokles', 'o kolik % útok snížil připravenost nepřítele (týl, partyzánský), jinak 0'],
+        ['sesvacenost_utocnik', 'sesvačenost naší útočící země v % (žebříček: barevné pole, "78%" = o 22 % nižší zisky = 22) z odečtu nejblíž útoku (do 12 h), jinak prázdné'],
+        ['sesvacenost_obrance', 'sesvačenost napadené země v % (žebříček), z odečtu nejblíž útoku (do 12 h), jinak prázdné'],
+        ['sesvacenost_utocnik_h', 'kolik hodin po útoku byla sesvačenost útočníka odečtena (záporné = před útokem)'],
+        ['sesvacenost_obrance_h', 'kolik hodin po útoku byla sesvačenost cíle odečtena (záporné = před útokem)'],
         ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po vyhlášení nebo obnovení války mezi naší aliancí a aliancí cíle, ať ji vyhlásil kdokoli), jinak 0 - zkušenosti +10 %'],
         ['obrana', '1 u naší obrany (útok nepřítele na nás), jinak 0'],
         ['obrana_nase_ztraty', 'obrana: prestiž, kterou jsme ztratili (z textu zprávy)'],
@@ -871,12 +884,15 @@
         });
         const zeb = A.parseZebricek(text);
         Object.assign(zebLog, zeb);
+        logSesvacenost(zeb);
         if (Object.keys(zebLog).length) {
             const res = A.applyHodnost(store.records, xpLog, zebLog);
+            const ses = A.applySesvacenost(store.records, sesLog);
             if (Object.keys(zeb).length || res.utocnik || res.obrance) {
                 bits.push(`žebříček: ${Object.keys(zebLog).length} zemí, hodnost útočníka jistě u ${res.utocnik}`
                     + `, obránce u ${res.obrance}`
-                    + (res.odhad ? `, ${res.odhad}× jen odhad (blízko hranice hodnosti, ve fitu váha 0,2)` : ''));
+                    + (res.odhad ? `, ${res.odhad}× jen odhad (blízko hranice hodnosti, ve fitu váha 0,2)` : '')
+                    + (ses.utocnik + ses.obrance ? `, sesvačenost u ${ses.utocnik}× útočníka a ${ses.obrance}× cíle (odečet do 12 h od útoku)` : ''));
             }
         }
 
@@ -1013,7 +1029,7 @@
             // With an archive and žebříček pasted in this session, records that
             // arrive now get their hodnost too - the order of paste and
             // download does not matter.
-            if (Object.keys(zebLog).length) A.applyHodnost(store.records, xpLog, zebLog);
+            if (Object.keys(zebLog).length) { A.applyHodnost(store.records, xpLog, zebLog); A.applySesvacenost(store.records, sesLog); }
 
             let konfNote = '';
             try {
@@ -1072,6 +1088,10 @@
                 });
                 stale = ' Worker je starší verze: obrany, dobyvačné útoky a odhadnutá hodnost se nenahrály'
                     + ' — nasaďte nový worker/wgbonus-worker.js a nahrajte znovu.';
+            } else if (!cols.includes('sesvacenost_obrance')
+                && store.records.some(r => r.sesvacenost_obrance != null || r.sesvacenost_utocnik != null)) {
+                // Not a loss of anything else: the worker just drops these fields.
+                stale = ' Sesvačenost tento worker neukládá — nasaďte nový worker/wgbonus-worker.js a nahrajte znovu.';
             }
             const atk = await syncCall('attacks', 'POST', records);
             let konfNote = '';

@@ -84,7 +84,9 @@ se nepřepisuje — započítá se jako duplicita. **Nikdo tedy nemůže svým n
 smazat data někoho jiného.** Jediná výjimka: dobyvačný útok uložený dřív, než ho
 parser uměl přečíst (`druh` = `dobyvani`), nahradí jeho plně přečtená verze se
 stejným `id`; odpověď to hlásí jako `doplneno`. A válka uložená ještě bez
-konce dostane konec, jakmile ho někdo nahraje.
+konce dostane konec, jakmile ho někdo nahraje. Sesvačenost útočníka a cíle
+(`sesvacenost_utocnik`, `sesvacenost_obrance` z žebříčku, s `_h` = kolik hodin
+po útoku byla odečtena) se doplní, a odečet bližší útoku nahradí vzdálenější.
 
 Zápis probíhá přes `INSERT OR IGNORE` v jedné transakci, takže ani dvě
 současná nahrání se navzájem nepřepíšou ani neztratí.

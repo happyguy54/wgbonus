@@ -118,6 +118,9 @@ recs.filter(A.isAttack).forEach(r => {
         // war, mozek, readiness
         war: s.valka_xp, wh, first: s.valka_prvni_hodina, noAli: !r.cil_aliance && !!r.cil_id,
         mozek, pr: r.pripravenost_pokles ?? null, sp: r.spokojenost_pokles ?? null,
+        // sesvačenost (%) of attacker and target from the žebříček, hours to that reading
+        sesU: r.sesvacenost_utocnik ?? null, sesUh: r.sesvacenost_utocnik_h ?? null,
+        sesD: r.sesvacenost_obrance ?? null, sesDh: r.sesvacenost_obrance_h ?? null,
         floorHit, raw: r.raw || '',
     };
     row.trusted = ['new', 'early', 'ghost'].includes(grp) && TACTICAL.includes(r.typ) && row.uspech === 1

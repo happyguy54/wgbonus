@@ -47,7 +47,9 @@ const COLUMNS = {
         'ztraty_vojaci', 'ztraty_tanky', 'ztraty_stihacky', 'ztraty_mechove', 'zabrano_km2', 'zabrano_budovy',
         'prestiz_utocnik', 'prestiz_obrance', 'hodnost_utocnik', 'hodnost_obrance',
         'hodnost_utocnik_jiste', 'hodnost_obrance_jiste',
-        'pripravenost_pokles', 'spokojenost_pokles', 'raw', 'vlozeno',
+        'pripravenost_pokles', 'spokojenost_pokles',
+        'sesvacenost_utocnik', 'sesvacenost_utocnik_h', 'sesvacenost_obrance', 'sesvacenost_obrance_h',
+        'raw', 'vlozeno',
     ],
     konflikty: [
         'id', 'cas', 'typ', 'utocnik_id', 'obrance_id', 'obrance_aliance',
@@ -98,6 +100,10 @@ const ADDED = {
         zabrano_budovy: 'INTEGER',
         hodnost_utocnik_jiste: 'INTEGER',
         hodnost_obrance_jiste: 'INTEGER',
+        sesvacenost_utocnik: 'REAL',
+        sesvacenost_utocnik_h: 'REAL',
+        sesvacenost_obrance: 'REAL',
+        sesvacenost_obrance_h: 'REAL',
     },
     konflikty: {
         rozloha: 'INTEGER',
@@ -262,7 +268,14 @@ export default {
             const upgrade = `attacks.druh = 'dobyvani' AND excluded.druh IS NOT 'dobyvani'`;
             const better = side => `(attacks.hodnost_${side} IS NULL AND excluded.hodnost_${side} IS NOT NULL)`
                 + ` OR (attacks.hodnost_${side}_jiste = 0 AND excluded.hodnost_${side}_jiste = 1 AND excluded.hodnost_${side} IS NOT NULL)`;
+            // Sesvačenost (with the hours from the attack to its žebříček
+            // reading): a reading closer to the attack replaces a farther one.
+            const closer = side => `(excluded.sesvacenost_${side}_h IS NOT NULL AND excluded.sesvacenost_${side} IS NOT NULL`
+                + ` AND (attacks.sesvacenost_${side} IS NULL OR attacks.sesvacenost_${side}_h IS NULL`
+                + ` OR ABS(excluded.sesvacenost_${side}_h) < ABS(attacks.sesvacenost_${side}_h)))`;
             const setAttack = c => {
+                const ses = (c.match(/^sesvacenost_(utocnik|obrance)/) || [])[1];
+                if (ses) return `${c} = CASE WHEN ${closer(ses)} THEN excluded.${c} ELSE attacks.${c} END`;
                 const side = (c.match(/^hodnost_(utocnik|obrance)/) || [])[1];
                 if (side) return `${c} = CASE WHEN ${upgrade} OR ${better(side)} THEN excluded.${c} ELSE attacks.${c} END`;
                 if (FILLED.includes(c)) return `${c} = CASE WHEN ${upgrade} THEN excluded.${c} ELSE COALESCE(attacks.${c}, excluded.${c}) END`;
@@ -275,6 +288,7 @@ export default {
                   + ` WHERE (${upgrade})`
                   + FILLED.map(c => ` OR (attacks.${c} IS NULL AND excluded.${c} IS NOT NULL)`).join('')
                   + ` OR ${better('utocnik')} OR ${better('obrance')}`
+                  + ` OR ${closer('utocnik')} OR ${closer('obrance')}`
                 : table === 'valky'
                 ? `INSERT INTO valky (${cols.join(', ')}) VALUES (${placeholders})`
                   + ` ON CONFLICT(id) DO UPDATE SET konec = excluded.konec`

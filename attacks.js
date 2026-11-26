@@ -436,7 +436,8 @@
      */
     function upgradeConquests(records) {
         const KEEP = ['id', 'utocnik_id', 'utocnik_zeme', 'utocnik_hrac', 'prestiz_utocnik', 'prestiz_obrance',
-            'hodnost_utocnik', 'hodnost_obrance', 'hodnost_utocnik_jiste', 'hodnost_obrance_jiste', 'vlozeno'];
+            'hodnost_utocnik', 'hodnost_obrance', 'hodnost_utocnik_jiste', 'hodnost_obrance_jiste',
+            'sesvacenost_utocnik', 'sesvacenost_utocnik_h', 'sesvacenost_obrance', 'sesvacenost_obrance_h', 'vlozeno'];
         let n = 0;
         (records || []).forEach(rec => {
             if (rec.druh !== 'dobyvani' || !rec.raw) return;
@@ -1345,7 +1346,13 @@
         const NUM = '(?:\\d{1,3}(?:[  ]\\d{3})+|\\d+)(?:[.,]\\d+)?';
         const ROW = new RegExp(COUNTRY + NOT_NEXT
             + /(?:\d{1,3}(?:[\s ]\d{3})+|\d+)\s*km2?\s+/.source + '(' + NUM + ')' + /\s*([kM])?\s+/.source
-            + '(' + NUM + ')' + /\s*([kM])?\s+\((\d+|\?)\)/.source, 'g');
+            + '(' + NUM + ')' + /\s*([kM])?\s+\((\d+|\?)\)/.source
+            // After the hodnost the row has the alliance, the government and a
+            // coloured cell whose title is the share of gains left ("78%" =
+            // gains 22 % lower = sesvačenost 22 %, the user, 2026-11-26). The
+            // collector writes that title as "zisky 78%"; a hand-copied page
+            // has no text there.
+            + /(?:(?:(?!\(#\d+\))[\s\S]){0,120}?zisky\s*(\d+(?:[.,]\d+)?)\s*%)?/.source, 'g');
         // Members table: area, prestiž, hodnost - no experience.
         const MEMBER = new RegExp(COUNTRY + /.*?\s/.source + '(' + NUM + ')' + /\s*km2?\s+/.source + '(' + NUM + ')' + /\s+\((\d+)\)/.source);
         // "Zkušenosti" table: country, player, then the experience last.
@@ -1392,7 +1399,9 @@
                     if (rank) shown[m[1]] = { hodnost: rank, at: when };
                     continue;
                 }
-                rounded[m[1]] = Object.assign(xp, { prestiz: pr ? pr.xp : null, hodnost: rank, at: when });
+                const zisky = m[7] !== undefined ? parseFloat(m[7].replace(',', '.')) : null;
+                rounded[m[1]] = Object.assign(xp, { prestiz: pr ? pr.xp : null, hodnost: rank, at: when,
+                    zisky: Number.isFinite(zisky) ? zisky : null });
             }
         });
 
@@ -1419,6 +1428,11 @@
                 hodnost: rank || rankFor(lo).n,
                 at,
             };
+            // Sesvačenost from the same žebříček row, with that row's time.
+            if (r && r.zisky !== null && r.zisky !== undefined) {
+                out[id].sesvacenost = Math.round((100 - r.zisky) * 10) / 10;
+                out[id].sesvacenost_at = r.at;
+            }
         });
         return out;
     }
@@ -1551,6 +1565,50 @@
         return res;
     }
 
+    /**
+     * Sesvačenost of both sides of each attack, from the žebříček (see
+     * parseZebricek): `sesvacenost_utocnik` (our side's own) and
+     * `sesvacenost_obrance` (the target's), in %, each with `_h` = hours from
+     * the attack to the reading (negative: read before it). It moves fast -
+     * every successful normal attack on a country adds up to 20 %, every turn
+     * it plays and every 2 h take 1 % off (help 6.2.3) - so only a reading
+     * within `okno` hours is written, and a closer reading replaces a farther
+     * one. Collected to test whether the attacker's own or the target's
+     * sesvačenost changes XP (the user's two ideas, 2026-11-26); nothing in
+     * the presets uses it. `readings` is parseZebricek's output, or per
+     * country a list of { sesvacenost, at } (every reading of a session).
+     * Returns { utocnik, obrance } - values written.
+     */
+    function applySesvacenost(records, readings, opts) {
+        const o = Object.assign({ okno: 12 }, opts || {});
+        const res = { utocnik: 0, obrance: 0 };
+        (records || []).filter(isAttack).forEach(rec => {
+            const t = casDate(rec.cas);
+            if (!t) return;
+            [['utocnik', rec.utocnik_id], ['obrance', rec.cil_id]].forEach(([side, id]) => {
+                const z = id && readings ? readings[id] : null;
+                if (!z) return;
+                // The reading closest to the attack.
+                let h = null, value = null;
+                (Array.isArray(z) ? z : [z]).forEach(r => {
+                    const at = r && Number.isFinite(r.sesvacenost) ? casDate(r.sesvacenost_at || r.at) : null;
+                    if (!at) return;
+                    const dh = Math.round((at - t) / 360e3) / 10;
+                    if (h === null || Math.abs(dh) < Math.abs(h)) { h = dh; value = r.sesvacenost; }
+                });
+                if (h === null || Math.abs(h) > o.okno) return;
+                const k = 'sesvacenost_' + side;
+                const had = rec[k] !== null && rec[k] !== undefined && rec[k] !== '';
+                const hadH = Number(rec[k + '_h']);
+                if (had && Number.isFinite(hadH) && Math.abs(hadH) <= Math.abs(h)) return;
+                rec[k] = value;
+                rec[k + '_h'] = h;
+                res[side]++;
+            });
+        });
+        return res;
+    }
+
     /** True when `cas` lies within `hours` before `at` (both "YYYY-MM-DD HH:MM:SS"). */
     function inWindow(cas, at, hours) {
         const a = casDate(cas), b = casDate(at);
@@ -1627,6 +1685,12 @@
         ].forEach(k => { if (rec[k] !== null && rec[k] !== undefined) out[k] = rec[k]; });
         // Readiness taken from the defender (týl, partisan); 0 where the message has none.
         out.pripravenost_pokles = Number(rec.pripravenost_pokles) || 0;
+        // Sesvačenost (%) of the attacker and of the target near the attack,
+        // with the hours to that žebříček reading; NaN when none was read close.
+        ['sesvacenost_utocnik', 'sesvacenost_obrance', 'sesvacenost_utocnik_h', 'sesvacenost_obrance_h'].forEach(k => {
+            const v = rec[k];
+            out[k] = v === null || v === undefined || v === '' ? NaN : Number(v);
+        });
 
         const P = (s.prestigeValues && typeof s.prestigeValues === 'object')
             ? s.prestigeValues : PRESTIGE_VALUES;
@@ -1790,6 +1854,7 @@
         applyKonflikty,
         parseZebricek,
         applyHodnost,
+        applySesvacenost,
         parseOther,
         isAttack,
         upgradeConquests,

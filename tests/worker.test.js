@@ -330,6 +330,25 @@ const atk = (id, extra = {}) => Object.assign({
         eq('known values are never overwritten', `${r2.prestiz_utocnik}/${r2.hodnost_utocnik}`, '500000/9');
     }
 
+    section('sesvačenost: a reading closer to the attack replaces a farther one');
+    {
+        const env = makeEnv('pw');
+        await call(env, 'POST', 'attacks', { records: [atk('ses-1'),
+            atk('ses-2', { sesvacenost_obrance: 40, sesvacenost_obrance_h: 2.5, sesvacenost_utocnik: 10, sesvacenost_utocnik_h: 2.5 })] }, 'pw');
+        const up = await (await call(env, 'POST', 'attacks', { records: [
+            atk('ses-1', { sesvacenost_obrance: 22, sesvacenost_obrance_h: 6.1 }),
+            atk('ses-2', { sesvacenost_obrance: 35, sesvacenost_obrance_h: -0.4, sesvacenost_utocnik: 0, sesvacenost_utocnik_h: 9 }),
+        ] }, 'pw')).json();
+        eq('both stored rows took something', up.doplneno, 2);
+        const rows = (await (await call(env, 'GET', 'attacks')).json()).records;
+        const s1 = rows.find(r => r.id === 'ses-1'), s2 = rows.find(r => r.id === 'ses-2');
+        eq('an empty one is filled', `${s1.sesvacenost_obrance}/${s1.sesvacenost_obrance_h}`, '22/6.1');
+        eq('a closer reading replaces it', `${s2.sesvacenost_obrance}/${s2.sesvacenost_obrance_h}`, '35/-0.4');
+        eq('a farther one does not', `${s2.sesvacenost_utocnik}/${s2.sesvacenost_utocnik_h}`, '10/2.5');
+        const same = await (await call(env, 'POST', 'attacks', { records: [atk('ses-1', { sesvacenost_obrance: 50, sesvacenost_obrance_h: 6.1 })] }, 'pw')).json();
+        eq('an equally far one changes nothing', `${same.doplneno || 0}/${same.duplicates}`, '0/1');
+    }
+
     section('wars: a database from before they existed');
     {
         // A worker instance creates missing tables once, so this needs its own.

@@ -12,9 +12,12 @@ předloha pro vzhled. Nejsou to kompletní stránky — jen ta část, na které
 
 Pozor na věci, které se objevily až tady:
 
-- `najitzem` je jediné místo, kde je **hodnost** přímo ("Farmář (1)"), a taky
-  **sesvačenost** ("o 51% nižší zisky") — to je ta klesající výnosnost
-  opakovaných útoků na stejný cíl.
+- `najitzem` ukazuje **hodnost** přímo ("Farmář (1)") a **sesvačenost**
+  ("o 51% nižší zisky") — to je ta klesající výnosnost opakovaných útoků na
+  stejný cíl. Žebříček má obojí také: hodnost "(8)" a sesvačenost jako barevné
+  pole bez textu, jen s titulkem `title="78%"` = zbývá 78 % zisků, tedy
+  o 22 % nižší zisky (uživatel, 26.11.2026). Sběrač ho zapisuje jako
+  "zisky 78%" za řádek země.
 - Archiv obsahuje i **obranné** zprávy ("prolomila naši obranu") a zprávy
   o **pomoci spojenci** ("Byli jsme povoláni … na pomoc v obraně"). Obě mají
   vlastní zkušenosti a jiný tvar než útočné — parser je zatím přeskakuje.

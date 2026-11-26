@@ -1085,4 +1085,43 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     eq('no wars known: 0', A.scopeFor({ typ: 'nocni', cas: '2026-10-06 20:03:00', cil_aliance: 'YOZZEFY' }, {}).valka_prvni_hodina, 0);
 }
 
+section('sesvačenost from the žebříček (2026-11-26)');
+{
+    // The collector writes the coloured cell's title ("78%" = gains 22 % lower,
+    // the user) after the row: "… (8) Outlogs Fund zisky 78%".
+    const zeb = A.parseZebricek('### ZEBRICEK 2026-11-26 15:00:00\n'
+        + '11 HodímeZaHlavuAJedemeDál(#42) [Outlogs] - Klimovec (#38060) (zástupce) 55 6 259km2 587k 278k (8) Outlogs Fund zisky 78%\n'
+        + '12 Země(#43) [(.-Y-.)] - x (#1) 5 000km2 100k 200k (5) (.-Y-.) Dikt zisky 100%\n'
+        + '13 Bez(#44) [X] - y (#2) 5 000km2 100k 200k (5) X Tech');
+    eq('78 % of the gains left = sesvačenost 22', zeb[42].sesvacenost, 22);
+    eq('…with the time of its block', zeb[42].sesvacenost_at, '2026-11-26 15:00:00');
+    ok('the row still gives hodnost and XP', zeb[42].hodnost === 8 && zeb[42].lo <= 587000 && zeb[42].hi >= 587000);
+    eq('a bracket in the alliance tag does not stop it', zeb[43].sesvacenost, 0);
+    eq('a row without the cell (a hand-copied page): none', zeb[44].sesvacenost, undefined);
+    const two = A.parseZebricek('### ZEBRICEK 2026-11-26 15:00:00\n'
+        + 'A(#51) [X] - a (#5) 5 000km2 100k 200k (5) X Fund zisky 90% B(#52) [X] - b (#6) 5 000km2 100k 200k (5) X Fund zisky 60%');
+    eq('two rows on one line keep their own', `${two[51].sesvacenost}/${two[52].sesvacenost}`, '10/40');
+    const gap = A.parseZebricek('### ZEBRICEK 2026-11-26 15:00:00\n'
+        + 'A(#53) [X] - a (#5) 5 000km2 100k 200k (5) X Fund B(#54) [X] - b (#6) 5 000km2 100k 200k (5) X Fund zisky 60%');
+    eq("a row without the cell does not take the next row's", `${gap[53].sesvacenost}/${gap[54].sesvacenost}`, 'undefined/40');
+
+    // Onto the attacks: the closest reading within 12 h, for both sides.
+    const atk = { cas: '2026-11-26 14:30:00', typ: 'nocni', utocnik_id: 42, cil_id: 43, xp: 1000 };
+    const old = { cas: '2026-11-25 10:00:00', typ: 'nocni', utocnik_id: 42, cil_id: 43, xp: 1000 };
+    const def = { cas: '2026-11-26 14:00:00', typ: 'nocni', druh: 'obrana', utocnik_id: 43, cil_id: 42, xp: 500 };
+    const res = A.applySesvacenost([atk, old, def], zeb);
+    eq('attacker and target, hours to the reading',
+        `${atk.sesvacenost_utocnik}/${atk.sesvacenost_utocnik_h} ${atk.sesvacenost_obrance}/${atk.sesvacenost_obrance_h}`, '22/0.5 0/0.5');
+    eq('a reading 29 h after the attack: not written', old.sesvacenost_utocnik, undefined);
+    eq('defences are left alone', def.sesvacenost_obrance, undefined);
+    eq('counted per side', `${res.utocnik}/${res.obrance}`, '1/1');
+    A.applySesvacenost([atk], { 42: [{ sesvacenost: 30, at: '2026-11-26 14:20:00' }, { sesvacenost: 5, at: '2026-11-26 20:00:00' }] });
+    eq('of several readings the closest; it replaces a farther one', `${atk.sesvacenost_utocnik}/${atk.sesvacenost_utocnik_h}`, '30/-0.2');
+    A.applySesvacenost([atk], { 42: [{ sesvacenost: 1, at: '2026-11-26 15:30:00' }] });
+    eq('a farther reading does not replace a closer one', atk.sesvacenost_utocnik, 30);
+    const s = A.scopeFor(atk, {});
+    eq('as variables', `${s.sesvacenost_utocnik} ${s.sesvacenost_obrance} ${s.sesvacenost_utocnik_h}`, '30 0 -0.2');
+    ok('nothing read near the attack: NaN, not 0', Number.isNaN(A.scopeFor(old, {}).sesvacenost_obrance));
+}
+
 process.exit(done() ? 1 : 0);

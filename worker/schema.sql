@@ -38,6 +38,10 @@ CREATE TABLE IF NOT EXISTS attacks (
   hodnost_obrance_jiste INTEGER,
   pripravenost_pokles REAL,
   spokojenost_pokles  REAL,
+  sesvacenost_utocnik   REAL,
+  sesvacenost_utocnik_h REAL,
+  sesvacenost_obrance   REAL,
+  sesvacenost_obrance_h REAL,
   raw              TEXT,
   vlozeno          TEXT
 );

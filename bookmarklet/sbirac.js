@@ -392,14 +392,18 @@
         naZebricku.add(id);
         const html = await page('p=zebricek', 'type=1&search_id=' + id + '&action=' + encodeURIComponent('Najít'));
         const at = casKey(new Date());
+        // Sesvačenost is a coloured cell with no text, only a title: the share
+        // of gains left ("78%" = gains 22 % lower). Put it into the text, so the
+        // row reads "… (8) Outlogs Fund zisky 78%".
+        const marked = String(html).replace(/(<td\b[^>]*\btitle="\s*(\d+(?:[.,]\d+)?)\s*%"[^>]*>)/gi, '$1 zisky $2% ');
         // The game does not put one country per table row - a whole page of
         // them comes out as one run of text - so take each country from
         // "(#id) [TAG] - player" to its "(hodnost)", one per line. The player's
         // own "(#436276)" is not a country: no " - " follows it.
         // From a million on the numbers have spaces in them: "1 204k 1 368k (10)".
         const rows = [];
-        const re = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s(?:(?!\(#\d+\)\s*(?:\[[^\]]*\]\s*)?-\s)[\s\S])*?km2?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+\((?:\d+|\?)\)/g;
-        const text = oneLine(html);
+        const re = /\(#(\d+)\)\s*(?:\[[^\]]*\]\s*)?-\s(?:(?!\(#\d+\)\s*(?:\[[^\]]*\]\s*)?-\s)[\s\S])*?km2?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?\s*[kM]?\s+\((?:\d+|\?)\)(?:(?:(?!\(#\d+\))[\s\S]){0,120}?zisky\s*\d+(?:[.,]\d+)?\s*%)?/g;
+        const text = oneLine(marked);
         let m;
         while ((m = re.exec(text)) !== null) {
             rows.push(m[0]);

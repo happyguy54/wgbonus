@@ -6,6 +6,28 @@ attacker and target within 30 minutes; a fit with a free multiplier per round)
 are what the findings below came from. `rows.json`, `attacks.json` and `konflikty.json` are not
 committed.
 
+## Sesvačenost collected per attack (2026-11-26)
+
+Some attackers sit at 0.73-0.88 for a stretch and then jump back to 1.00
+mid-session (#70 24.11 09:27:10, #42 23.11 02:06:39); #42's seven týl on
+24.11 all gave 152 where mozek guarantees 188 (x0.81 after the floor), and
+the last age's destroyed EJZ had týl floors of 122-184. The user's two ideas:
+the attacker's own sesvačenost (enemy normal attacks add up to 20 % each;
+every turn - almost every action takes turns - and every 2 h take 1 % off)
+or the target's (help 6.2.3 says it has no effect on tactical XP). Neither
+can be read back: turns are invisible, and conquests on a target by other
+alliances too. Some lows follow the target (#31 and #65 both low on #88 at
+23:45-23:48 and normal on #82 minutes later; #36 low on #150 and normal on
+#97 two minutes apart), some the attacker (#70 on #141 and #68, #42 on #80
+and #63).
+
+The žebříček row has the sesvačenost: a coloured cell whose title is the
+share of gains left ("78%" = 22 %). The collector now writes it as
+"zisky 78%"; the page puts the closest reading within 12 h on each attack -
+`sesvacenost_utocnik`, `sesvacenost_obrance`, with `_h` = hours from the
+attack to the reading - and the worker keeps a closer reading over a farther
+one. Useful only from collector runs soon after a session.
+
 ## New-age noční outliers (2026-11-26, 275 attacks)
 
 Six clusters, each checked by a separate skeptic (aa93955). Off by more

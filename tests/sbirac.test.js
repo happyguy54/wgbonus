@@ -78,11 +78,16 @@ function makeGame({ attacks = {}, zeb = {}, stored = null, clipboardFails = fals
 
     /** One žebříček row, laid out like the one copied from the game. */
     const zebRow = id => {
-        const [xp, h] = zeb[id] || ['10k', 2];
+        const [xp, h, zisky] = zeb[id] || ['10k', 2];
+        // The sesvačenost cell has no text, only a title: the share of gains
+        // left (the user's row of #42 on 26.11: title="78%").
+        const ses = zisky === undefined ? ''
+            : `<td class="none c">&nbsp;</td><td style="padding:0;background-color: #ffc800" title="${zisky}%">&nbsp;</td>`
+              + '<td><img src="img/x.gif" title="Svatá válka" alt="[S]"></td><td></td>';
         return `<tr><td>on</td><td>${id}</td><td><a href="index.php?p=mail&amp;to_id=${id}"><img src="img/mail.gif" alt="Pošta"></a>&nbsp;`
             + `<a href="index.php?p=najit&amp;s=najitzem&amp;hid=${id}">Země ${id}(#${id})</a><a href="index.php?p=najit&amp;s=najittag&amp;tag=X">[X]</a>`
             + `<a class="pname"> - hrac${id}</a> <span class="pname">(#4${id}0)</span> <img src="img/hvezda.gif" alt="Vítěz 94.věku"><span>94</span></td>`
-            + `<td class="r">4&nbsp;407km<sup>2</sup></td><td class="r">${xp}</td><td class="r">167k</td><td class="c">(${h})</td><td>X</td><td>Tech</td></tr>`;
+            + `<td class="r">4&nbsp;407km<sup>2</sup></td><td class="r">${xp}</td><td class="r">167k</td><td class="c">(${h})</td><td>X</td><td>Tech</td>${ses}</tr>`;
     };
 
     const serve = (url, form) => {
@@ -267,7 +272,8 @@ section(`${label}: every ally in the alliance archive`);
         },
         // 47 and 53 are far from any threshold; 91 is only 1 500 past its
         // rank's start, so its rank may be fresh and must not be written.
-        zeb: { 47: ['200k', 6], 118: ['45k', 4], 53: ['300k', 7], 91: ['82k', 5] },
+        // 47 and 53 carry the sesvačenost cell (95 % and 78 % of gains left).
+        zeb: { 47: ['200k', 6, 95], 118: ['45k', 4], 53: ['300k', 7, 78], 91: ['82k', 5] },
     }));
     const archiveCalls = game.calls.filter(u => /p=archiv&typ=1/.test(u));
     const visited = [...new Set(archiveCalls.map(u => Number(u.match(/id=(\d+)/)[1])))].sort((a, b) => a - b);
@@ -301,6 +307,14 @@ section(`${label}: every ally in the alliance archive`);
     // (a third), so he was already 5 - but that close, only as an estimate.
     eq('a defender just past a threshold: still that rank, as an estimate',
         `${a118.hodnost_obrance}/${a118.hodnost_obrance_jiste}`, '5/0');
+
+    // Sesvačenost: the coloured cell's title comes through as text.
+    ok('žebříček rows carry the sesvačenost cell as "zisky 78%"', /\(#53\)[^\n]*\(7\)[^\n]*zisky 78%/.test(game.clip.text));
+    eq('read by the page: 22 % for #53, 5 % for #47, none where the cell is missing',
+        `${r.zeb[53].sesvacenost}/${r.zeb[47].sesvacenost}/${r.zeb[91].sesvacenost}`, '22/5/undefined');
+    A.applySesvacenost(r.records, r.zeb);
+    eq('onto the attack: the target\'s and our own, an hour after',
+        `${a47.sesvacenost_obrance}/${a47.sesvacenost_utocnik}/${Math.round(a47.sesvacenost_obrance_h)}`, '22/5/1');
 
     const searches = game.calls.filter(u => /p=zebricek/.test(u)).map(u => Number(u.match(/search_id=(\d+)/)[1]));
     eq('žebříček: one search for the allies, one for 53 (91 is on that page too)', searches.join(','), '44,53');
