@@ -258,8 +258,9 @@
     /**
      * The ally list: from the page already open when it is the alliance
      * archive (no request at all), else from the archive page, else from the
-     * first ally's archive it links to. When none of it works, say what the
-     * game sent back instead.
+     * first ally's archive it links to, else just the country those links
+     * point to - your own. When none of it works, say what the game sent back
+     * instead.
      */
     // The page the ally list came from; its side panel names our alliance.
     let menuHtml = '';
@@ -285,8 +286,22 @@
 
         const title = ((last.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || '').replace(/\s+/g, ' ').trim();
         const login = /Nejsi p[řr]ihl[áa][šs]en|logout\.php/i.test(title + ' ' + lastUrl);
+        // Started away from the archive, the game may send the archive page
+        // without its ally menu (2026-11-26, "Gold Webgame" from p=archiv&tag=1
+        // and &id=95). The default alliance archive is your own, and its tabs
+        // ("Celý archiv", "Útoky", …) link to it with your number - so collect
+        // just that country. The allies need a run from the archive itself.
+        if (link && !login) {
+            say('Seznam spojenců stránka archivu neukazuje — sbírám jen vaši zemi (#' + link[1] + ').'
+                + ' Spojence sebere sběrač spuštěný z Aliančního archivu.');
+            return [{ id: Number(link[1]), zeme: '', hrac: '', ja: true }];
+        }
+        // What the page did link to, so a reply can show what the game sent.
+        const links = (last.match(/<a\b[^>]*href="[^"]*p=archiv[^"]*"[^>]*>[\s\S]{0,80}?<\/a>/gi) || []).slice(0, 5)
+            .map(a => oneLine(a.replace(/^<a\b[^>]*href="([^"]*)"[^>]*>/i, '$1 → ')));
         throw new Error('V archivu nevidím seznam spojenců. Hra vrátila „' + (title || 'stránku bez názvu') + '“'
-            + (lastUrl ? ' (' + lastUrl.replace(location.origin, '') + ')' : '') + '.'
+            + (lastUrl ? ' (' + lastUrl.replace(location.origin, '') + ')' : '')
+            + ', ' + last.length + ' znaků, odkazy na archiv: ' + (links.join(' | ') || 'žádné') + '.'
             + (login
                 ? ' Hra tvrdí, že nejste přihlášen — přihlaste se znovu a spusťte to ze stránky hry.'
                 : ' Otevřete Alianční archiv a spusťte to odtamtud; když ani to nepomůže, pošlete tenhle výpis.'));
@@ -371,7 +386,7 @@
                 wrap.appendChild(b);
             };
             add('Všichni (' + list.length + ')', list.map(s => s.id), true);
-            list.forEach(s => add(s.zeme + ' (#' + s.id + ')' + (s.ja ? ' = vy' : ''), [s.id]));
+            list.forEach(s => add((s.zeme || 'Vaše země') + ' (#' + s.id + ')' + (s.ja ? ' = vy' : ''), [s.id]));
             box.appendChild(wrap);
             status('Koho projít? Na vyzkoušení stačí jeden spojenec.');
             wake = () => pick([]);
@@ -474,7 +489,7 @@
             spojenci = spojenci.filter(s => ids.indexOf(s.id) >= 0);
         }
         say((spojenci.length === 1 ? 'Jen ' : spojenci.length + ' spojenců: ')
-            + spojenci.map(s => s.zeme + ' (#' + s.id + ')' + (s.ja ? ' = vy' : '')).join(', '));
+            + spojenci.map(s => (s.zeme || 'vaše země') + ' (#' + s.id + ')' + (s.ja ? ' = vy' : '')).join(', '));
         say('Stránku za ' + PAUZA_S[0] + '–' + PAUZA_S[1] + ' s, takže to potrvá pár minut. '
             + 'Nechte tenhle panel otevřený, hrát můžete v jiném.');
 
@@ -576,11 +591,11 @@
             } finally {
                 // Keep what this ally's pages gave so far, even when stopped
                 // half-way through them.
-                say(s.zeme + ' (#' + s.id + '): ' + rows.length + ' nových'
+                say((s.zeme || 'Vaše země') + ' (#' + s.id + '): ' + rows.length + ' nových'
                     + (obran ? ' (z toho ' + obran + ' obran)' : '')
                     + (vOkne - rows.length ? ', ' + (vOkne - rows.length) + ' už známých' : ''));
                 if (rows.length) {
-                    archivy.push('### ARCHIV #' + s.id + ' ' + s.zeme + ' - ' + s.hrac + '\n' + rows.join('\n'));
+                    archivy.push('### ARCHIV #' + s.id + (s.zeme || s.hrac ? ' ' + s.zeme + ' - ' + s.hrac : '') + '\n' + rows.join('\n'));
                     utocnici.push(s.id);
                     nove += rows.length;
                 }

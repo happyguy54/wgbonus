@@ -345,6 +345,35 @@ section(`${label}: menu page without the list, but linking to an ally`);
     eq('and found the allies there', paste(game.clip.text || '').records.length, 1);
 }
 
+section(`${label}: no ally list anywhere - just our own country (2026-11-26)`);
+{
+    // Started away from the archive, the real game sent the archive page
+    // without its ally menu ("Gold Webgame", p=archiv&tag=1&id=95); its tabs
+    // still link to our own archive.
+    const own = MENU.replace(/<ul class="tbl_sim"[\s\S]*?<\/ul>/, '').replace(/id=47/g, 'id=118');
+    const game = makeGame({ attacks: { 118: [{ h: 1, xp: 2001, cil: 91 }], 47: [{ h: 1, xp: 1001, cil: 53 }] }, menu: own });
+    await run(code, game, { pick: 118 });
+    const logText = game.extra.map(e => String(e.textContent || '')).join('\n');
+    ok('says it collects only our country', /sbírám jen vaši zemi \(#118\)/.test(logText), logText.split('\n').filter(l => /CHYBA/.test(l)).join(' '));
+    const r = paste(game.clip.text || '');
+    eq('our attack arrives, as ours', r.records.map(x => `${x.utocnik_id}:${x.xp}`).join(','), '118:2001');
+    ok('a bare heading, no made-up name', /### ARCHIV #118\n/.test(game.clip.text || '') && !r.records.some(x => x.utocnik_zeme));
+    ok('no ally archive visited', !game.calls.some(u => /typ=1&tag=1&id=47/.test(u)));
+}
+
+section(`${label}: no list and no link - the error says what the page held`);
+{
+    const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, menu: '<html><head><title>Gold Webgame</title></head><body><a href="index.php?p=archiv">Archiv</a></body></html>' });
+    vm.createContext(game.sandbox);
+    vm.runInContext(code, game.sandbox);
+    for (let i = 0; i < 2000; i++) await new Promise(r => setImmediate(r));
+    const logText = game.extra.map(e => String(e.textContent || '')).join('\n');
+    ok('names the title, the size and the archive links it saw',
+        /Gold Webgame/.test(logText) && /znaků, odkazy na archiv: index\.php\?p=archiv → Archiv/.test(logText),
+        logText.split('\n').filter(l => /CHYBA/.test(l)).join(' '));
+    eq('nothing handed over', game.clip.text, null);
+}
+
 section(`${label}: the game says "Nejsi přihlášen"`);
 {
     const game = makeGame({ attacks: { 47: [{ h: 1, xp: 1, cil: 53 }] }, loggedOut: true, openPage: MENU });
