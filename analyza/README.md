@@ -29,12 +29,26 @@ than 5 %: 59 -> 48 attacks, 11 -> 8 rounds.
   which the user's reading (gap - 1) x 5 % fits (1.02-1.06) and the help
   literal doesn't. Noční in both ages prefer it (gap 2: 1.05 -> 1.00, n 19);
   týl at gap 2 (3 attacks) and .ghost's týl at gap 4 (6) prefer the help.
-  #36 -> #143 23.11 19h (1.14): the first hour of NATO's war on Outlogs,
-  which the page doesn't count (only wars on the target's alliance). One
-  session, no control; 6.11 #83 -> #35 goes against it. #36 -> #124 25.11
-  (0.92) depends on #124's rank (5 or 6) and on whether 9:09 was the
-  YOZZEFY declaration's time. #31 -> #88 23.11 (0.74, the conquest too) and
-  #36 -> #82 25.11 22:05:22/45 (1.15 before a x0.84 step) are unexplained.
+  #36 -> #124 25.11 (0.92) depends on #124's rank (5 or 6) and on whether
+  9:09 was the YOZZEFY declaration's time. #31 -> #88 23.11 (0.74, the
+  conquest too) and #36 -> #82 25.11 22:05:22/45 (1.15 before a x0.84 step)
+  are unexplained.
+- **The first war hour counts whoever declared** (the user, 26.11: "it does
+  not matter who started the war"; the page counted only our declarations
+  since 790a348, on four 1.10 attacks the old formula read as no bonus).
+  #36 -> #143 23.11 (12.8 h into NATO's war on Outlogs) 1.11-1.14 -> 1.01-1.04;
+  1.10 #68 -> #119 1.12 -> 1.02; 6.11 #118 -> #35 týl 1.05 in the first hour
+  of MaNTiNeL's war against 0.94 an hour later. Late-age EJZ rounds in such
+  hours (30.10, 6.11) drop further (0.67-0.96) - part of the late drop.
+  New-age noční off by more than 5 %: 48 -> 43.
+- War pages (the user, 26.11): Outlogs vs YOZZEFY 20.11 20:22 - 23.11 21:54,
+  101 attacks (6 normal, 95 tactical), and from 25.11 09:09, 8 attacks and
+  22 673 XP - exactly the attacks and XP in the store, so it is complete for
+  these wars. YOZZEFY's 14 199 XP in the second war is all defence: the
+  defence formula gives 13 900 with mozek for #124 and #139 (2 % low; 11 120
+  without), and no first-hour bonus for the defender. "Neaktivní může být za
+  7 h 10 min" at "Probíhá už 29 hodin": the help's 36 h from the declaration
+  puts it at 09:09 if the page rounds the hours, 09:19-10:19 if it truncates.
 - Konflikty pairing: four noční rows (#133 24.11 16:12, #142 22.11 20:33)
   got each other's prestiž; their unit fields prove it. Cosmetic, not fixed.
 

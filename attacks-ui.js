@@ -315,7 +315,7 @@
         ['uspech', '1 = útok uspěl, 0 = odražen / nepodařil se'],
         ['mozek', '1,25 když útočník měl pokrok Tajemství mozku (země vypište v Kontextu), jinak 1'],
         ['pripravenost_pokles', 'o kolik % útok snížil připravenost nepřítele (týl, partyzánský), jinak 0'],
-        ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po našem vyhlášení války aliance cíle), jinak 0 - zkušenosti +10 %'],
+        ['valka_prvni_hodina', '1 v první hodině plné války (12-13 h po vyhlášení nebo obnovení války mezi naší aliancí a aliancí cíle, ať ji vyhlásil kdokoli), jinak 0 - zkušenosti +10 %'],
         ['obrana', '1 u naší obrany (útok nepřítele na nás), jinak 0'],
         ['obrana_nase_ztraty', 'obrana: prestiž, kterou jsme ztratili (z textu zprávy)'],
         ['obrana_ztraty_nepritele', 'obrana: prestiž, kterou ztratil útočící nepřítel (z textu zprávy)'],

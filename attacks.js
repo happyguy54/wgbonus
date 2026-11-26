@@ -1199,16 +1199,23 @@
 
     /**
      * 1 when the attack fell into the first hour of full war - 12 to 13 hours
-     * after our alliance declared war on the target's (help: "V první hodině
-     * války (plných zisků) jsou zisky a zkušenosti navýšené"). The data shows
-     * +10 % there, and nothing in the first hour of a war declared on us.
+     * after a war between our alliance and the target's was declared or
+     * refreshed (help: "V první hodině války (plných zisků) jsou zisky a
+     * zkušenosti navýšené"; the data shows +10 %). Either side may have
+     * declared it: "it does not matter who started the war" (the user,
+     * 2026-11-26). Until then only our declarations counted, on four attacks
+     * of 1.10 against NATO that the old formula read as no bonus; with today's
+     * formula three of them sit at 1.12 without it, #36 -> #143 at 1.11-1.14
+     * in the first hour of NATO's war on Outlogs (23.11), and #118's týl on
+     * #35 at 1.05 in the first hour of MaNTiNeL's war on EJZ against 0.94 an
+     * hour later (6.11).
      */
     function firstFullWarHour(rec, valky) {
         if (!rec || !rec.cas || !rec.cil_aliance || !valky || !valky.length) return 0;
         const t = casDate(rec.cas);
         if (!t) return 0;
         return valky.some(v => {
-            if (v.proti !== rec.cil_aliance) return false;
+            if (v.proti !== rec.cil_aliance && v.ali !== rec.cil_aliance) return false;
             const od = casDate(v.od);
             if (!od || (v.do && casDate(v.do) < t)) return false;
             const h = (t - od) / 3600e3;
@@ -1223,7 +1230,8 @@
      *        known active war with that alliance is younger than 12 hours
      *        (#68 -> #152 on 12.11.2026, 21 partisan attacks minutes after the
      *        declaration: 0.51 of his full-war level);
-     *   1.1  the first hour of full war (12-13 h after we declared);
+     *   1.1  the first hour of full war (12-13 h after either alliance declared
+     *        or refreshed it);
      *   1    otherwise, and whenever no war with that alliance is known.
      * An older war in full force wins: on 5.10. EJZ had declared on *MAFIE*
      * five hours earlier, but *MAFIE*'s own war on EJZ was a day old.

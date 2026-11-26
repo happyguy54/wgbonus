@@ -1032,13 +1032,19 @@ section('wars from the alliance page (p=aliance, Aktuální války)');
     const list = [{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01' }];
     eq('merging: new wars added, a known one gets its end', A.mergeValky(list, v.concat([{ ali: 'EJZ', proti: 'HOLY', od: '2026-09-30 08:01', do: '2026-10-03 13:33' }])), 4);
     eq('merging again changes nothing', `${A.mergeValky(list, v)}/${list.length}/${list[0].do}`, '0/4/2026-10-03 13:33');
-    // first hour of full war: 12-13 h after we declared on the target's alliance
+    // first hour of full war: 12-13 h after a war with the target's alliance
+    // was declared - by either side (the user, 2026-11-26)
     const at = (cas, ali) => A.scopeFor({ typ: 'nocni', cas, cil_aliance: ali }, { valky: v }).valka_prvni_hodina;
     eq('YOZZEFY 6.10 20:03 (12 h 1 min after our declaration)', at('2026-10-06 20:03:00', 'YOZZEFY'), 1);
     eq('11 h 59 min: not yet full war', at('2026-10-06 20:01:00', 'YOZZEFY'), 0);
     eq('13 h after: the bonus hour is over', at('2026-10-06 21:02:00', 'YOZZEFY'), 0);
-    eq('a war declared on us: no bonus hour', at('2026-10-04 19:45:00', '*MAFIE*'), 0);
+    eq('a war declared on us has its bonus hour too', at('2026-10-04 19:45:00', '*MAFIE*'), 1);
+    eq('…and it ends 13 h after their declaration', at('2026-10-04 20:31:00', '*MAFIE*'), 0);
     eq('our declaration on MAFIE counts', at('2026-10-05 18:48:00', '*MAFIE*'), 1);
+    eq('a war of another alliance does not', at('2026-10-04 19:45:00', 'NATO'), 0);
+    const onUs = [{ ali: 'NATO', proti: 'Outlogs', od: '2026-11-23 06:15' }];
+    eq('NATO on Outlogs 23.11 06:15: Outlogs on NATO at 19:03 gets 1.1',
+        A.scopeFor({ typ: 'nocni', cas: '2026-11-23 19:03:00', cil_aliance: 'NATO' }, { valky: onUs }).valka_xp, 1.1);
     // The previous age's týl rounds were .ghost's: they get his number, so mozek applies.
     const oldTylG = { id: 'x1', typ: 'tyl', cas: '2026-09-21 09:55:59', cil_id: 69, xp: 29972, raw: 'Naší tankové brigádě se podařilo bleskovým úderem napadnout týl' };
     const oldNoc = { id: 'x2', typ: 'nocni', cas: '2026-09-16 08:35:05', cil_id: 61, xp: 15407 };
