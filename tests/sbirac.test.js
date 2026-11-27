@@ -355,6 +355,9 @@ section(`${label}: no ally list anywhere - just our own country (2026-11-26)`);
     await run(code, game, { pick: 118 });
     const logText = game.extra.map(e => String(e.textContent || '')).join('\n');
     ok('says it collects only our country', /sbírám jen vaši zemi \(#118\)/.test(logText), logText.split('\n').filter(l => /CHYBA/.test(l)).join(' '));
+    const verze = (read('bookmarklet/sbirac.js').match(/const VERZE = '([^']+)'/) || [])[1];
+    ok('the panel starts with the version', !!verze && logText.split('\n').includes('wg sběrač · verze ' + verze)
+        && logText.indexOf('wg sběrač · verze') < logText.indexOf('Hledám seznam spojenců'), verze);
     const r = paste(game.clip.text || '');
     eq('our attack arrives, as ours', r.records.map(x => `${x.utocnik_id}:${x.xp}`).join(','), '118:2001');
     ok('a bare heading, no made-up name', /### ARCHIV #118\n/.test(game.clip.text || '') && !r.records.some(x => x.utocnik_zeme));
@@ -371,6 +374,7 @@ section(`${label}: no list and no link - the error says what the page held`);
     ok('names the title, the size and the archive links it saw',
         /Gold Webgame/.test(logText) && /znaků, odkazy na archiv: index\.php\?p=archiv → Archiv/.test(logText),
         logText.split('\n').filter(l => /CHYBA/.test(l)).join(' '));
+    ok('the error names the version that ran', /CHYBA \(sběrač verze \d{4}-\d{2}-\d{2}\):/.test(logText));
     eq('nothing handed over', game.clip.text, null);
 }
 

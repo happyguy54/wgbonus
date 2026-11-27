@@ -1147,9 +1147,13 @@
             return;
         }
         ui.sbiracLink.href = href;
-        ui.sbiracInfo.textContent = syncBase()
+        // The version the bookmark carries; the collector prints the same one
+        // on its first line, so an old bookmark shows itself.
+        let verze = '';
+        try { verze = (decodeURIComponent(sbiracSource).match(/VERZE\s*=\s*'([^']+)'/) || [])[1] || ''; } catch (e) { /* not decodable */ }
+        ui.sbiracInfo.textContent = (verze ? ' Verze ' + verze + '.' : '') + (syncBase()
             ? ' Adresa workeru je v ní, takže útoky už uložené přeskočí.'
-            : ' Zatím bez adresy workeru — vyplňte ji dole v „Sdílené úložiště“ a záložku si vezměte znovu, pak bude přeskakovat už uložené útoky.';
+            : ' Zatím bez adresy workeru — vyplňte ji dole v „Sdílené úložiště“ a záložku si vezměte znovu, pak bude přeskakovat už uložené útoky.');
     }
 
     async function loadSbirac() {

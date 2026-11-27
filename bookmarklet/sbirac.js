@@ -32,6 +32,11 @@
 
     const HOST = 'gold.webgame.cz';
 
+    // Shown on the panel's first line and in every error, so it is clear
+    // which bookmark ran (2026-11-27: an old one kept giving an old error).
+    // Bump it with every change.
+    const VERZE = '2026-11-27';
+
     // Konflikty reach only 72 hours back, and hodnost drifts within days, so an
     // older attack can never be completed with prestiž and rank. Stop there.
     const HODIN = 72;
@@ -81,6 +86,7 @@
     const log = [];
     const say = m => { log.push(m); logEl.textContent = log.join('\n'); };
     const status = m => { statusEl.textContent = m; };
+    say('wg sběrač · verze ' + VERZE);
     const TITLE = document.title;
 
     // Finished runs stay in this browser (the game site's local storage) for
@@ -633,7 +639,7 @@
             }
         }
     } catch (err) {
-        konec = err.message === STOP ? 'Zastaveno — beru, co už je.' : 'CHYBA: ' + err.message;
+        konec = err.message === STOP ? 'Zastaveno — beru, co už je.' : 'CHYBA (sběrač verze ' + VERZE + '): ' + err.message;
         say('\n' + konec);
     }
 
